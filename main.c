@@ -77,6 +77,7 @@ void test_switch()
 #include "core/logxcontroll.h"
 //#include "module/logic/lxc_bool_gates.h"
 
+/*
 void test_path()
 {
 	logxcontroll_init_environment();
@@ -92,6 +93,37 @@ void test_path()
 		printf("instance name: %s\n",nand->behavior->get_gate_name(nand));
 
 }
+*/
+
+void test_cast()
+{
+	Gate cast = lxc_new_instance_by_name("cast to");
+
+	char*** arr = malloc(sizeof(void*));
+	arr[0] = NULL;
+
+	array_pnt_append_element(arr, malloc(20));
+	array_pnt_append_element(arr, malloc(20));
+	array_pnt_append_element(arr, malloc(20));
+	array_pnt_append_element(arr, malloc(20));
+
+	int ret = cast->behavior->enumerate_properties(cast, *arr, 4);
+
+	printf("ret: %d\n", ret);
+
+	char** a = *arr;
+
+	for(int i=0;NULL != a[i];++i)
+		printf("%s\n", a[i]);
+}
+
+void init_env()
+{
+	logxcontroll_init_environment();
+	printf("library initialized\n");
+	dbg_print_library_tree(true);
+}
+
 
 int main(/*int dfgsdfg, char** argv*/)
 {
@@ -100,7 +132,10 @@ int main(/*int dfgsdfg, char** argv*/)
 		printf("Can't register print_stack_trace crash handler\n!");
 	}
 
-	test_path();
+	init_env();
+
+	test_cast();
+	//test_path();
 
 	exit(0);
 /*	struct dyn_size* st = malloc(sizeof(struct dyn_size)+20);

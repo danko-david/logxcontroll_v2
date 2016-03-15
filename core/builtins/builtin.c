@@ -166,34 +166,55 @@ const struct lxc_constant_value lxc_bool_constant_value_false =
 	.name = "false"
 };
 
+/************************** Built in libraries ********************************/
+
+const char*** lxc_built_in_path_type =	(char**[])
+									{
+										(char*[])
+										{
+											"Built in",
+											"Type",
+											NULL
+										},
+										NULL
+									};
+
+const char*** lxc_built_in_path_value_propagation =	(char**[])
+												{
+													(char*[])
+													{
+														"Built in",
+														"Value propagation",
+														NULL
+													},
+													NULL
+												};
+
 static int library_load(enum library_operation op, char*** errors)
 {
+	if(library_before_load == op)
+	{
+		lxc_builtin_cast_init_before_load();
+	}
+
 	return 0;
 }
 
-static const struct lxc_gate_behavior placeholder;
-
-static struct detailed_gate_entry detailed_cast_to =
-{
-	.behavior = &placeholder,
-	.generic_name = "cast to",
-	.paths = (char**[]){(char*[]){"Built in", "Type", NULL},NULL},
-};
-
-static struct detailed_gate_entry detailed_const =
+/*static struct detailed_gate_entry detailed_const =
 {
 	.behavior = &placeholder,
 	.generic_name = "const",
-	.paths = (char**[]){(char*[]){"Built in", "Value propagation", NULL},NULL},
+	.paths = lxc_built_in_path_value_propagation,
 };
+*/
 
 const struct loadable_library logxcontroll_loadable_library_builtin =
 {
 	.library_operation = library_load,
 	.gates = (struct detailed_gate_entry*[])
 	{
-		&detailed_cast_to,
-		&detailed_const,
+		&lxc_built_in_gate_cast,
+		//&detailed_const,
 
 
 
@@ -222,3 +243,4 @@ const struct loadable_library logxcontroll_loadable_library_builtin =
 		NULL
 	}
 };
+

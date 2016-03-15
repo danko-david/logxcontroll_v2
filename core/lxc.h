@@ -67,6 +67,12 @@ typedef struct lxc_wire* Wire;
 typedef struct lxc_value* LxcValue;
 typedef struct lxc_port* Port;
 
+struct lxc_cast_to
+{
+	Signal to;
+	LxcValue (*cast_function)(LxcValue);
+};
+
 /**
  * Contains the necessary data about the signal type and framework utility.
  * */
@@ -89,7 +95,7 @@ struct lxc_signal_type
 	 * A mapping used for casting value:
 	 * Map<Signal, LxcValue (*cast_to)(LxcValue)>
 	 */
-	struct key_value* cast_to;
+	struct lxc_cast_to** cast_to;
 };
 
 //atomically increment the underlying value's reference count.
@@ -208,12 +214,16 @@ enum lxc_errno
 
 	LXC_ERROR_ILLEGAL_REQUEST = -13,
 
+	LXC_ERROR_PROPERTY_ALREADY_REGISTERED = -14,
+	LXC_ERROR_PROPERTY_NOT_FOUND = -15,
 
 	LXC_ERROR_ILLEGAL_NAME = -100,
 
 	LXC_ERROR_SIGNAL_ALREADY_REGISTERED = -101,
 	LXC_ERROR_GATE_BY_NAME_ALREADY_REGISTERED = -102,
 	LXC_ERROR_CONSTANT_VALUE_BY_NAME_ALREADY_REGISTERED = -103,
+
+	LXC_ERROR_TYPE_CONVERSION_NOT_EXISTS = -104,
 
 	LXC_ERROR_TOO_MANY_TYPES = -1024,
 
@@ -441,7 +451,7 @@ struct lxc_gate_behavior
 
 	//prop: set,get enumerate, label, description
 	//
-	int (*enumerate_properties)(Gate instance, char** arr, uint max_index);
+	int (*enumerate_properties)(Gate instance, const char** arr, uint max_length);
 
 	const char* (*get_property_label)(Gate instance, char* property);
 

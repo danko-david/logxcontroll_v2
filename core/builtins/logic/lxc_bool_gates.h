@@ -10,8 +10,6 @@
 
 #include "core/logxcontroll.h"
 
-#include <stdbool.h>
-
 struct lxc_bool_gate_behavior
 {
 	const struct lxc_gate_behavior base;

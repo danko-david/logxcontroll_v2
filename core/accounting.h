@@ -91,6 +91,9 @@ struct workspace
 	unsigned int id;
 	char* name;
 
+	//wire extra info
+	//gate extra info
+
 	//execution pool
 };
 

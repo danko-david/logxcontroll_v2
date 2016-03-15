@@ -5,27 +5,27 @@
  *      Author: szupervigyor
  */
 
-#include "module/logic/lxc_bool_gates.h"
+#include "core/builtins/logic/lxc_bool_gates.h"
 #include <stdlib.h>
 #include <string.h>
 
 
-struct lxc_bool_gate_behavior* castBGB(const struct lxc_gate_behavior* be)
+static struct lxc_bool_gate_behavior* castBGB(const struct lxc_gate_behavior* be)
 {
 	return (struct lxc_bool_gate_behavior*) be;
 }
 
-struct lxc_bool_instance* castGate(Gate gate)
+static struct lxc_bool_instance* castGate(Gate gate)
 {
 	return (struct lxc_bool_instance*) gate;
 }
 
-const char* logx_bool_get_gate_name(Gate gate)
+static const char* logx_bool_get_gate_name(Gate gate)
 {
 	return castBGB(gate->behavior)->name;
 }
 
-Gate logx_bool_create(const struct lxc_gate_behavior* be)
+static Gate logx_bool_create(const struct lxc_gate_behavior* be)
 {
 	struct lxc_bool_instance* ret = malloc(sizeof(struct lxc_bool_instance));
 	lxc_init_instance(&(ret->base), be);
@@ -37,7 +37,7 @@ Gate logx_bool_create(const struct lxc_gate_behavior* be)
 	return &(ret->base);
 }
 
-int logx_bool_get_supported_types(Gate instance, Signal* arr, uint max_length)
+static int logx_bool_get_supported_types(Gate instance, Signal* arr, uint max_length)
 {
 	UNUSED(instance);
 	if(NULL == arr)
@@ -54,7 +54,7 @@ int logx_bool_get_supported_types(Gate instance, Signal* arr, uint max_length)
 	return 1;
 }
 
-const char* const INPUT_NAMES[] =
+static const char* const INPUT_NAMES[] =
 {
 	"I0",
 	"I1",
@@ -80,7 +80,7 @@ const char* const INPUT_NAMES[] =
 	"I20",
 };
 
-const char* const OUTPUT_NAMES[] =
+static const char* const OUTPUT_NAMES[] =
 {
 	"Q0",
 	"Q1",
@@ -107,7 +107,7 @@ const char* const OUTPUT_NAMES[] =
 };
 
 
-const char* logx_bool_get_input_label(Gate instance, Signal signal, uint index)
+static const char* logx_bool_get_input_label(Gate instance, Signal signal, uint index)
 {
 	UNUSED(instance);
 	if(type_bool != signal || index > 20)
@@ -116,7 +116,7 @@ const char* logx_bool_get_input_label(Gate instance, Signal signal, uint index)
 	return INPUT_NAMES[index];
 }
 
-const char* logx_bool_get_output_label(Gate instance, Signal signal,
+static const char* logx_bool_get_output_label(Gate instance, Signal signal,
 		uint index)
 {
 	UNUSED(instance);
@@ -126,7 +126,7 @@ const char* logx_bool_get_output_label(Gate instance, Signal signal,
 	return OUTPUT_NAMES[index];
 }
 
-const char* logx_bool_get_single_ouput_label(Gate instance, Signal signal,
+static const char* logx_bool_get_single_ouput_label(Gate instance, Signal signal,
 		int index)
 {
 	UNUSED(instance);
@@ -136,7 +136,7 @@ const char* logx_bool_get_single_ouput_label(Gate instance, Signal signal,
 	return "Q";
 }
 
-int return_20(Gate instance, Signal s)
+static int return_20(Gate instance, Signal s)
 {
 	UNUSED(instance);
 	if(type_bool != s)
@@ -145,7 +145,7 @@ int return_20(Gate instance, Signal s)
 	return 20;
 }
 
-int return_1(Gate instance, Signal s)
+static int return_1(Gate instance, Signal s)
 {
 	UNUSED(instance);
 	if(type_bool != s)
@@ -154,7 +154,7 @@ int return_1(Gate instance, Signal s)
 	return 1;
 }
 
-Wire logx_bool_get_input_wire(Gate instance, Signal signal, uint index)
+static Wire logx_bool_get_input_wire(Gate instance, Signal signal, uint index)
 {
 	if(type_bool == signal || index > 20)
 		return NULL;
@@ -162,7 +162,7 @@ Wire logx_bool_get_input_wire(Gate instance, Signal signal, uint index)
 	return castGate(instance)->inputs[index];
 }
 
-Wire logx_bool_get_output_wire(Gate instance, Signal signal, uint index)
+static Wire logx_bool_get_output_wire(Gate instance, Signal signal, uint index)
 {
 	if(type_bool == signal || 0 != index )
 		return NULL;
@@ -170,7 +170,7 @@ Wire logx_bool_get_output_wire(Gate instance, Signal signal, uint index)
 	return castGate(instance)->output;
 }
 
-int logx_bool_wire_input(Gate instance, Signal signal, Wire wire, uint index)
+static int logx_bool_wire_input(Gate instance, Signal signal, Wire wire, uint index)
 {
 	UNUSED(instance);
 	UNUSED(signal);
@@ -178,7 +178,7 @@ int logx_bool_wire_input(Gate instance, Signal signal, Wire wire, uint index)
 	return 0;
 }
 
-int logx_bool_wire_output(Gate instance, Signal signal, Wire wire, uint index)
+static int logx_bool_wire_output(Gate instance, Signal signal, Wire wire, uint index)
 {
 	UNUSED(instance);
 	UNUSED(signal);
@@ -187,7 +187,7 @@ int logx_bool_wire_output(Gate instance, Signal signal, Wire wire, uint index)
 	return 0;
 }
 
-void logx_bool_execute(Gate instance, Signal type, LxcValue value, uint index)
+static void logx_bool_execute(Gate instance, Signal type, LxcValue value, uint index)
 {
 	UNUSED(instance);
 	UNUSED(type);
@@ -201,7 +201,7 @@ void logx_bool_execute(Gate instance, Signal type, LxcValue value, uint index)
 	}
 }
 
-void logx_bool_input_value_changed(Gate instance, Signal type, LxcValue value, uint index)
+static void logx_bool_input_value_changed(Gate instance, Signal type, LxcValue value, uint index)
 {
 	instance->execution_behavior(instance, type, value, index);
 }
@@ -211,7 +211,7 @@ void logx_bool_input_value_changed(Gate instance, Signal type, LxcValue value, u
  * */
 
 
-const struct lxc_bool_gate_behavior commons =
+static const struct lxc_bool_gate_behavior commons =
 {
 	.base.get_gate_name = logx_bool_get_gate_name,
 	.base.create = logx_bool_create,
@@ -242,7 +242,7 @@ const struct lxc_bool_gate_behavior commons =
 
 /************************** Logic Gate nand ***********************************/
 
-bool logic_function_nand(Gate instance)
+static bool logic_function_nand(Gate instance)
 {
 	Wire* in = castGate(instance)->inputs;
 	int i = 0;
@@ -265,8 +265,8 @@ bool logic_function_nand(Gate instance)
 	return false;
 }
 
-struct lxc_bool_gate_behavior logic_nand;
-struct detailed_gate_entry detail_logic_nand =
+static struct lxc_bool_gate_behavior logic_nand;
+static struct detailed_gate_entry detail_logic_nand =
 {
 	.behavior = &(logic_nand.base),
 	.generic_name = "nand",
@@ -276,7 +276,7 @@ struct detailed_gate_entry detail_logic_nand =
 
 /************************** Logic Gate nor ************************************/
 
-bool logic_function_nor(Gate instance)
+static bool logic_function_nor(Gate instance)
 {
 	Wire* in = castGate(instance)->inputs;
 	int i = 0;
@@ -301,8 +301,8 @@ bool logic_function_nor(Gate instance)
 	return 0 == used?false:true;
 }
 
-struct lxc_bool_gate_behavior logic_nor;
-struct detailed_gate_entry detail_logic_nor =
+static struct lxc_bool_gate_behavior logic_nor;
+static struct detailed_gate_entry detail_logic_nor =
 {
 	.behavior = &logic_nor,
 	.generic_name = "nor",
@@ -311,7 +311,7 @@ struct detailed_gate_entry detail_logic_nor =
 
 /************************** Logic Gate and ************************************/
 
-bool logic_function_and(Gate instance)
+static bool logic_function_and(Gate instance)
 {
 	Wire* in = castGate(instance)->inputs;
 	int i = 0;
@@ -336,8 +336,8 @@ bool logic_function_and(Gate instance)
 	return 0 == used?false:true;
 }
 
-struct lxc_bool_gate_behavior logic_and;
-struct detailed_gate_entry detail_logic_and =
+static struct lxc_bool_gate_behavior logic_and;
+static struct detailed_gate_entry detail_logic_and =
 {
 	.behavior = &logic_and,
 	.generic_name = "and",
@@ -346,7 +346,7 @@ struct detailed_gate_entry detail_logic_and =
 
 /************************** Logic Gate or *************************************/
 
-bool logic_function_or(Gate instance)
+static bool logic_function_or(Gate instance)
 {
 	Wire* in = castGate(instance)->inputs;
 	int i = 0;
@@ -371,8 +371,8 @@ bool logic_function_or(Gate instance)
 	return false;
 }
 
-struct lxc_bool_gate_behavior logic_or;
-struct detailed_gate_entry detail_logic_or =
+static struct lxc_bool_gate_behavior logic_or;
+static struct detailed_gate_entry detail_logic_or =
 {
 	.behavior = &logic_or,
 	.generic_name = "or",
@@ -423,7 +423,7 @@ struct lxc_bool_gate_behavior logic_print =
 	.logic_function = NULL,
 };
 */
-void init_behavior
+static void init_behavior
 (
 	struct lxc_bool_gate_behavior* b,
 	const char* gate_name,
@@ -434,7 +434,7 @@ void init_behavior
 	b->logic_function = logic_function;
 }
 
-int library_operation_function(enum library_operation op, char*** errors)
+static int library_operation_function(enum library_operation op, char*** errors)
 {
 	if(library_before_load == op)
 	{

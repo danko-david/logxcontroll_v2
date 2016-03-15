@@ -10,6 +10,10 @@
 
 void logxcontroll_init_environment()
 {
+	/*** initialize generic library ***/
+	lxc_init_generic_library();
+
+
 	/*** Register built in Libraries ***/
 	char errors[200];
 	lxc_load_library(&logxcontroll_loadable_library_builtin, errors, 200);

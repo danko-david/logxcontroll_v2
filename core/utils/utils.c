@@ -43,7 +43,7 @@ void linux_print_heap_size()
 
 	long diff = high - low;
 
-	printf("Heap size: %d Mb, %d Kb, %d bytes\n", diff/(1024*1024), diff/1024, diff);
+	printf("Heap size: %ld Mb, %ld Kb, %ld bytes\n", diff/(1024*1024), diff/1024, diff);
 }
 
 #include <execinfo.h>
@@ -82,7 +82,7 @@ char* render_string(int maxlen, char* fmt, void* argptr)
 		return NULL;
 	}
 
-	realloc(ret, strlen(ret)+1);
+	ret = realloc(ret, strlen(ret)+1);
 
 	return ret;
 }
@@ -219,7 +219,7 @@ int array_nt_contains(void** array_addr, unsigned int length, void* addr)
 	if(NULL == array_addr)
 		return -1;
 
-	int i = 0;
+	uint i = 0;
 	while(i < length)
 	{
 		if(NULL == array_addr[i])
@@ -451,7 +451,7 @@ void array_pnt_dbg_printf_char_array(void** array, char* array_name)
 		printf("%s array address: %p\r\n", array_name, array);
 
 	char** arr = (char**)array;
-	int i = 0;
+
 	for(int i=0;NULL != arr[i];++i)
 		printf("%s[%d] = \"%s\"\r\n", array_name, i, arr[i]);
 }

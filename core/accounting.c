@@ -61,8 +61,6 @@ LxcValue lxc_get_constant_by_name(char* name)
 	return NULL;
 }
 
-//TODO int lxc_load_shared_library(char* file, char*** errors);
-
 int lxc_load_library(const struct loadable_library* lib, char* error, int max_length)
 {
 	if(NULL == lib)
@@ -356,24 +354,23 @@ Signal lxc_get_signal_by_name(const char* str)
 	return NULL;
 }
 
-/*
-void lxc_ll_relay_library_operation
-(
-	enum library_operation libop,
-	struct loadable_library* ll
-)
+LxcValue (*lxc_get_conversion_function(Signal from, Signal to))(LxcValue)
 {
-	for(int i=0;NULL != ll->gates[i];++i)
-	{
-		if(NULL == ll->gates[i] || NULL == ll->gates[i]->behavior)
-			continue;
+	if(NULL == from || NULL == to)
+		return NULL;
 
-		void (*op)(enum library_operation) = ll->gates[i]->behavior->library_operation;
-		if(NULL != op)
-			op(libop);
-	}
+	struct lxc_cast_to** cast = from->cast_to;
+
+	if(NULL == cast)
+		return NULL;
+
+	for(int i=0;NULL != cast[i];++i)
+		if(to == cast[i]->to)
+			return cast[i]->cast_function;
+
+	return NULL;
 }
-*/
+
 /******************************************************************************/
 
 

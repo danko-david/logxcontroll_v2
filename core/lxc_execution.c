@@ -22,7 +22,7 @@ Task lxc_create_task(Gate instance, LxcValue value, int index)
 	//value if no more reference.
 	if(NULL != value)
 	{
-		struct lxc_value_operation* ops = value->operations;
+		const struct lxc_value_operation* ops = value->operations;
 		if(NULL != ops && NULL != ops->reference)
 		{
 			ops->reference(value);

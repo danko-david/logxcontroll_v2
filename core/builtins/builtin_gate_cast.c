@@ -7,166 +7,253 @@
 
 
 #include "core/logxcontroll.h"
-#include "core/builtins/builtin_gate_cast.h"
-
-const char*** paths =
-{
-	(char*[]){"built in", "types", NULL},
-	NULL
-};
 
 struct lxc_cast_instance
 {
-	struct lxc_instance base;
+	struct lxc_generic_porti_instance base;
 	Wire input;
 	Wire output;
-	Signal source;
-	Signal destination;
+	Signal from;
+	Signal to;
+	LxcValue (*cast_to)(LxcValue);
 };
 
-static const char* cast_get_gate_name(Gate unused)
-{
-	UNUSED(unused);
-	return "cast to";
-}
+static struct lxc_generic_porti_propb_behavior gate_cast;
 
-static Gate cast_create(const struct lxc_gate_behavior* this_behavoir)
+struct detailed_gate_entry lxc_built_in_gate_cast =
 {
-	struct lxc_instance* ret = malloc_zero(sizeof(struct lxc_cast_instance));
-	lxc_init_instance(ret, this_behavoir);
-	return ret;
-}
+	.behavior = &(gate_cast.base),
+	.generic_name = "cast to",
+};
 
-static void cast_destroy(Gate instance)
+static void* cast_access_property(Gate instance, const char* property)
 {
-	free(instance);
-}
-
-static int cast_get_input_types(Gate instance, Signal* arr, uint max_length)
-{
-	struct lxc_cast_instance* in = (struct lxc_cast_instance*) instance;
-	if(NULL != in->source)
+	struct lxc_cast_instance* gate = (struct lxc_cast_instance*) instance;
+	if(0 == strcmp("from", property))
 	{
-		if(max_length < 1)
-			return -1;
-
-		arr[0] = in->source;
-		return 1;
+		return &(gate->from);
+	}
+	else if(0 == strcmp("to", property))
+	{
+		return &(gate->to);
 	}
 
-	return 0;
+	return NULL;
 }
 
-static const char* cast_get_input_label(Gate instance, Signal signal, uint index)
+static void replace_portmanager_type
+(
+	struct lxc_port_manager* mngr,
+	Signal new_type,
+	char* name
+)
 {
+	int absindex = lxc_port_get_absindex_by_name(mngr, name);
 
-}
-/*
-static const struct lxc_gate_behavior builtin_gate_cast =
-{
-	.get_gate_name		= cast_get_gate_name,
-	.create				= cast_create,
-	.destroy			= cast_destroy,
-	.get_input_types	= cast_get_input_types,
+	if(absindex >= 0)
+	{
+		Signal sig;
+		int mti;
+		int index;
+		lxc_port_get_type_and_index_by_absindex(mngr, absindex, &sig, &mti, &index);
+		if(NULL != sig)
+		{
+			lxc_port_remove_port(mngr, sig, index);
+		}
+		else
+		{
+			printf("ERROR: built in gate cast: registered type not found.");
+			return;
+		}
+	}
 
-	//get the input user friandly name
-	const char* (*get_input_label)(Gate instance, Signal signal, uint index);
-
-	//get the max index of the specified type, returns negative value if
-	//type not supported
-	int (*get_input_max_index)(Gate instance, Signal type);
-
-	//returns the wire of the specified type and input. returns null if
-	//type not supported or port is not wired
-	Wire (*get_input_wire)(Gate instance, Signal type, uint index);
-
-	//\\tries to wire the input. Signal parameter is redundant, if wire is not null
-	//\\it will be silently ignored, if wire is null gate unwire the input specified
-	//\\by type and index.
-
-	//simply set the wire in the internal data structure specified by signal
-	int (*wire_input)(Gate instance, Signal signal, Wire wire, uint index);
-
-	//here notified if an input value changed, you can decide do you want to
-	//care about (sensitivity), if you want to execute them without any
-	//modification call instance->execution_behavior(instance,type,value,index)
-	void (*input_value_changed)(Gate instance, Signal type, LxcValue value, uint index);
-
-	//execute the gate specific function
-	//this will be called by the input_value_changed function as it implemented
-	//and by the framework if:
-	// a new input wired,
-	// an input unwired,
-	// a new output wired
-	// gate enabled,
-	//
-	//TODO etc.
-	//TODO precise doc how does it do.
-	void (*execute)(Gate instance, Signal type, LxcValue value, uint index);
-
-
-	int (*get_output_types)(Gate instance, Signal* arr, uint max_length);
-
-	const char* (*get_output_label)(Gate instance, Signal signal, uint index);
-
-	//get the max index of the specified type, returns negative value if
-	//type not supported
-	int (*get_output_max_index)(Gate instance, Signal type);
-
-	//returns the wire of the specified type and output. returns null if
-	//type not supported or port is not wired
-	Wire (*get_output_wire)(Gate instance, Signal type, uint index);
-
-
-
-	//\\tries to wire the input. Signal parameter is redundant if wire is not null
-	//\\and it will be silently ignored, if wire is null gate unwires the input specified
-	//\\by the signal type and index.
-
-	//simply set the wire in the internal data structure specified by signal
-	int (*wire_output)(Gate instance, Signal signal, Wire wire, uint index);
-
-	//TODO get_lock_for_execution
-	//a structure of function pointers contains the data for locking
-	//mechanism
-
-	//prop: set,get enumerate, label, description
-	//
-	int (*enumerate_properties)(Gate instance, char** arr, uint max_index);
-
-	const char* (*get_property_label)(Gate instance, char* property);
-
-	const char* (*get_property_description)(Gate instance, char* property);
-
-	int (*get_property_value)(Gate instance, char* property, char* dst, uint max_length);
-
-	//returns zero if property successfilly modified, return negative required length if error
-	//buffer is too short to write error description. returns positive value if error ocurred and
-	//error description successfully written back.
-	int (*set_property)(Gate instance, char* property, char* value, char* err, uint max_length);
-
-	//functionality like ioctl
-	int (*gatectl)(Gate instance, unsigned long request, ...);
-};
-*/
-/*
-const struct detailed_gate_entry* lib_gate_cast =
-{
-	//.behavior = &builtin_gate_cast,
-	//.paths = paths,
-};
-
-
-
-static int library_load(enum library_operation op, char*** errors)
-{
-	//on first operation
-	//struct lxc_gate_behavior* ret = malloc();
-
-	return 0;
+	lxc_port_unchecked_add_new_port(mngr, name, new_type, true);
 }
 
-*/
+
+static void replace_port_type
+(
+	struct lxc_cast_instance* gate,
+	void* addr,
+	Signal new_type
+)
+{
+	if(addr == &(gate->from))
+	{
+		replace_portmanager_type(&(gate->base.input_ports), new_type, "from");
+	}
+	else if(addr == &(gate->to))
+	{
+		replace_portmanager_type(&(gate->base.output_ports), new_type, "to");
+	}
+}
+
+static int cast_validate_propety
+(
+	struct lxc_cast_instance* gate,
+	Wire wire,
+	bool direction,
+	void* addr,
+	const char* name,
+	const char* value,
+	char* ret,
+	int max_length
+)
+{
+	if(direction == DIRECTION_OUT)
+	{
+		//write back which type of signal is currently used for input type
+		if(NULL == addr)
+		{
+			safe_strcpy(ret, max_length, "");
+			return 0;
+		}
+
+		safe_strcpy(ret, max_length, (char*) (*((Signal*)addr))->name);
+		return 0;
+	}
+	else if(direction == DIRECTION_IN)
+	{
+		//if port is wired we refuse the signal modification
+		if(NULL != wire)
+		{
+			safe_strcpy(ret, max_length, "");
+			return LXC_ERROR_PORT_IS_IN_USE;
+		}
+
+		Signal sig = lxc_get_signal_by_name(value);
+
+		if(NULL == sig)
+		{
+			safe_strcpy(ret, max_length, "Requested signal type doesn't exists.");
+			return LXC_ERROR_TYPE_NOT_SUPPORTED;
+		}
+
+		Signal t_from = NULL;
+		Signal t_to = NULL;
+
+		//is there a know direct conversion between the requested types?
+		if(addr == &(gate->from))
+		{
+			t_from = sig;
+
+			if(NULL != gate->to)
+				t_to = gate->to;
+		}
+		else if(addr == &(gate->to))
+		{
+			t_to = gate->to;
+			if(NULL != gate->from)
+				t_from = gate->from;
+		}
+
+		if(NULL != t_from && NULL != t_to)
+		{
+			LxcValue (*convert)(LxcValue) =
+				lxc_get_conversion_function(t_from, t_to);
+
+			if(NULL == convert)
+			{
+				safe_strcpy(ret, max_length, "No direct conversion known between specified types.");
+				return LXC_ERROR_TYPE_CONVERSION_NOT_EXISTS;
+			}
+			else
+			{
+				replace_port_type(gate, addr, sig);
+				*((Signal*)addr) = sig;
+				gate->cast_to = convert;
+				return 0;
+			}
+		}
+		else
+		{
+			replace_port_type(gate, addr, sig);
+			*((Signal*)addr) = sig;
+		}
+
+		return 0;
+	}
+
+	//may not happen.
+	return LXC_ERROR_ILLEGAL_REQUEST;
+}
+
+
+static int validate_property_from
+(
+	Gate instance,
+	bool direction,
+	void* addr,
+	const char* name,
+	const char* value,
+	char* ret,
+	int max_length
+)
+{
+	struct lxc_cast_instance* gate = (struct lxc_cast_instance*) instance;
+	return cast_validate_propety(gate, gate->input, direction, addr, name, value, ret, max_length);
+}
+
+static int validate_property_to
+(
+	Gate instance,
+	bool direction,
+	void* addr,
+	const char* name,
+	const char* value,
+	char* ret,
+	int max_length
+)
+{
+	struct lxc_cast_instance* gate = (struct lxc_cast_instance*) instance;
+	return cast_validate_propety(gate, gate->output, direction, addr, name, value, ret, max_length);
+}
+
+static void cast_execute(Gate instance, Signal type, LxcValue value, uint index)
+{
+
+
+}
+
+void lxc_builtin_cast_init_before_load()
+{
+	memset(&gate_cast, 0, sizeof(gate_cast));
+
+	memcpy
+	(
+		&gate_cast,
+		&lxc_generic_porti_propb_prototype,
+		sizeof(lxc_generic_porti_propb_prototype)
+	);
+
+	gate_cast.base.instance_memory_size = sizeof(struct lxc_cast_instance);
+	lxc_built_in_gate_cast.paths = lxc_built_in_path_type,
+
+	//yes we discard const
+	//void* (**ap_addr)(Gate, const char*) = &();
+
+	gate_cast.properties.access_property = cast_access_property;
+	gate_cast.base.base.execute = cast_execute;
+
+	//*ap_addr = ;
+
+	lxc_add_property
+	(
+		&(gate_cast.properties),
+		"from",
+		"Cast value type from",
+		validate_property_from
+	);
+
+	lxc_add_property
+	(
+		&(gate_cast.properties),
+		"to",
+		"Cast value type to",
+		validate_property_to
+	);
+}
+
 
 
 

@@ -104,6 +104,14 @@ void lxc_init_instance(Gate instance, const struct lxc_gate_behavior* behavior);
 
 extern const struct loadable_library logxcontroll_loadable_library_builtin;
 
+/**************************** Built in gates **********************************/
 
+extern const char*** lxc_built_in_path_type;
+extern const char*** lxc_built_in_path_value_propagation;
+
+//cast
+
+extern struct detailed_gate_entry lxc_built_in_gate_cast;
+void lxc_builtin_cast_init_before_load();
 
 #endif /* BUILTIN_H_ */
