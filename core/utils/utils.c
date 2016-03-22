@@ -413,6 +413,9 @@ int array_pnt_append_element(void*** array_addr, void* element)
 
 int array_pnt_contains(void** array_addr, void* addr)
 {
+	if(NULL == array_addr)
+		return -1;
+
 	for(int i=0;NULL != array_addr[i];++i)
 	{
 		if(addr == *array_addr)
@@ -473,4 +476,156 @@ int safe_strcpy(char* dst, int max_length, char* src)
 	}
 
 	return len;
+}
+
+#include <dlfcn.h>
+
+int gnu_libc_backtrace_symbol(void* addr, char* ret_str, size_t max_length)
+{
+	void *arr[1];
+	arr[0] = addr;
+	char** ob = backtrace_symbols(arr, 1);
+	if(NULL == ob)
+	{
+		return safe_strcpy(ret_str,max_length, "");
+	}
+
+	char* ret = ob[0];
+
+	if(NULL != ret)
+	{
+		int retval = safe_strcpy(ret_str,max_length, ret);
+		free(ob);
+		return retval;
+	}
+	else
+	{
+		return safe_strcpy(ret_str,max_length, "");
+	}
+
+	/*struct Dl_info info;
+	if(0 == dladdr(addr, &info))
+	{
+		return safe_strcpy(ret_str, max_length, "");
+	}
+
+	return safe_strcpy(ret_str, max_length, info.dli_sname);
+	*/
+}
+
+void queue_add_element
+(
+	struct queue_element** head,
+	struct queue_element* elem,
+	struct queue_element** tail
+)
+{
+	if(NULL == *head)
+	{
+		*head = elem;
+		*tail = elem;
+		elem->next = NULL;
+		elem->prev = NULL;
+	}
+	else
+	{
+		(*tail)->next = elem;
+
+		elem->next = NULL;
+		elem->prev = *tail;
+
+		*tail = elem;
+	}
+}
+
+struct queue_element* queue_pop_tail_element
+(
+	struct queue_element** head,
+	struct queue_element** tail
+)
+{
+	if(NULL == *tail)
+	{
+		return NULL;
+	}
+	else
+	{
+		struct queue_element* ret = *tail;
+
+		if(NULL != ret->prev)
+		{
+			//set the tail with the previous one
+			*tail = ret->prev;
+
+			//unbind returning element
+			ret->prev->next = NULL;
+
+			//unbind reference to the queue
+			ret->prev = NULL;
+		}
+		else
+		//this means only this element in the queue
+		{
+			*head = NULL;
+			*tail = NULL;
+			//and ret->next nad ret->prev in this case is NULL
+		}
+
+		//ret->next is always NULL!
+		return ret;
+	}
+}
+
+void queue_pop_intermediate_element
+(
+	struct queue_element** head,
+	struct queue_element* intermediate,
+	struct queue_element** tail
+)
+{
+	struct queue_element* op;
+
+	//first element of the queue
+	if(NULL == intermediate->prev)
+	{
+		*head = intermediate->next;
+		op = intermediate->next;
+
+		if(NULL == op)
+		//this is the only element, empty the queue
+		{
+			*tail = NULL;
+		}
+		else
+		{
+			op->prev = NULL;
+		}
+	}
+	else
+	//set the previous element's next
+	{
+		intermediate->prev = intermediate->next;
+	}
+
+	//last element of the queue
+	if(NULL == intermediate->next)
+	{
+		*tail = intermediate->prev;
+		op = intermediate->prev;
+
+		if(NULL == op)
+		//this is the only element
+		{
+			*head = NULL;
+		}
+		else
+		{
+			op->next = NULL;
+		}
+	}
+	else
+	//set the next element's prev
+	{
+		intermediate->next = intermediate->prev;
+	}
 }

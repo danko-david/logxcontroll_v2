@@ -36,41 +36,13 @@ size_t lxc_size_primitive_value(/*LxcValue value*/)
 	return sizeof(double);
 }
 
-int lxc_reference_primitive_value(LxcValue asdf)
+static int lxc_ref_diff_primitive_value(LxcValue asdf, int n)
 {
 	struct lxc_primitive_value* val = (struct lxc_primitive_value*) asdf;
-	if
-	(
-			NULL != val
-		&&
-			NULL != val->base.operations
-		&&
-			NULL != val->base.operations->reference
-	)
-	{
-		return __sync_fetch_and_add(&(val->base.refcount), 1);
-	}
-
-	return 1;
+	return __sync_fetch_and_add(&(val->base.refcount), n);
 }
 
-int lxc_unreference_primitive_value(LxcValue asdf)
-{
-	struct lxc_primitive_value* val = (struct lxc_primitive_value*) asdf;
-	if
-	(
-			NULL != val
-		&&
-			NULL != val->base.operations
-		&&
-			NULL != val->base.operations->unreference
-	)
-	{
-		return __sync_fetch_and_sub(&(val->base.refcount), 1);
-	}
 
-	return 1;
-}
 
 void* lxc_data_address_primitive_value(LxcValue val)
 {
@@ -82,8 +54,7 @@ const struct lxc_value_operation primitive_variable_value_operations =
 	.free = lxc_free_primitive_value,
 	.clone = lxc_clone_primitive_value,
 	.size = lxc_size_primitive_value,
-	.reference = lxc_reference_primitive_value,
-	.unreference = lxc_unreference_primitive_value,
+	.ref_diff = lxc_ref_diff_primitive_value,
 	.data_address = lxc_data_address_primitive_value,
 };
 
@@ -92,8 +63,7 @@ const struct lxc_value_operation primitive_constant_value_operations =
 	.free = NULL,
 	.clone = lxc_clone_primitive_value,
 	.size = lxc_size_primitive_value,
-	.reference = NULL,
-	.unreference = NULL,
+	.ref_diff = NULL,
 	.data_address = lxc_data_address_primitive_value,
 };
 
@@ -132,9 +102,9 @@ const struct lxc_signal_type lxc_signal_double =
 	.name = "double",
 };
 
-const struct lxc_signal_type lxc_signal_pcm =
+const struct lxc_signal_type lxc_signal_data =
 {
-	.name = "pcm",
+	.name = "data",
 	//.equals =
 };
 
@@ -196,6 +166,13 @@ static int library_load(enum library_operation op, char*** errors)
 	{
 		lxc_builtin_cast_init_before_load();
 	}
+	else if(library_after_loaded == op)
+	{
+
+
+
+	}
+
 
 	return 0;
 }
@@ -208,7 +185,7 @@ static int library_load(enum library_operation op, char*** errors)
 };
 */
 
-const struct loadable_library logxcontroll_loadable_library_builtin =
+const struct lxc_loadable_library logxcontroll_loadable_library_builtin =
 {
 	.library_operation = library_load,
 	.gates = (struct detailed_gate_entry*[])
@@ -230,7 +207,7 @@ const struct loadable_library logxcontroll_loadable_library_builtin =
 		&lxc_signal_long,
 		&lxc_signal_short,
 
-		&lxc_signal_pcm,
+		&lxc_signal_data,
 
 		NULL
 	},

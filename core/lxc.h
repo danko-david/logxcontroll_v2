@@ -98,14 +98,6 @@ struct lxc_signal_type
 	struct lxc_cast_to** cast_to;
 };
 
-//atomically increment the underlying value's reference count.
-int lxc_reference_value(LxcValue value);
-
-//atomically decrement the underlying value's reference count,
-//if reference count is 0 (or less), resource will be freed and 0 return
-//otherwise current reference count returned.
-int lxc_unference_value(LxcValue value);
-
 struct lxc_port
 {
 	Gate gate;
@@ -124,11 +116,11 @@ struct lxc_value_operation
 	//if this method null it's maybe a constant value.
 */
 
-	//returns the underlying value exact copy.
+	//returns the underlying value's exact copy.
 	//for you can modify an incoming value (in  the aspect of a gate)
 	//you may not modify directly the incoming value, first it must be cloned.
 	//if the underlying value is a constant and you clone that,
-	//the new value must work like a valueable value.
+	//the new value must work like a regular (modifiable) value.
 	LxcValue (*clone)(LxcValue dest);
 
 	//returns the size of the value
@@ -136,19 +128,15 @@ struct lxc_value_operation
 	//the size is sum of all unique element.
 	size_t (*size)(LxcValue value);
 
-	//increment the reference counter with 1 and returns the
-	//current reference count. If no reference counting applied return 1
-	//or this function is null
-	int (*reference)(LxcValue value);
+	//modify the reference counter with the underlying value
+	//then returns the current refcount of value.
+	int (*ref_diff)(LxcValue value, int num);
 
-	//decrements the reference counter and returns the current reference
-	//count if no more reference used it should automatically free.
-	int (*unreference)(LxcValue value);
+	//TODO visit and build
 
-	/**
-	 * the data is always in the same structure, but can be aligned
-	 *
-	 * */
+	//the data is always in the same structure, but can be aligned
+
+	//never may null
 	void* (*data_address)(LxcValue value);
 };
 
@@ -160,12 +148,12 @@ struct lxc_value
 	//but same type of values may behaviors different.
 	//some primitive values may be placed in a constant pool
 	//text section calling free for this values may causes runtime breaking.
+
+	//never may NULL
 	const struct lxc_value_operation* operations;
 
 	int refcount;
 };
-
-LxcValue lxc_create_generic_value(Signal,size_t);
 
 #define LXC_GATE_MAX_IO_TYPE_COUNT 20
 
@@ -214,16 +202,16 @@ enum lxc_errno
 
 	LXC_ERROR_ILLEGAL_REQUEST = -13,
 
-	LXC_ERROR_PROPERTY_ALREADY_REGISTERED = -14,
-	LXC_ERROR_PROPERTY_NOT_FOUND = -15,
+	LXC_ERROR_ENTITY_ALREADY_REGISTERED = -14,
+	LXC_ERROR_ENTITY_NOT_FOUND = -15,
+
+	LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED = -16,
+
+	LXC_ERROR_TYPE_CONVERSION_NOT_EXISTS = -17,
 
 	LXC_ERROR_ILLEGAL_NAME = -100,
 
-	LXC_ERROR_SIGNAL_ALREADY_REGISTERED = -101,
-	LXC_ERROR_GATE_BY_NAME_ALREADY_REGISTERED = -102,
-	LXC_ERROR_CONSTANT_VALUE_BY_NAME_ALREADY_REGISTERED = -103,
-
-	LXC_ERROR_TYPE_CONVERSION_NOT_EXISTS = -104,
+	LXC_ERROR_ENTITY_NOT_EXISTS = -104,
 
 	LXC_ERROR_TOO_MANY_TYPES = -1024,
 
@@ -235,111 +223,6 @@ enum lxc_errno
 
 
 };
-
-void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue value);
-
-int lxc_wire_gate_input(Signal type, Wire wire, Gate g, uint index);
-
-int lxc_wire_gate_output(Signal type, Wire wire, Gate g, uint index);
-
-Wire lxc_create_wire(Signal type);
-
-/**
- * Wiring function:
- * 	wire_input and wire_output used for binding wires into/from the gate or
- * 	unwire a specified port
- *
- * example code:
- *
- 	int wiring(Gate instance, Signal signal, Wire wire, int index)
- 	{
- 		//is the call legal?
- 		if(NULL == signal && NULL == wire)
- 			return WIRING_ERROR_BAD_CALL;
-
-		if(NULL == signal)
-		{
-			signal = wire->type;
-		}
-		//signal is not null. But if the wire not null it is use the same type?
-		else if(NULL != wire && signal != wire->type)
-		{
-			return WIRING_ERROR_BAD_CALL;
-		}
-
-		if(!is_im_support_this_type_of_signal(signal))
-		{
-			return WIRING_ERROR_TYPE_NOT_SUPPORTED;
-		}
-
-		if(!is_wire_by_type__index_is_in_range(signal, index))
-		{
-			return WIRING_ERROR_PORT_OUT_OF_RANGE;
-		}
-
-		//now user tries to unwire with specified index
-		if(NULL == wire)
-		{
-			if(is_target_wire_NULL(signal, index))
-			{
-				return WIRING_ERROR_PORT_IS_ALREADY_FREE;
-			}
-
-			set_target_wire(signal, index, NULL);
-			return 0;
-		}
-		else
-		{
-			if(!is_target_wire_NULL(signal, index))
-			{
-				return WIRING_ERROR_PORT_IS_IN_USE;
-			}
-
-			set_target_wire(signal, index, wire);
-			return 0;
-		}
-	}
- *
- * */
-
-
-/**
- * destionation arrays:
- * 	functions prototyped like: int function(array** arr, int max_length);
- *	tries to copy the data to the given destination address.
- *
- *	some examples:
- *
- *	every time the item count is 5.
- *
- *	{
- *		struct item* arr[1];
- *		int ret = function(arr, 1);
- *		//ret = -5
- *		//no modification in arr memory region
- *	}
- *
- *	{
- *		struct item* arr[5];
- *		int ret = function(arr, 5);
- *		//ret = 5
- *		//all the data are copied.
- *	}
- *
- *	{
- *		struct item* arr[10];
- *		int ret = function(arr, 10);
- *		//ret = 5
- *		//all data copied and arr is terminated. (arr[6] = NULL)
- *	}
- *
- *	{
- *		int ret = function(NULL, 0);
- *		//ret = -5
- *		//get the size
- *	}
- *
- * */
 
 enum library_operation
 {
@@ -453,11 +336,11 @@ struct lxc_gate_behavior
 	//
 	int (*enumerate_properties)(Gate instance, const char** arr, uint max_length);
 
-	const char* (*get_property_label)(Gate instance, char* property);
+	const char* (*get_property_label)(Gate instance, const char* property);
 
 	const char* (*get_property_description)(Gate instance, char* property);
 
-	int (*get_property_value)(Gate instance, char* property, char* dst, uint max_length);
+	int (*get_property_value)(Gate instance, const char* property, char* dst, uint max_length);
 
 	//returns zero if property successfilly modified, return negative required length if error
 	//buffer is too short to write error description. returns positive value if error ocurred and
@@ -471,12 +354,6 @@ struct lxc_gate_behavior
 
 	//TODO etc data (library, documentation url, graphical symbol (SVG))
 };
-
-LxcValue lxc_get_wire_value(Wire);
-void* lxc_get_value(LxcValue);
-
-
-void lxc_destroy_simple_free(Gate instance);
 
 struct lxc_instance
 {
@@ -501,8 +378,6 @@ struct lxc_constant_value
 	LxcValue value;
 };
 
-
-
 typedef struct circuit* Circuit;
 typedef struct iocircuit* IOCircuit;
 
@@ -514,6 +389,9 @@ struct circuit
 	uint wires_count;
 	Wire* wires;
 };
+
+void lxc_destroy_simple_free(Gate instance);
+void lxc_init_instance(Gate instance, const struct lxc_gate_behavior* behavior);
 
 Circuit lxc_create_circuit();
 int lxc_add_gate_to_circuit(Circuit, Gate);
@@ -535,11 +413,8 @@ struct iocircuit
 IOCircuit lxc_create_iocircuit();
 
 /********************** LOADABLE LIBRARY DEFINITIONS **************************/
-struct loadable_library;
+struct lxc_loadable_library;
 
-void lxc_ll_relay_library_operation(enum library_operation, struct loadable_library*);
-
-//TODO where to belong
 struct detailed_gate_entry
 {
 	const struct lxc_gate_behavior* behavior;
@@ -556,7 +431,7 @@ struct detailed_gate_entry
 };
 
 
-struct loadable_library
+struct lxc_loadable_library
 {
 	int (*library_operation)(enum library_operation, char* error, int max_length);
 

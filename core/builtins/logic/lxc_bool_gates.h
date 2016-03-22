@@ -28,6 +28,6 @@ Signal type_bool;
 LxcValue bool_value_false;
 LxcValue bool_value_true;
 
-extern struct loadable_library logxcontroll_loadable_library_bool;
+extern struct lxc_loadable_library logxcontroll_loadable_library_bool;
 
 #endif /* LXC_BOOL_GATES_H_ */

@@ -124,20 +124,28 @@ void lxc_port_unchecked_add_new_port
 
 	int next_abs;
 
-	for(int i=0;NULL != names[i];++i)
+	if(NULL == names)
 	{
-		if(lxc_port_empty_name == names[i])
-		{
-			next_abs = i;
-			intermediate = true;
-			break;
-		}
+		//fist add
+		next_abs = 0;
 	}
-
-	if(!intermediate)
+	else
 	{
-		//determine the next free absolute index
-		next_abs = array_pnt_population((void**)factory->port_names);
+		for(int i=0;NULL != names[i];++i)
+		{
+			if(lxc_port_empty_name == names[i])
+			{
+				next_abs = i;
+				intermediate = true;
+				break;
+			}
+		}
+
+		if(!intermediate)
+		{
+			//determine the next free absolute index
+			next_abs = array_pnt_population((void**)factory->port_names);
+		}
 	}
 
 	//determine the index of the signal
@@ -149,16 +157,18 @@ void lxc_port_unchecked_add_new_port
 		bool type_replace = false;
 		Signal* mt = factory->managed_types;
 		int* lengths = factory->to_abs_size;
-		for(int i=0;NULL != mt[i] ;++i)
+		if(NULL != mt)
 		{
-			if(0 <= lengths)
+			for(int i=0;NULL != mt[i] ;++i)
 			{
-				type_replace = true;
-				ti = i;
-				break;
+				if(0 <= lengths)
+				{
+					type_replace = true;
+					ti = i;
+					break;
+				}
 			}
 		}
-
 		//if there is no empty managed type
 		//we allocate new place
 		if(!type_replace)
@@ -268,7 +278,7 @@ int lxc_port_get_absindex_by_name(struct lxc_port_manager* fact, char* name)
 {
 	int i=0;
 	const char** arr = fact->port_names;
-	while(NULL != *arr)
+	while(NULL != arr)
 	{
 		//printf("%s\r\n", *arr);
 		if(strcmp(*arr, name) == 0)
@@ -812,7 +822,9 @@ int lxc_add_property
 (
 	struct lxc_property_manager* mngr,
 	const char* name,
+	const char* label,
 	const char* description,
+	const char* default_value,
 	int (*property_operation)(Gate instance, bool direction, void* addr, const char* name, const char* value, char* ret, int max_length)
 )
 {
@@ -821,12 +833,14 @@ int lxc_add_property
 	{
 		for(int i=0;NULL != props[i];++i)
 			if(0 == strcmp(name, props[i]->name))
-				return LXC_ERROR_PROPERTY_ALREADY_REGISTERED;
+				return LXC_ERROR_ENTITY_ALREADY_REGISTERED;
 	}
 
 	struct lxc_property* prop = malloc_zero(sizeof(struct lxc_property));
 	prop->name = name;
+	prop->label = label;
 	prop->description = description;
+	prop->default_value = default_value;
 	prop->property_operation = property_operation;
 
 	array_pnt_append_element((void***) &(mngr->properties), prop);
@@ -897,7 +911,7 @@ static int generic_prop_operation
 	struct lxc_property** props = mngr->properties;
 
 	if(NULL == props)
-		return LXC_ERROR_PROPERTY_NOT_FOUND;
+		return LXC_ERROR_ENTITY_NOT_FOUND;
 
 	for(int i=0;NULL != props[i];++i)
 		if(0 == strcmp(property, props[i]->name))
@@ -907,7 +921,7 @@ static int generic_prop_operation
 			return prop->property_operation(instance, direction, addr, property, value, dst, max_length);
 		}
 
-	return LXC_ERROR_PROPERTY_NOT_FOUND;
+	return LXC_ERROR_ENTITY_NOT_FOUND;
 }
 
 static inline struct lxc_property_manager* get_portb_propb_manager(Gate instance)

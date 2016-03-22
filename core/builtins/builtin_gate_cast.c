@@ -109,6 +109,11 @@ static int cast_validate_propety
 			return 0;
 		}
 
+		if(NULL == *((Signal*)addr))
+		{
+			return safe_strcpy(ret, max_length, "");
+		}
+
 		safe_strcpy(ret, max_length, (char*) (*((Signal*)addr))->name);
 		return 0;
 	}
@@ -234,6 +239,7 @@ void lxc_builtin_cast_init_before_load()
 
 	gate_cast.properties.access_property = cast_access_property;
 	gate_cast.base.base.execute = cast_execute;
+	gate_cast.base.gate_name = "cast to";
 
 	//*ap_addr = ;
 
@@ -241,7 +247,9 @@ void lxc_builtin_cast_init_before_load()
 	(
 		&(gate_cast.properties),
 		"from",
+		"From type",
 		"Cast value type from",
+		"",
 		validate_property_from
 	);
 
@@ -249,7 +257,9 @@ void lxc_builtin_cast_init_before_load()
 	(
 		&(gate_cast.properties),
 		"to",
+		"To type",
 		"Cast value type to",
+		"",
 		validate_property_to
 	);
 }

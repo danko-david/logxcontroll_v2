@@ -20,6 +20,7 @@
 
 
 #include "core/lxc.h"
+#include "core/facet.h"
 #include "core/lxc_base_impl.h"
 #include "core/lxc_execution.h"
 #include "core/accounting.h"
@@ -28,8 +29,20 @@
 #include "core/builtins/logic/lxc_bool_gates.h"
 
 #include "core/utils/utils.h"
+#include "core/utils/rerunnable_thread.h"
+#include "core/utils/worker_pool.h"
+#include "core/debug.h"
 
 void logxcontroll_init_environment();
+
+void logxcontroll_main();
+
+//uncomment if you doesn't want the effect.
+#define DEBUG_FOR_NEGATIVE_REFCOUNT
+
+//TODO only for code build stage purpose;
+extern void (*logxcontroll_after_bootstrapping)(void);
+
 
 /**
  * TODO steps:

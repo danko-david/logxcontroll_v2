@@ -480,7 +480,7 @@ static int library_operation_function(enum library_operation op, char*** errors)
 }
 
 //loadable library definition
-struct loadable_library logxcontroll_loadable_library_bool =
+struct lxc_loadable_library logxcontroll_loadable_library_bool =
 {
 	.library_operation = library_operation_function,
 	.gates = (struct detailed_gate_entry*[])

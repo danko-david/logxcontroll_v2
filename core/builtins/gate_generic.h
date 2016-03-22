@@ -107,12 +107,30 @@ struct lxc_port_registry
 
 struct lxc_generic_portb_instance;
 
+/**
+ * Have to specify/implement:
+ * 	required:
+ * 		.base.gate_name
+ * 		.base.instance_memory_size
+ *		.base.execute
+ *
+ *
+ * 	optionally:
+ * 		.instance_init
+ * 		.instance_destroy
+ *		.base.enumerate_properties
+ *
+ *		.base.get_property_label
+ *		.base.get_property_description
+ *		.base.get_property_value
+ *		.base.set_property
+ *		.base.gatectl
+ * */
 struct lxc_generic_portb_behavior
 {
 	struct lxc_gate_behavior base;
 	const char* gate_name;
 	int instance_memory_size;
-	//struct lxc_generic_instance* (*create_instance)(const struct lxc_generic_behavior*);
 	void (*instance_init)(struct lxc_generic_portb_instance*);
 	void (*instance_destroy)(struct lxc_generic_portb_instance*);
 
@@ -130,46 +148,28 @@ struct lxc_generic_portb_instance
 
 extern const struct lxc_generic_portb_behavior lxc_generic_portb_prototype;
 
-/*
-void lxc_generic_portb_init(struct lxc_generic_portb_instance*);
-
-Gate lxc_generic_portb_gate_create(const struct lxc_generic_portb_behavior*);
-
-void lxc_generic_portb_gate_destroy(Gate);
-
-const char* lxc_generic_get_portb_gate_name(Gate);
-
-int lxc_generic_portb_get_input_types(Gate instance, Signal* arr, uint max_length);
-
-const char* lxc_generic_portb_get_input_label(Gate instance, Signal signal, uint index);
-
-int lxc_generic_portb_get_input_max_index(Gate instance, Signal type);
-
-Wire lxc_generic_portb_get_input_wire(Gate instance, Signal type, uint index);
-
-int lxc_generic_portb_wire_input(Gate instance, Signal signal, Wire wire, uint index);
-
-void lxc_generic_portb_input_value_changed(Gate instance, Signal type, LxcValue value, uint index);
-
-int lxc_generic_portb_get_output_types(Gate instance, Signal* arr, uint max_length);
-
-const char* lxc_generic_portb_get_output_label(Gate instance, Signal signal, uint index);
-
-int lxc_generic_portb_get_output_max_index(Gate instance, Signal type);
-
-Wire lxc_generic_portb_get_output_wire(Gate instance, Signal type, uint index);
-
-int lxc_generic_portb_wire_output(Gate instance, Signal signal, Wire wire, uint index);
-
-const char* lxc_generic_portb_get_gate_name(Gate);
-
-*/
-
-
-
 /********* port definitions In Instance generic gate implementation ***********/
 struct lxc_generic_porti_instance;
 
+/**
+ * Have to specify/implement:
+ * 	required:
+ * 		.base.gate_name
+ * 		.base.instance_memory_size
+ *		.base.execute
+ *
+ *
+ * 	optionally:
+ * 		.instance_init
+ * 		.instance_destroy
+ *		.base.enumerate_properties
+ *
+ *		.base.get_property_label
+ *		.base.get_property_description
+ *		.base.get_property_value
+ *		.base.set_property
+ *		.base.gatectl
+ * */
 struct lxc_generic_porti_behavior
 {
 	struct lxc_gate_behavior base;
@@ -191,41 +191,6 @@ struct lxc_generic_porti_instance
 	Wire* outputs;
 };
 
-/*
-void lxc_generic_porti_init(struct lxc_generic_porti_instance*);
-
-Gate lxc_generic_porti_gate_create(const struct lxc_generic_porti_behavior*);
-
-void lxc_generic_porti_gate_destroy(Gate);
-
-const char* lxc_generic_get_porti_gate_name(Gate);
-
-int lxc_generic_porti_get_input_types(Gate instance, Signal* arr, uint max_length);
-
-const char* lxc_generic_porti_get_input_label(Gate instance, Signal signal, uint index);
-
-int lxc_generic_porti_get_input_max_index(Gate instance, Signal type);
-
-Wire lxc_generic_porti_get_input_wire(Gate instance, Signal type, uint index);
-
-int lxc_generic_porti_wire_input(Gate instance, Signal signal, Wire wire, uint index);
-
-void lxc_generic_porti_input_value_changed(Gate instance, Signal type, LxcValue value, uint index);
-
-int lxc_generic_porti_get_output_types(Gate instance, Signal* arr, uint max_length);
-
-const char* lxc_generic_porti_get_output_label(Gate instance, Signal signal, uint index);
-
-int lxc_generic_porti_get_output_max_index(Gate instance, Signal type);
-
-Wire lxc_generic_porti_get_output_wire(Gate instance, Signal type, uint index);
-
-int lxc_generic_porti_wire_output(Gate instance, Signal signal, Wire wire, uint index);
-
-const char* lxc_generic_porti_get_gate_name(Gate);
-*/
-
-
 /************************** Property Manager **********************************/
 
 struct lxc_property
@@ -233,6 +198,7 @@ struct lxc_property
 	const char* name;
 	const char* label;
 	const char* description;
+	const char* default_value;
 	int (*property_operation)(Gate instance, bool direction, void* addr, const char* name, const char* value, char* ret, int max_length);
 };
 
@@ -245,9 +211,11 @@ struct lxc_property_manager
 
 int lxc_add_property
 (
-	struct lxc_property_manager*,
+	struct lxc_property_manager* mngr,
 	const char* name,
+	const char* label,
 	const char* description,
+	const char* default_value,
 	int (*property_operation)(Gate instance, bool direction, void* addr, const char* name, const char* value, char* ret, int max_length)
 );
 
@@ -258,15 +226,22 @@ struct lxc_generic_portb_propb_behavior
 	struct lxc_property_manager properties;
 };
 
-extern struct lxc_generic_portb_propb_behavior lxc_generic_portb_propb_prototype;
+/**
+ * Have to specify/implement:
+ * 	required:
+ 		.base.gate_name
+ 		.base.instance_memory_size
+		.base.execute
+		.properties.access_property
 
-/*
-int generic_portb_propb_enumerate_properties(Gate instance, const char** arr, uint max_index);
-const char* generic_portb_propb_get_property_label(Gate instance, char* property);
-const char* generic_portb_propb_get_property_description(Gate instance, char* property);
-int generic_portb_propb_get_property_value(Gate instance, char* property, char* dst, uint max_length);
-int generic_portb_propb_set_property(Gate instance, char* property, char* value, char* err, uint max_length);
-*/
+ * 	optionally:
+ 		.instance_init
+ 		.instance_destroy
+		.base.gatectl
+		.properties.notify_property_changed
+ *
+ * */
+extern struct lxc_generic_portb_propb_behavior lxc_generic_portb_propb_prototype;
 
 struct lxc_generic_porti_propb_behavior
 {

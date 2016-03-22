@@ -20,14 +20,7 @@ Task lxc_create_task(Gate instance, LxcValue value, int index)
 	//and thing get smarter with the other part:
 	//lxc_execute_task automatically execute and releases
 	//value if no more reference.
-	if(NULL != value)
-	{
-		const struct lxc_value_operation* ops = value->operations;
-		if(NULL != ops && NULL != ops->reference)
-		{
-			ops->reference(value);
-		}
-	}
+	lxc_reference_value(value);
 	return ret;
 }
 
@@ -43,12 +36,5 @@ void lxc_execute_task(Task task)
 		task->index
 	);
 
-	if(NULL != value)
-	{
-		struct lxc_value_operation* ops = value->operations;
-		if(NULL != ops && NULL != ops->reference)
-		{
-			ops->unreference(value);
-		}
-	}
+	lxc_unreference_value(value);
 }

@@ -6,7 +6,6 @@
  */
 
 #include "core/logxcontroll.h"
-#include "core/accounting.h"
 
 Signal* REGISTERED_SIGNALS = NULL;
 struct library_tree_node** ROOT_NODES = NULL;
@@ -17,7 +16,7 @@ int lxc_register_gate(struct detailed_gate_entry* entry)
 {
 	struct detailed_gate_entry* in = get_gate_entry_by_name(entry->generic_name);
 	if(NULL != in)
-		return LXC_ERROR_GATE_BY_NAME_ALREADY_REGISTERED;
+		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
 
 	array_pnt_append_element((void***) &REGISTERED_BEHAVIORS, (void*) entry);
 
@@ -34,34 +33,7 @@ int lxc_register_gate(struct detailed_gate_entry* entry)
 	return 0;
 }
 
-Gate lxc_new_instance_by_name(const char* name)
-{
-	struct detailed_gate_entry* ent = get_gate_entry_by_name(name);
-	if(NULL == ent)
-		return NULL;
-
-	struct lxc_gate_behavior* behavior = ent->behavior;
-	if(NULL == behavior)
-		return NULL;
-
-	return behavior->create(behavior);
-}
-
-LxcValue lxc_get_constant_by_name(char* name)
-{
-	if(NULL == REGISTERED_CONSTANT_VALUES)
-		return NULL;
-
-	for(int i=0;NULL != REGISTERED_CONSTANT_VALUES[i];++i)
-	{
-		if(0 == strcmp(name,REGISTERED_CONSTANT_VALUES[i]->name))
-			return REGISTERED_CONSTANT_VALUES[i]->value;
-	}
-
-	return NULL;
-}
-
-int lxc_load_library(const struct loadable_library* lib, char* error, int max_length)
+int lxc_load_library(const struct lxc_loadable_library* lib, char* error, int max_length)
 {
 	if(NULL == lib)
 	{
@@ -158,7 +130,7 @@ int lxc_register_constant_value(struct lxc_constant_value* val)
 		for(int i=0;NULL != REGISTERED_CONSTANT_VALUES[i];++i)
 			if(0 == strcmp(val->name, REGISTERED_CONSTANT_VALUES[i]->name))
 			{
-				return LXC_ERROR_CONSTANT_VALUE_BY_NAME_ALREADY_REGISTERED;
+				return LXC_ERROR_ENTITY_ALREADY_REGISTERED;
 			}
 	}
 
@@ -334,25 +306,23 @@ int lxc_register_signal(Signal signal)
 {
 	Signal in = lxc_get_signal_by_name(signal->name);
 	if(NULL != in)
-		return LXC_ERROR_SIGNAL_ALREADY_REGISTERED;
+		return LXC_ERROR_ENTITY_ALREADY_REGISTERED;
 
 	array_pnt_append_element((void***)&REGISTERED_SIGNALS, (void*) signal);
 	return 0;
 }
 
-Signal lxc_get_signal_by_name(const char* str)
+
+int lxc_register_conversion_function(Signal from, Signal to, LxcValue (*function)(LxcValue))
 {
-	if(NULL == REGISTERED_SIGNALS)
-		return NULL;
+	void* funct = lxc_get_conversion_function(from, to);
+	if(NULL != funct)
+		return LXC_ERROR_ENTITY_ALREADY_REGISTERED;
 
-	for(int i=0;NULL != REGISTERED_SIGNALS[i];++i)
-	{
-		if(0 == strcmp(str,REGISTERED_SIGNALS[i]->name))
-			return REGISTERED_SIGNALS[i];
-	}
 
-	return NULL;
+	return 0;
 }
+
 
 LxcValue (*lxc_get_conversion_function(Signal from, Signal to))(LxcValue)
 {
@@ -406,7 +376,7 @@ int lxc_load_shared_library(const char* so_file, char* error, int maxlength)
 		return LXC_ERROR_LIBRARY_SO_CANT_OPEN;
 	}
 
-	struct loadable_library* lib = dlsym(handle, "logxcontroll_loadable_library");
+	struct lxc_loadable_library* lib = dlsym(handle, "logxcontroll_loadable_library");
 	if(NULL == lib)
 	{
 		safe_strcpy(error, maxlength, dlerror());

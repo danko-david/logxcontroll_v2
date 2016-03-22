@@ -23,22 +23,26 @@
  * Builtin fuction used for search signals. It's also essential for library
  * */
 extern Signal* REGISTERED_SIGNALS;
+extern struct lxc_constant_value** REGISTERED_CONSTANT_VALUES;
 
 int lxc_register_signal(Signal);
-Signal lxc_get_signal_by_name(const char*);
 
 extern struct detailed_gate_entry** REGISTERED_BEHAVIORS;
 //TODO constant pool
-LxcValue lxc_get_constant_by_name(char* name);
+
 struct library_tree_node* get_or_create_library_path(const char** path);
 
-int lxc_load_library(const struct loadable_library* lib, char* error, int max_length);
+int lxc_load_library(const struct lxc_loadable_library* lib, char* error, int max_length);
 int lxc_register_gate(struct detailed_gate_entry* entry);
 struct detailed_gate_entry* get_gate_entry_by_name(const char* name);
 
-Gate lxc_new_instance_by_name(const char* name);
 
-void dbg_print_library_tree(bool leafs);
+
+
+LxcValue (*lxc_get_conversion_function(Signal from, Signal to))(LxcValue);
+int lxc_register_conversion_function(Signal from, Signal to, LxcValue (*function)(LxcValue));
+
+
 /*
  *
  *

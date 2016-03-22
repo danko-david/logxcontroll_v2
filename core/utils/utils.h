@@ -123,6 +123,7 @@ void array_pnt_dbg_printf_char_array(void** array, char* array_name);
 
 int safe_strcpy(char* dst, int max_length, char* src);
 
+int gnu_libc_backtrace_symbol(void* addr, char* ret_str, size_t max_length);
 
 
 
@@ -133,6 +134,32 @@ struct key_value
 	void* key;
 	void* value;
 };
+
+struct queue_element
+{
+	struct queue_element* prev;
+	struct queue_element* next;
+};
+
+void queue_add_element
+(
+	struct queue_element** head,
+	struct queue_element* elem,
+	struct queue_element** tail
+);
+
+struct queue_element* queue_pop_tail_element
+(
+	struct queue_element** head,
+	struct queue_element** tail
+);
+
+void queue_pop_intermediate_element
+(
+	struct queue_element** head,
+	struct queue_element* intermediate,
+	struct queue_element** tail
+);
 
 //TODO add map element
 //TODO remove map element

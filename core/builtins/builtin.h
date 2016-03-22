@@ -60,6 +60,15 @@
  *
  * */
 
+extern const struct lxc_signal_type lxc_signal_bool;
+extern const struct lxc_signal_type lxc_signal_byte;
+extern const struct lxc_signal_type lxc_signal_short;
+extern const struct lxc_signal_type lxc_signal_int;
+extern const struct lxc_signal_type lxc_signal_float;
+extern const struct lxc_signal_type lxc_signal_long;
+extern const struct lxc_signal_type lxc_signal_double;
+extern const struct lxc_signal_type lxc_signal_data;
+
 struct lxc_primitive_value
 {
 	struct lxc_value base;
@@ -81,28 +90,11 @@ struct lxc_primitive_value
 extern const struct lxc_value_operation primitive_constant_value_operations;
 extern const struct lxc_value_operation primitive_variable_value_operations;
 
-LxcValue lxc_create_primitive_value(Signal type);
-
-void lxc_free_primitive_value(LxcValue value);
-
-LxcValue lxc_clone_primitive_value(LxcValue value);
-
-size_t lxc_size_primitive_value(/*LxcValue value*/);
-
-int lxc_reference_primitive_value(LxcValue val);
-
-int lxc_unreference_primitive_value(LxcValue val);
-
-void* lxc_data_address_primitive_value(LxcValue val);
-
 #include "core/lxc.h"
 #include "core/lxc_base_impl.h"
 
 
-void lxc_init_instance(Gate instance, const struct lxc_gate_behavior* behavior);
-
-
-extern const struct loadable_library logxcontroll_loadable_library_builtin;
+extern const struct lxc_loadable_library logxcontroll_loadable_library_builtin;
 
 /**************************** Built in gates **********************************/
 

@@ -97,24 +97,21 @@ void test_path()
 
 void test_cast()
 {
-	Gate cast = lxc_new_instance_by_name("cast to");
+	Gate gate = lxc_new_instance_by_name("cast to");
 
-	char*** arr = malloc(sizeof(void*));
-	arr[0] = NULL;
+	if(NULL == gate)
+	{
+		printf("Gate instance is null\n");
+		return;
+	}
 
-	array_pnt_append_element(arr, malloc(20));
-	array_pnt_append_element(arr, malloc(20));
-	array_pnt_append_element(arr, malloc(20));
-	array_pnt_append_element(arr, malloc(20));
+	lxc_dbg_print_properties(gate);
 
-	int ret = cast->behavior->enumerate_properties(cast, *arr, 4);
+	char err[120];
 
-	printf("ret: %d\n", ret);
+	lxc_set_property_value(gate, "from", "int", err, sizeof(err));
 
-	char** a = *arr;
-
-	for(int i=0;NULL != a[i];++i)
-		printf("%s\n", a[i]);
+	lxc_dbg_print_properties(gate);
 }
 
 void init_env()
@@ -122,6 +119,27 @@ void init_env()
 	logxcontroll_init_environment();
 	printf("library initialized\n");
 	dbg_print_library_tree(true);
+}
+
+void startn(int n);
+
+void print_num_wait(int n)
+{
+	printf("Print: %d\n",n);
+	fsync(1);
+	sleep(2);
+	lxc_submit_asyncron_task(startn, n);
+}
+
+void startn(int n)
+{
+	lxc_submit_asyncron_task(print_num_wait, n);
+}
+
+void test()
+{
+	for(int i=0;i<10;++i)
+		startn(i);
 }
 
 
@@ -132,12 +150,14 @@ int main(/*int dfgsdfg, char** argv*/)
 		printf("Can't register print_stack_trace crash handler\n!");
 	}
 
-	init_env();
+	logxcontroll_after_bootstrapping = test_cast;
 
-	test_cast();
+	logxcontroll_main();
+
+	//test_cast();
 	//test_path();
 
-	exit(0);
+	//exit(0);
 /*	struct dyn_size* st = malloc(sizeof(struct dyn_size)+20);
 
 	strcpy(st->data, "cucc");
