@@ -379,11 +379,6 @@ int lxc_generic_get_type_max_index(struct lxc_port_manager* fact, Signal type)
 
 /********* port definitions In Behavior generic gate implementation ***********/
 
-static const char* lxc_generic_get_portb_gate_name(Gate instance)
-{
-	return ((struct lxc_generic_portb_behavior*)(instance->behavior))->gate_name;
-}
-
 static void lxc_generic_portb_init(struct lxc_generic_portb_instance* instance)
 {
 	int insize =	array_pnt_population
@@ -572,7 +567,6 @@ static int lxc_generic_portb_wire_output(Gate instance, Signal type, Wire wire, 
 
 const struct lxc_generic_portb_behavior lxc_generic_portb_prototype =
 {
-	.base.get_gate_name = lxc_generic_get_portb_gate_name,
 	.base.create = lxc_generic_portb_gate_create,
 	.base.destroy = lxc_generic_portb_gate_destroy,
 	.base.get_input_types = lxc_generic_portb_get_input_types,
@@ -602,11 +596,6 @@ const struct lxc_generic_portb_behavior lxc_generic_portb_prototype =
 
 
 /********* port definitions In Instance generic gate implementation ***********/
-
-static const char* lxc_generic_porti_get_gate_name(Gate instance)
-{
-	return ((struct lxc_generic_porti_behavior*)(instance->behavior))->gate_name;
-}
 
 static void lxc_generic_porti_init(struct lxc_generic_porti_instance* instance)
 {
@@ -796,7 +785,6 @@ static int lxc_generic_porti_wire_output(Gate instance, Signal type, Wire wire, 
 
 const struct lxc_generic_porti_behavior lxc_generic_porti_prototype =
 {
-	.base.get_gate_name = lxc_generic_porti_get_gate_name,
 	.base.create = lxc_generic_porti_gate_create,
 	.base.destroy = lxc_generic_porti_gate_destroy,
 	.base.get_input_types = lxc_generic_porti_get_input_types,

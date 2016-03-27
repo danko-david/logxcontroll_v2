@@ -13,7 +13,6 @@
 struct lxc_bool_gate_behavior
 {
 	const struct lxc_gate_behavior base;
-	const char* name;
 	bool (*logic_function)(Gate);
 };
 
@@ -23,10 +22,6 @@ struct lxc_bool_instance
 	Wire inputs[21];
 	Wire output;
 };
-
-Signal type_bool;
-LxcValue bool_value_false;
-LxcValue bool_value_true;
 
 extern struct lxc_loadable_library logxcontroll_loadable_library_bool;
 

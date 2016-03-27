@@ -69,6 +69,10 @@ extern const struct lxc_signal_type lxc_signal_long;
 extern const struct lxc_signal_type lxc_signal_double;
 extern const struct lxc_signal_type lxc_signal_data;
 
+extern const struct lxc_constant_value lxc_bool_constant_value_true;
+
+extern const struct lxc_constant_value lxc_bool_constant_value_false;
+
 struct lxc_primitive_value
 {
 	struct lxc_value base;
@@ -103,7 +107,7 @@ extern const char*** lxc_built_in_path_value_propagation;
 
 //cast
 
-extern struct detailed_gate_entry lxc_built_in_gate_cast;
+extern struct lxc_gate_behavior lxc_built_in_gate_cast;
 void lxc_builtin_cast_init_before_load();
 
 #endif /* BUILTIN_H_ */

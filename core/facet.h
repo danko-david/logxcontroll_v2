@@ -19,6 +19,8 @@ int lxc_reference_value(LxcValue value);
 //and current reference count returned.
 int lxc_unference_value(LxcValue value);
 
+int lxc_refdiff_value(LxcValue value, int count);
+
 
 LxcValue lxc_get_wire_value(Wire);
 
@@ -31,7 +33,7 @@ void* lxc_get_value(LxcValue);
 LxcValue lxc_create_generic_value(Signal, size_t);
 
 
-LxcValue lxc_get_constant_by_name(char* name);
+LxcValue lxc_get_constant_by_name(const char* name);
 
 /******************** Signal ASSOCIATED FACET FUNCTION ************************/
 
@@ -57,6 +59,10 @@ int lxc_get_gate_input_types(Gate, Signal*, int max_length);
 
 int lxc_get_gate_output_types(Gate, Signal*, int max_length);
 
+const char* lxc_get_input_label(Gate gate, Signal type, uint index);
+
+const char* lxc_get_output_label(Gate gate, Signal type, uint index);
+
 
 int lxc_get_input_labels(Gate, const char**, int max_length);
 
@@ -64,11 +70,13 @@ int lxc_get_output_labels(Gate, const char**, int max_length);
 
 int lxc_enumerate_properties(Gate, const char**, int max_length);
 
+const char* lxc_get_property_description(Gate gate, const char* property);
+
 const char* lxc_get_property_label(Gate, const char*);
 
 int lxc_get_property_value(Gate, const char*, char*,int);
 
-int lxc_set_property_value(Gate, const char*, char*, char*, uint);
+int lxc_set_property_value(Gate, const char*, const char*, char*, uint);
 
 
 /*********************** .......... ASSOCIATED FACET FUNCTION *****************/

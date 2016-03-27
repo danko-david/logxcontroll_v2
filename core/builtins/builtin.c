@@ -190,7 +190,7 @@ const struct lxc_loadable_library logxcontroll_loadable_library_builtin =
 	.library_operation = library_load,
 	.gates = (struct detailed_gate_entry*[])
 	{
-		&lxc_built_in_gate_cast,
+		//&lxc_built_in_gate_cast,
 		//&detailed_const,
 
 

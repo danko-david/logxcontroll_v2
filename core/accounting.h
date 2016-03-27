@@ -27,14 +27,14 @@ extern struct lxc_constant_value** REGISTERED_CONSTANT_VALUES;
 
 int lxc_register_signal(Signal);
 
-extern struct detailed_gate_entry** REGISTERED_BEHAVIORS;
+extern struct lxc_gate_behavior** REGISTERED_BEHAVIORS;
 //TODO constant pool
 
 struct library_tree_node* get_or_create_library_path(const char** path);
 
-int lxc_load_library(const struct lxc_loadable_library* lib, char* error, int max_length);
-int lxc_register_gate(struct detailed_gate_entry* entry);
-struct detailed_gate_entry* get_gate_entry_by_name(const char* name);
+int lxc_load_library(const struct lxc_loadable_library* lib, const char** error, int max_length);
+int lxc_register_gate(struct lxc_gate_behavior* entry);
+struct lxc_gate_behavior* get_gate_entry_by_name(const char* name);
 
 
 
@@ -61,7 +61,7 @@ struct lxc_lib
 };
 
 
-int lxc_load_shared_library(const char* so_file, char* error, int maxlength);
+int lxc_load_shared_library(const char* so_file, const char* error, int maxlength);
 
 
 /***************************/
@@ -71,7 +71,7 @@ struct library_tree_node
 	const char* name;
 
 	//array_pnt of gate behaviors;
-	struct detailed_gate_entry** gates;
+	struct lxc_gate_behavior** gates;
 
 	//array_pnt of more node;
 	struct library_tree_node** subnodes;

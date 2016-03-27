@@ -20,12 +20,6 @@ struct lxc_cast_instance
 
 static struct lxc_generic_porti_propb_behavior gate_cast;
 
-struct detailed_gate_entry lxc_built_in_gate_cast =
-{
-	.behavior = &(gate_cast.base),
-	.generic_name = "cast to",
-};
-
 static void* cast_access_property(Gate instance, const char* property)
 {
 	struct lxc_cast_instance* gate = (struct lxc_cast_instance*) instance;
@@ -232,14 +226,14 @@ void lxc_builtin_cast_init_before_load()
 	);
 
 	gate_cast.base.instance_memory_size = sizeof(struct lxc_cast_instance);
-	lxc_built_in_gate_cast.paths = lxc_built_in_path_type,
+//	lxc_built_in_gate_cast.paths = lxc_built_in_path_type,
 
 	//yes we discard const
 	//void* (**ap_addr)(Gate, const char*) = &();
 
 	gate_cast.properties.access_property = cast_access_property;
 	gate_cast.base.base.execute = cast_execute;
-	gate_cast.base.gate_name = "cast to";
+	gate_cast.base.base.gate_name = "cast to";
 
 	//*ap_addr = ;
 

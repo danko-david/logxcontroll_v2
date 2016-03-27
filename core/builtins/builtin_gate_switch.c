@@ -514,7 +514,7 @@ int switch_gatectl(Gate instance, unsigned long request, struct switchctl* ctl)
 
 const struct lxc_gate_behavior builtin_gate_switch =
 {
-	.get_gate_name = switch_gate_name,
+	.gate_name = "switch",
 	.create = create_switch_gate,
 	.destroy = switch_gate_destroy,
 	.get_input_types = switch_get_input_types,

@@ -396,23 +396,16 @@ void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue val
 
 int lxc_reference_value(LxcValue value)
 {
-	if(NULL == value)
-	{
-		return 0;
-	}
-
-	int (*op)(LxcValue, int) = value->operations->ref_diff;
-	if(NULL != op)
-	{
-		return op(value, 1);
-	}
-
-	//not a reference counted type
-	return 1;
+	return lxc_refdiff_value(value, 1);
 }
 
 
 int lxc_unreference_value(LxcValue value)
+{
+	return lxc_refdiff_value(value, -1);
+}
+
+int lxc_refdiff_value(LxcValue value, int count)
 {
 	if(NULL == value)
 	{
@@ -422,7 +415,7 @@ int lxc_unreference_value(LxcValue value)
 	int (*op)(LxcValue, int) = value->operations->ref_diff;
 	if(NULL != op)
 	{
-		int ret = op(value, 1);
+		int ret = op(value, count);
 
 #ifdef DEBUG_FOR_NEGATIVE_REFCOUNT
 		if(ret < 0)
@@ -446,7 +439,7 @@ int lxc_unreference_value(LxcValue value)
 	}
 
 
-	return 1;
+	return 1024;
 }
 
 
@@ -472,7 +465,7 @@ const char* lxc_get_gate_name(Gate gate)
 		return NULL;
 	}
 
-	return gate->behavior->get_gate_name(gate);
+	return gate->behavior->gate_name;
 }
 
 
@@ -549,80 +542,80 @@ static int get_labels
 	const char* (*get_label)(Gate instance, Signal signal, uint index)
 )
 {
-	if(NULL == gate)
+	//assert has enough place for all port name
+	Signal sigs[LXC_GATE_MAX_IO_TYPE_COUNT];
+
+	if(NULL == get_types)
+	{
+		return 0;
+	}
+
+	int len =	get_types
+				(
+					gate,
+					sigs,
+					LXC_GATE_MAX_IO_TYPE_COUNT
+				);
+
+	if(0 == len)
+	{
+		return 0;
+	}
+	else if(len < 0)
+	{
+		return LXC_ERROR_TOO_MANY_TYPES;
+	}
+
+	int req_length = 0;
+
+	for(int i=0;i < len;++i)
+	{
+		int req = get_max_index(gate, sigs[i]);
+		if(req > 0)
 		{
-			return 0;
+			req_length += req;
+		}
+	}
+
+	if(max_length <= req_length)
+	{
+		return -req_length;
+	}
+
+	int sum = 0;
+
+	for(int i=0;i < len;++i)
+	{
+		int req = get_max_index(gate, sigs[i]);
+
+		if(req <= 0)
+		{
+			continue;
 		}
 
-		//assert has enough place for all port name
-		Signal sigs[LXC_GATE_MAX_IO_TYPE_COUNT];
+		sum += fill_labels
+		(
+			gate,
+			sigs[i],
+			req,
+			get_label,
+			arr,
+			sum,
+			max_length
+		);
+	}
 
-		if(NULL == get_types)
-		{
-			return 0;
-		}
-
-		int len =	get_types
-					(
-						gate,
-						sigs,
-						LXC_GATE_MAX_IO_TYPE_COUNT
-					);
-
-		if(0 == len)
-		{
-			return 0;
-		}
-		else if(len < 0)
-		{
-			return LXC_ERROR_TOO_MANY_TYPES;
-		}
-
-		int req_length = 0;
-
-		for(int i=0;i < len;++i)
-		{
-			int req = get_max_index(gate, sigs[i]);
-			if(req > 0)
-			{
-				req_length += req;
-			}
-		}
-
-		if(max_length <= req_length)
-		{
-			return -req_length;
-		}
-
-		int sum = 0;
-
-		for(int i=0;i < len;++i)
-		{
-			int req = get_max_index(gate, sigs[i]);
-
-			if(req <= 0)
-			{
-				continue;
-			}
-
-			sum += fill_labels
-			(
-				gate,
-				sigs[i],
-				req,
-				get_label,
-				arr,
-				sum,
-				max_length
-			);
-		}
-
-		return sum;
+	return sum;
 }
 
 
 int lxc_get_input_labels(Gate gate, const char** arr, int max_length)
 {
+	if(NULL == gate)
+	{
+		return 0;
+	}
+
 	return get_labels
 	(
 		gate,
@@ -637,6 +630,11 @@ int lxc_get_input_labels(Gate gate, const char** arr, int max_length)
 
 int lxc_get_output_labels(Gate gate, const char** arr, int max_length)
 {
+	if(NULL == gate)
+	{
+		return 0;
+	}
+
 	return get_labels
 	(
 		gate,
@@ -646,6 +644,54 @@ int lxc_get_output_labels(Gate gate, const char** arr, int max_length)
 		gate->behavior->get_output_max_index,
 		gate->behavior->get_output_label
 	);
+}
+
+static const char* get_io_label
+(
+	Gate gate,
+	Signal type,
+	uint index,
+	const char* (*get_label)(Gate instance, Signal signal, uint index)
+)
+{
+	if(NULL == type || NULL == get_label)
+	{
+		return NULL;
+	}
+
+	return get_label(gate, type, index);
+}
+
+
+const char* lxc_get_input_label(Gate gate, Signal type, uint index)
+{
+	if(NULL == gate)
+	{
+		return 0;
+	}
+
+	return	get_io_label
+			(
+				gate,
+				type,
+				index,
+				gate->behavior->get_input_label
+			);
+}
+
+const char* lxc_get_property_description(Gate gate, const char* property)
+{
+	if(NULL == gate || NULL == property)
+	{
+		return NULL;
+	}
+
+	if(NULL != gate->behavior->get_property_description)
+	{
+		return gate->behavior->get_property_description(gate, property);
+	}
+
+	return NULL;
 }
 
 
@@ -673,7 +719,7 @@ int lxc_set_property_value
 (
 	Gate gate,
 	const char* property,
-	char* value,
+	const char* value,
 	char* error,
 	uint max_len
 )
@@ -683,7 +729,7 @@ int lxc_set_property_value
 		goto error;
 	}
 
-	int (*set_property)(Gate, char*, char*, char*, uint) =
+	int (*set_property)(Gate, const char*, char*, char*, uint) =
 		gate->behavior->set_property;
 
 	if(NULL != set_property)
@@ -738,11 +784,7 @@ int lxc_get_property_value(Gate gate, const char* prop, char* ret, int max)
 
 Gate lxc_new_instance_by_name(const char* name)
 {
-	struct detailed_gate_entry* ent = get_gate_entry_by_name(name);
-	if(NULL == ent)
-		return NULL;
-
-	const struct lxc_gate_behavior* behavior = ent->behavior;
+	const struct lxc_gate_behavior* behavior = get_gate_entry_by_name(name);
 	if(NULL == behavior)
 		return NULL;
 
@@ -750,7 +792,7 @@ Gate lxc_new_instance_by_name(const char* name)
 }
 
 
-LxcValue lxc_get_constant_by_name(char* name)
+LxcValue lxc_get_constant_by_name(const char* name)
 {
 	if(NULL == REGISTERED_CONSTANT_VALUES)
 		return NULL;

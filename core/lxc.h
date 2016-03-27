@@ -252,7 +252,7 @@ enum library_operation
 struct lxc_gate_behavior
 {
 	//returns the gate name like: nand, nor, struct, ao_out, v4l_input etc.
-	const char* (*get_gate_name)(Gate);
+	const char* gate_name;
 
 	Gate (*create)(const struct lxc_gate_behavior* this_behavoir);
 
@@ -338,14 +338,14 @@ struct lxc_gate_behavior
 
 	const char* (*get_property_label)(Gate instance, const char* property);
 
-	const char* (*get_property_description)(Gate instance, char* property);
+	const char* (*get_property_description)(Gate instance, const char* property);
 
 	int (*get_property_value)(Gate instance, const char* property, char* dst, uint max_length);
 
 	//returns zero if property successfilly modified, return negative required length if error
 	//buffer is too short to write error description. returns positive value if error ocurred and
 	//error description successfully written back.
-	int (*set_property)(Gate instance, char* property, char* value, char* err, uint max_length);
+	int (*set_property)(Gate instance, const char* property, char* value, char* err, uint max_length);
 
 	//functionality like ioctl
 	int (*gatectl)(Gate instance, unsigned long request, ...);
@@ -353,6 +353,23 @@ struct lxc_gate_behavior
 	//TODO save/restore with DataReprez
 
 	//TODO etc data (library, documentation url, graphical symbol (SVG))
+
+	int (*library_operation)(enum library_operation, char** errors, int errors_max_length);
+
+	//array_pnt library paths path1, path2, NULL,
+	const char*** paths;
+
+
+
+	//source/doc
+	//graphical symbol
+	//gatectl / property utility
+	//
+
+
+
+
+
 };
 
 struct lxc_instance
@@ -415,31 +432,16 @@ IOCircuit lxc_create_iocircuit();
 /********************** LOADABLE LIBRARY DEFINITIONS **************************/
 struct lxc_loadable_library;
 
-struct detailed_gate_entry
-{
-	const struct lxc_gate_behavior* behavior;
-
-	const char* generic_name;
-
-	//array_pnt library paths path1, path2, NULL,
-	const char*** paths;
-
-	//source/doc
-	//graphical symbol
-	//gatectl / property utility
-	//
-};
-
 
 struct lxc_loadable_library
 {
-	int (*library_operation)(enum library_operation, char* error, int max_length);
+	int (*library_operation)(enum library_operation, const char** error, int max_length);
 
 	//NULL terminated array (array_pnt)
-	struct detailed_gate_entry** gates;
+	struct lxc_gate_behavior** gates;
 	//Signals used by the library
 	Signal* signals;
-	struct lxc_constant_value* constants;
+	struct lxc_constant_value** constants;
 
 	//TODO struct types
 

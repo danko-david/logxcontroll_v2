@@ -9,12 +9,12 @@
 
 Signal* REGISTERED_SIGNALS = NULL;
 struct library_tree_node** ROOT_NODES = NULL;
-struct detailed_gate_entry** REGISTERED_BEHAVIORS = NULL;
+struct lxc_gate_behavior** REGISTERED_BEHAVIORS = NULL;
 struct lxc_constant_value** REGISTERED_CONSTANT_VALUES;
 
-int lxc_register_gate(struct detailed_gate_entry* entry)
+int lxc_register_gate(struct lxc_gate_behavior* entry)
 {
-	struct detailed_gate_entry* in = get_gate_entry_by_name(entry->generic_name);
+	struct lxc_gate_behavior* in = get_gate_entry_by_name(entry->gate_name);
 	if(NULL != in)
 		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
 
@@ -33,29 +33,29 @@ int lxc_register_gate(struct detailed_gate_entry* entry)
 	return 0;
 }
 
-int lxc_load_library(const struct lxc_loadable_library* lib, char* error, int max_length)
+int lxc_load_library(const struct lxc_loadable_library* lib, const char** errors, int maxlength)
 {
 	if(NULL == lib)
 	{
-		safe_strcpy(error, max_length, "Library reference is NULL.");
+		array_fix_try_add_last_null(errors, maxlength, "Library reference is NULL.");
 		return LXC_ERROR_BAD_CALL;
 	}
 
-	int (*libop)(enum library_operation, char*, int) = lib->library_operation;
+	int (*libop)(enum library_operation, const char**, int) = lib->library_operation;
 
 	if(NULL != libop)
 	{
-		int ret = libop(library_before_load, error, max_length);
+		int ret = libop(library_before_load, errors, maxlength);
 		if(0 != ret)
 		{
-			int un = libop(library_unload_caused_before_load_error, error, max_length);
+			int un = libop(library_unload_caused_before_load_error, errors, maxlength);
 			return 0 != un?un:ret;
 		}
 		//successfull library preload
 	}
 
 	//load signals and gate behaviors
-	struct detailed_gate_entry** gates = lib->gates;
+	struct lxc_gate_behavior** gates = lib->gates;
 	if(NULL != gates)
 	{
 		for(int i=0;NULL != gates[i];++i)
@@ -63,11 +63,8 @@ int lxc_load_library(const struct lxc_loadable_library* lib, char* error, int ma
 			int ret = lxc_register_gate(gates[i]);
 			if(0 != ret)
 			{
-				char* re = render_string(200, "Gate named `%s` already registered.", gates[i]->generic_name);
-				safe_strcpy(error, max_length, re);
-				free(re);
-				//TODO unregister gates, then unload
-				return ret;
+				array_fix_try_add_last_null(errors, maxlength, "Gate already registered.");
+				array_fix_try_add_last_null(errors, maxlength, gates[i]->gate_name);
 			}
 		}
 	}
@@ -80,9 +77,8 @@ int lxc_load_library(const struct lxc_loadable_library* lib, char* error, int ma
 			int ret = lxc_register_signal(sigs[i]);
 			if(0 != ret)
 			{
-				char* re = render_string(200, "Signal named `%s` already registered.", sigs[i]->name);
-				safe_strcpy(error, max_length, re);
-				free(re);
+				array_fix_try_add_last_null(errors, maxlength, "Signal already registered.");
+								array_fix_try_add_last_null(errors, maxlength, sigs[i]->name);
 				//TODO unregister then unload
 				return ret;
 			}
@@ -98,18 +94,15 @@ int lxc_load_library(const struct lxc_loadable_library* lib, char* error, int ma
 			int ret = lxc_register_constant_value(consts[i]);
 			if(0 != ret)
 			{
-				char* re = render_string(200, "Constant value named `%s` already registered.", consts[i]->name);
-				safe_strcpy(error, max_length, re);
-				free(re);
-				//TODO unregister then unload
-				return ret;
+				array_fix_try_add_last_null(errors, maxlength, "Constant already registered.");
+				array_fix_try_add_last_null(errors, maxlength, consts[i]->name);
 			}
 		}
 	}
 
 	if(NULL != libop)
 	{
-		int ret = libop(library_after_loaded, error, max_length);
+		int ret = libop(library_after_loaded, errors, maxlength);
 		if(0 != ret)
 		{
 			//unload all
@@ -239,7 +232,7 @@ void dbg_print_leafs(struct library_tree_node* node, int lvl)
 	if(NULL == node)
 		return;
 
-	struct detailed_gate_entry** ent = node->gates;
+	struct lxc_gate_behavior** ent = node->gates;
 
 	if(NULL == ent)
 		return;
@@ -249,7 +242,7 @@ void dbg_print_leafs(struct library_tree_node* node, int lvl)
 		for(int i=0;i<lvl;++i)
 			printf("\t");
 
-		printf("`%s`\n", ent[g]->generic_name, ent[g]->generic_name);
+		printf("`%s`\n", ent[g]->gate_name, ent[g]->gate_name);
 	}
 }
 
@@ -290,13 +283,13 @@ void dbg_print_library_tree(bool leafs)
 	dbg_recursive_print_library_tree(ROOT_NODES, 0, leafs);
 }
 
-struct detailed_gate_entry* get_gate_entry_by_name(const char* name)
+struct lxc_gate_behavior* get_gate_entry_by_name(const char* name)
 {
 	if(NULL == REGISTERED_BEHAVIORS)
 		return NULL;
 
 	for(int i=0;NULL != REGISTERED_BEHAVIORS[i];++i)
-		if(0 == strcmp(name, REGISTERED_BEHAVIORS[i]->generic_name))
+		if(0 == strcmp(name, REGISTERED_BEHAVIORS[i]->gate_name))
 			return REGISTERED_BEHAVIORS[i];
 
 	return NULL;
@@ -319,6 +312,7 @@ int lxc_register_conversion_function(Signal from, Signal to, LxcValue (*function
 	if(NULL != funct)
 		return LXC_ERROR_ENTITY_ALREADY_REGISTERED;
 
+	array_pnt_append_element((void*)&(from->cast_to), (void*) function);
 
 	return 0;
 }
@@ -367,26 +361,25 @@ Workspace get_bootstrapping_workspace()
 	return BOOTSTRAPPING_WORKSPACE;
 }
 
-int lxc_load_shared_library(const char* so_file, char* error, int maxlength)
+int lxc_load_shared_library(const char* so_file, char** errors, int maxlength)
 {
 	void* handle = dlopen(so_file, RTLD_NOW);
 	if(NULL == handle)
 	{
-		safe_strcpy(error, maxlength, dlerror());
 		return LXC_ERROR_LIBRARY_SO_CANT_OPEN;
 	}
 
 	struct lxc_loadable_library* lib = dlsym(handle, "logxcontroll_loadable_library");
 	if(NULL == lib)
 	{
-		safe_strcpy(error, maxlength, dlerror());
+		array_fix_try_add_last_null(errors, maxlength, dlerror());
 		dlclose(handle);
 		return LXC_ERROR_LIBRARY_SYMBOL_NOT_FOUND;
 	}
 	else
 	{
 		//TODO on success, register plugin
-		return lxc_load_library(lib, error, maxlength);
+		return lxc_load_library(lib, errors, maxlength);
 	}
 
 	return 0;

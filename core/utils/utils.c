@@ -302,6 +302,19 @@ void array_fix_add_element(void*** array_addr, uint* length, void* element)
 	(*array_addr)[index] = element;
 }
 
+bool array_fix_try_add_last_null(void** array_addr, uint length, void* element)
+{
+	int index = array_fix_first_free_slot(array_addr, length);
+	if(-1 == index)
+	{
+		return false;
+	}
+
+	array_addr[index] = element;
+	return true;
+}
+
+
 void array_fix_ensure_index(void*** array_addr, uint* length, uint index)
 {
 	if(*length > index)

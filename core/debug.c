@@ -32,4 +32,3 @@ void lxc_dbg_print_properties(Gate gate)
 	printf("\n");
 }
 
-void lxc_dbg_print_library_tree(bool leafs);

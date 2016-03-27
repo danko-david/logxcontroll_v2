@@ -15,7 +15,9 @@
 #define COMPILE_TIME_ASSERT2(X,L) COMPILE_TIME_ASSERT3(X,L)
 #define COMPILE_TIME_ASSERT(X)    COMPILE_TIME_ASSERT2(X,__LINE__)
 
+#ifndef UNUSED
 #define UNUSED(x) (void)(x)
+#endif
 
 void linux_print_heap_size();
 
@@ -85,6 +87,8 @@ void* array_fix_remove_element(void** array_addr, uint length, uint index);
 
 //add element into the first free slot
 void array_fix_add_element(void*** array_addr, uint* length, void* element);
+
+bool array_fix_try_add_last_null(void** array_addr, uint length, void* element);
 
 void array_fix_set_element(void*** array_addr, uint* length, uint index, void* element);
 

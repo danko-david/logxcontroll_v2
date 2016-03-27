@@ -110,7 +110,6 @@ struct lxc_generic_portb_instance;
 /**
  * Have to specify/implement:
  * 	required:
- * 		.base.gate_name
  * 		.base.instance_memory_size
  *		.base.execute
  *
@@ -129,7 +128,6 @@ struct lxc_generic_portb_instance;
 struct lxc_generic_portb_behavior
 {
 	struct lxc_gate_behavior base;
-	const char* gate_name;
 	int instance_memory_size;
 	void (*instance_init)(struct lxc_generic_portb_instance*);
 	void (*instance_destroy)(struct lxc_generic_portb_instance*);
@@ -154,7 +152,6 @@ struct lxc_generic_porti_instance;
 /**
  * Have to specify/implement:
  * 	required:
- * 		.base.gate_name
  * 		.base.instance_memory_size
  *		.base.execute
  *
@@ -173,8 +170,7 @@ struct lxc_generic_porti_instance;
 struct lxc_generic_porti_behavior
 {
 	struct lxc_gate_behavior base;
-	const char* gate_name;
-	int instance_memory_size;
+	uint instance_memory_size;
 
 	void (*instance_init)(struct lxc_generic_porti_instance*);
 	void (*instance_destroy)(struct lxc_generic_porti_instance*);
@@ -229,7 +225,6 @@ struct lxc_generic_portb_propb_behavior
 /**
  * Have to specify/implement:
  * 	required:
- 		.base.gate_name
  		.base.instance_memory_size
 		.base.execute
 		.properties.access_property
