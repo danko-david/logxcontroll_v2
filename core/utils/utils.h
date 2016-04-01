@@ -43,7 +43,11 @@ char* render_string(int maxlen, char* fmt, void* argptr);
 
 char* copy_string(char* str);
 
+void* offset_bytes(void* addr, int bytes);
+
 void* malloc_zero(size_t);
+
+void* realloc_zero(void* addr, size_t old_len, size_t new_length);
 
 void dbg_print_messages(char** msgs);
 

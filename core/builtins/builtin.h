@@ -60,6 +60,9 @@
  *
  * */
 
+
+extern const struct lxc_signal_type lxc_signal_system;
+extern const struct lxc_signal_type lxc_signal_pulse;
 extern const struct lxc_signal_type lxc_signal_bool;
 extern const struct lxc_signal_type lxc_signal_byte;
 extern const struct lxc_signal_type lxc_signal_short;

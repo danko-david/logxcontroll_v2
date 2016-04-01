@@ -55,9 +55,9 @@ struct lxc_port_manager
 
 extern const char* lxc_port_empty_name;
 
-bool lxc_port_check_portname_in_use(struct lxc_port_manager*, char* name);
+bool lxc_port_check_portname_in_use(struct lxc_port_manager*, const char* name);
 
-void lxc_port_unchecked_add_new_port(struct lxc_port_manager*, char* port_name, Signal type, bool sensitive);
+int lxc_port_unchecked_add_new_port(struct lxc_port_manager*, const char* port_name, Signal type, bool sensitive);
 
 void lxc_port_init_port_manager_factory(struct lxc_port_manager* fact);
 
@@ -79,7 +79,9 @@ void lxc_port_remove_port
 	uint index
 );
 
-int lxc_port_get_absindex_by_name(struct lxc_port_manager*, char* name);
+int lxc_port_count(struct lxc_port_manager* factory);
+
+int lxc_port_get_absindex_by_name(struct lxc_port_manager*, const char* name);
 
 struct lxc_port_registry
 {
@@ -183,7 +185,9 @@ struct lxc_generic_porti_instance
 	struct lxc_instance base;
 	struct lxc_port_manager input_ports;
 	struct lxc_port_manager output_ports;
+	uint inputs_length;
 	Wire* inputs;
+	uint outputs_length;
 	Wire* outputs;
 };
 
@@ -195,14 +199,14 @@ struct lxc_property
 	const char* label;
 	const char* description;
 	const char* default_value;
-	int (*property_operation)(Gate instance, bool direction, void* addr, const char* name, const char* value, char* ret, int max_length);
+	int (*property_validator)(Gate instance, bool direction, void* addr, const char* name, const char* value, char* ret, int max_length);
 };
 
 struct lxc_property_manager
 {
 	struct lxc_property** properties;
 	void* (*access_property)(Gate, const char*);
-	void (*notify_property_changed)(Gate,char* property);
+	//void (*notify_property_changed)(Gate,char* property);
 };
 
 int lxc_add_property
@@ -246,6 +250,13 @@ struct lxc_generic_porti_propb_behavior
 
 extern struct lxc_generic_porti_propb_behavior lxc_generic_porti_propb_prototype;
 
+int lxc_portb_get_absindex
+(
+	struct lxc_generic_portb_instance* gate,
+	bool direction,
+	Signal type,
+	uint index
+);
 
 void lxc_init_generic_library();
 

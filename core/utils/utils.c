@@ -110,6 +110,11 @@ char* copy_string(char* str)
 	return ret;
 }
 
+void* offset_bytes(void* addr, int bytes)
+{
+	return ((void*)(((char*)addr) + bytes));
+}
+
 void* malloc_zero(size_t size)
 {
 	void* ret = malloc(size);
@@ -117,6 +122,20 @@ void* malloc_zero(size_t size)
 		memset(ret, 0, size);
 
 	return ret;
+}
+
+void* realloc_zero(void* addr, size_t old_len, size_t new_length)
+{
+	addr = realloc(addr, new_length);
+
+	int diff = new_length - old_len;
+	if(diff > 0)
+	{
+		memset(offset_bytes(addr, old_len), 0, diff);
+	}
+
+	return addr;
+
 }
 
 void dbg_print_messages(char** msgs)
@@ -322,7 +341,8 @@ void array_fix_ensure_index(void*** array_addr, uint* length, uint index)
 
 	uint oldlen = *length;
 	*array_addr = realloc(*array_addr, sizeof(void*)*(index+1));
-	memset(&((*array_addr)[index]), 0, (index+1) - oldlen);
+	memset(&((*array_addr)[oldlen]), 0, (index+1 - oldlen)* sizeof(void*));
+	*length = index+1;
 }
 
 //returns the index of the first occurrence of item.

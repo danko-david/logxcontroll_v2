@@ -33,11 +33,21 @@ int lxc_register_gate(struct lxc_gate_behavior* entry)
 	return 0;
 }
 
-int lxc_load_library(const struct lxc_loadable_library* lib, const char** errors, int maxlength)
+int lxc_load_library
+(
+	const struct lxc_loadable_library* lib,
+	const char** errors,
+	int maxlength
+)
 {
 	if(NULL == lib)
 	{
-		array_fix_try_add_last_null(errors, maxlength, "Library reference is NULL.");
+		array_fix_try_add_last_null
+		(
+			(void**)errors,
+			maxlength,
+			(void*)"Library reference is NULL."
+		);
 		return LXC_ERROR_BAD_CALL;
 	}
 
@@ -46,11 +56,11 @@ int lxc_load_library(const struct lxc_loadable_library* lib, const char** errors
 	if(NULL != libop)
 	{
 		int ret = libop(library_before_load, errors, maxlength);
-		if(0 != ret)
+		/*if(0 != ret)
 		{
 			int un = libop(library_unload_caused_before_load_error, errors, maxlength);
 			return 0 != un?un:ret;
-		}
+		}*/
 		//successfull library preload
 	}
 
@@ -63,8 +73,8 @@ int lxc_load_library(const struct lxc_loadable_library* lib, const char** errors
 			int ret = lxc_register_gate(gates[i]);
 			if(0 != ret)
 			{
-				array_fix_try_add_last_null(errors, maxlength, "Gate already registered.");
-				array_fix_try_add_last_null(errors, maxlength, gates[i]->gate_name);
+				array_fix_try_add_last_null((void**)errors, maxlength, (void*) "Gate already registered.");
+				array_fix_try_add_last_null((void**)errors, maxlength, (void*) gates[i]->gate_name);
 			}
 		}
 	}
@@ -77,8 +87,8 @@ int lxc_load_library(const struct lxc_loadable_library* lib, const char** errors
 			int ret = lxc_register_signal(sigs[i]);
 			if(0 != ret)
 			{
-				array_fix_try_add_last_null(errors, maxlength, "Signal already registered.");
-								array_fix_try_add_last_null(errors, maxlength, sigs[i]->name);
+				array_fix_try_add_last_null((void**) errors, maxlength, (void*)"Signal already registered.");
+				array_fix_try_add_last_null((void**) errors, maxlength, (void*)sigs[i]->name);
 				//TODO unregister then unload
 				return ret;
 			}
@@ -94,8 +104,8 @@ int lxc_load_library(const struct lxc_loadable_library* lib, const char** errors
 			int ret = lxc_register_constant_value(consts[i]);
 			if(0 != ret)
 			{
-				array_fix_try_add_last_null(errors, maxlength, "Constant already registered.");
-				array_fix_try_add_last_null(errors, maxlength, consts[i]->name);
+				array_fix_try_add_last_null((void**) errors, maxlength, (void*) "Constant already registered.");
+				array_fix_try_add_last_null((void**) errors, maxlength, (void*) consts[i]->name);
 			}
 		}
 	}
@@ -242,7 +252,7 @@ void dbg_print_leafs(struct library_tree_node* node, int lvl)
 		for(int i=0;i<lvl;++i)
 			printf("\t");
 
-		printf("`%s`\n", ent[g]->gate_name, ent[g]->gate_name);
+		printf("`%s`\n", ent[g]->gate_name);
 	}
 }
 
@@ -361,7 +371,7 @@ Workspace get_bootstrapping_workspace()
 	return BOOTSTRAPPING_WORKSPACE;
 }
 
-int lxc_load_shared_library(const char* so_file, char** errors, int maxlength)
+int lxc_load_shared_library(const char* so_file, const char** errors, int maxlength)
 {
 	void* handle = dlopen(so_file, RTLD_NOW);
 	if(NULL == handle)
@@ -372,7 +382,7 @@ int lxc_load_shared_library(const char* so_file, char** errors, int maxlength)
 	struct lxc_loadable_library* lib = dlsym(handle, "logxcontroll_loadable_library");
 	if(NULL == lib)
 	{
-		array_fix_try_add_last_null(errors, maxlength, dlerror());
+		array_fix_try_add_last_null((void**) errors, maxlength, (void*) dlerror());
 		dlclose(handle);
 		return LXC_ERROR_LIBRARY_SYMBOL_NOT_FOUND;
 	}

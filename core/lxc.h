@@ -180,7 +180,7 @@ struct lxc_wire
 enum lxc_errno
 {
 	SUCCESS = 0,
-	LXC_ERROR_PORT_OUT_OF_RANGE = -1,
+	LXC_ERROR_ENTITY_OUT_OF_RANGE = -1,
 	LXC_ERROR_TYPE_NOT_SUPPORTED = -2,
 	LXC_ERROR_PORT_IS_IN_USE = -3,
 	LXC_ERROR_PORT_IS_ALREADY_FREE = -4,
@@ -230,15 +230,6 @@ enum library_operation
 
 
 	library_after_loaded,
-
-	//=======
-
-	library_before_unload,
-
-	library_after_unloaded,
-
-
-	library_unload_caused_before_load_error,
 
 };
 
@@ -345,7 +336,7 @@ struct lxc_gate_behavior
 	//returns zero if property successfilly modified, return negative required length if error
 	//buffer is too short to write error description. returns positive value if error ocurred and
 	//error description successfully written back.
-	int (*set_property)(Gate instance, const char* property, char* value, char* err, uint max_length);
+	int (*set_property)(Gate instance, const char* property, const char* value, char* err, uint max_length);
 
 	//functionality like ioctl
 	int (*gatectl)(Gate instance, unsigned long request, ...);
@@ -354,7 +345,7 @@ struct lxc_gate_behavior
 
 	//TODO etc data (library, documentation url, graphical symbol (SVG))
 
-	int (*library_operation)(enum library_operation, char** errors, int errors_max_length);
+	int (*library_operation)(enum library_operation, const char** errors, int errors_max_length);
 
 	//array_pnt library paths path1, path2, NULL,
 	const char*** paths;
@@ -365,10 +356,6 @@ struct lxc_gate_behavior
 	//graphical symbol
 	//gatectl / property utility
 	//
-
-
-
-
 
 };
 
@@ -395,6 +382,45 @@ struct lxc_constant_value
 	LxcValue value;
 };
 
+/************************ Framework system events *****************************/
+
+enum lxc_system_event_type
+{
+	system_event_gate_enabled,
+	system_event_gate_disabled,
+
+	/**
+	 * system_event_input_wire_added,
+	 *
+	 * this case is unnecessary, because gate will be notified by the
+	 * natural usage of input_value_changed() method.
+	 */
+
+	/**
+	 * system_event_input_wire_removed,
+	 *
+	 * and in this case input_value_changed will called with NULL value.
+	 * It is natural to bring a Wire to NULL value, but before notification
+	 * we remove the input wire.
+	 */
+
+	system_event_output_wire_added,
+	system_event_output_wire_removed,
+
+
+	system_event_property_modified,
+};
+
+struct lxc_system_event
+{
+	enum lxc_system_event_type event_type;
+	Signal signal;
+	int index;
+	const char* name;
+};
+
+
+/************************ Subcircuit definitions ******************************/
 typedef struct circuit* Circuit;
 typedef struct iocircuit* IOCircuit;
 
@@ -428,6 +454,7 @@ struct iocircuit
 };
 
 IOCircuit lxc_create_iocircuit();
+
 
 /********************** LOADABLE LIBRARY DEFINITIONS **************************/
 struct lxc_loadable_library;

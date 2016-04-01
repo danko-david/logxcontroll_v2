@@ -28,10 +28,13 @@
 #include "core/builtins/builtin.h"
 #include "core/builtins/logic/lxc_bool_gates.h"
 
+#include "core/utils/lxc_utils.h"
 #include "core/utils/utils.h"
 #include "core/utils/rerunnable_thread.h"
 #include "core/utils/worker_pool.h"
 #include "core/debug.h"
+
+#include <signal.h>
 
 void logxcontroll_init_environment();
 

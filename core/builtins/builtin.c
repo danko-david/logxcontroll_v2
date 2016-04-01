@@ -7,6 +7,7 @@
 
 #include "core/logxcontroll.h"
 
+/*
 LxcValue lxc_create_primitive_value(Signal type)
 {
 	struct lxc_primitive_value* ret = malloc(sizeof(struct lxc_primitive_value));
@@ -14,6 +15,7 @@ LxcValue lxc_create_primitive_value(Signal type)
 	ret->base.refcount = 0;
 	return (LxcValue) ret;
 }
+*/
 
 void lxc_free_primitive_value(LxcValue value)
 {
@@ -66,6 +68,17 @@ const struct lxc_value_operation primitive_constant_value_operations =
 	.ref_diff = NULL,
 	.data_address = lxc_data_address_primitive_value,
 };
+
+const struct lxc_signal_type lxc_signal_system =
+{
+	.name = "system",
+};
+
+const struct lxc_signal_type lxc_signal_pulse =
+{
+	.name = "pulse",
+};
+
 
 const struct lxc_signal_type lxc_signal_bool =
 {
@@ -164,7 +177,7 @@ static int library_load(enum library_operation op, char*** errors)
 {
 	if(library_before_load == op)
 	{
-		lxc_builtin_cast_init_before_load();
+//		lxc_builtin_cast_init_before_load();
 	}
 	else if(library_after_loaded == op)
 	{

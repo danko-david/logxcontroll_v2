@@ -7,7 +7,7 @@
 
 
 #include "core/logxcontroll.h"
-
+/*
 struct lxc_cast_instance
 {
 	struct lxc_generic_porti_instance base;
@@ -258,6 +258,4 @@ void lxc_builtin_cast_init_before_load()
 	);
 }
 
-
-
-
+*/

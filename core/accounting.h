@@ -42,6 +42,7 @@ struct lxc_gate_behavior* get_gate_entry_by_name(const char* name);
 LxcValue (*lxc_get_conversion_function(Signal from, Signal to))(LxcValue);
 int lxc_register_conversion_function(Signal from, Signal to, LxcValue (*function)(LxcValue));
 
+int lxc_register_constant_value(struct lxc_constant_value* val);
 
 /*
  *
@@ -61,7 +62,7 @@ struct lxc_lib
 };
 
 
-int lxc_load_shared_library(const char* so_file, const char* error, int maxlength);
+int lxc_load_shared_library(const char* so_file, const char** error, int maxlength);
 
 
 /***************************/

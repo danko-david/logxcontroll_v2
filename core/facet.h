@@ -51,9 +51,15 @@ Wire lxc_create_wire(Signal type);
 
 /*********************** Gate ASSOCIATED FACET FUNCTION ***********************/
 
+Gate lxc_new_instance_by_behavior(const struct lxc_gate_behavior*);
+
 Gate lxc_new_instance_by_name(const char* name);
 
 const char* lxc_get_gate_name(Gate);
+
+bool lxc_gate_is_enabled(Gate);
+
+void lxc_gate_set_enabled(Gate,bool);
 
 int lxc_get_gate_input_types(Gate, Signal*, int max_length);
 
@@ -64,9 +70,13 @@ const char* lxc_get_input_label(Gate gate, Signal type, uint index);
 const char* lxc_get_output_label(Gate gate, Signal type, uint index);
 
 
+Wire lxc_get_input_wire(Gate, Signal, uint);
+
 int lxc_get_input_labels(Gate, const char**, int max_length);
 
 int lxc_get_output_labels(Gate, const char**, int max_length);
+
+Wire lxc_get_output_wire(Gate, Signal, uint);
 
 int lxc_enumerate_properties(Gate, const char**, int max_length);
 

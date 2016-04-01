@@ -282,12 +282,11 @@ void on_successfull_input_wiring(Signal type, Wire wire, Gate g, uint index)
 		p->index = index;
 		add_port(p, &(wire->drivens), &(wire->drivens_length));
 
-		//TODO how to notify in this case? the driver or the driven gate?
-		//notify_drivers(wire);
-
 		//TODO in this case reference count management
 		if(g->enabled)
+		{
 			g->behavior->input_value_changed(g, type, wire->current_value, index);
+		}
 	}
 	else
 	{
@@ -300,14 +299,25 @@ void on_successfull_output_wiring(Signal type, Wire wire, Gate g, uint index)
 {
 	if(NULL != wire)
 	{
-		//new wire attached, send to the driver a general input_change
+		//new wire attached, notify the driver
 		Port p = malloc(sizeof(struct lxc_port));
 		p->gate = g;
 		p->index = index;
 		add_port(p, &(wire->drivers), &(wire->drivers_length));
 
 		if(g->enabled)
-			g->behavior->input_value_changed(g, NULL, NULL, 0);
+		{
+			LxcValue notify = lxc_create_system_event
+			(
+				system_event_output_wire_added,
+				type,
+				index,
+				NULL
+			);
+			lxc_reference_value(notify);
+			g->behavior->input_value_changed(g, notify->type, notify, 0);
+			lxc_unreference_value(notify);
+		}
 	}
 	else
 	{
@@ -319,11 +329,15 @@ void on_successfull_output_wiring(Signal type, Wire wire, Gate g, uint index)
 		{
 			Port p = ps[i];
 			if(NULL == p)
+			{
 				return;
+			}
 
 			Gate target = p->gate;
 			if(target->enabled)
+			{
 				target->behavior->input_value_changed(target, type, NULL, p->index);
+			}
 		}
 	}
 }
@@ -468,6 +482,59 @@ const char* lxc_get_gate_name(Gate gate)
 	return gate->behavior->gate_name;
 }
 
+bool lxc_gate_is_enabled(Gate gate)
+{
+	if(NULL == gate)
+	{
+		return true;
+	}
+
+	return gate->enabled;
+}
+
+void lxc_gate_set_enabled(Gate gate,bool enabled)
+{
+	if(NULL == gate)
+	{
+		return;
+	}
+
+	gate->enabled = enabled;
+
+	void (*ivc)(Gate instance, Signal type, LxcValue value, uint index) =
+		gate->behavior->input_value_changed;
+
+	if(NULL == ivc)
+	{
+		return;
+	}
+
+	LxcValue notify;
+	if(enabled)
+	{
+		notify = lxc_create_system_event
+		(
+			system_event_gate_enabled,
+			NULL,
+			0,
+			NULL
+		);
+	}
+	else
+	{
+		notify = lxc_create_system_event
+		(
+			system_event_gate_disabled,
+			NULL,
+			0,
+			NULL
+		);
+	}
+
+	lxc_reference_value(notify);
+	ivc(gate, notify->type, notify, 0);
+	lxc_unreference_value(notify);
+}
 
 int lxc_get_gate_input_types(Gate gate, Signal* sig, int max_length)
 {
@@ -729,12 +796,34 @@ int lxc_set_property_value
 		goto error;
 	}
 
-	int (*set_property)(Gate, const char*, char*, char*, uint) =
+	int (*set_property)(Gate, const char*, const char*, char*, uint) =
 		gate->behavior->set_property;
 
 	if(NULL != set_property)
 	{
-		return set_property(gate, property, value, error, max_len);
+		int ret = set_property(gate, property, value, error, max_len);
+
+		if(0 == ret)
+		{
+			void (*ivc)(Gate instance, Signal type, LxcValue value, uint index) =
+					gate->behavior->input_value_changed;
+
+			if(NULL != ivc)
+			{
+				LxcValue notify = lxc_create_system_event
+				(
+					system_event_property_modified,
+					NULL,
+					0,
+					property
+				);
+				lxc_reference_value(notify);
+				ivc(gate, notify->type, notify, 0);
+				lxc_unreference_value(notify);
+			}
+		}
+
+		return ret;
 	}
 
 error:
@@ -781,6 +870,15 @@ int lxc_get_property_value(Gate gate, const char* prop, char* ret, int max)
 	return pv(gate, prop, ret, max);
 }
 
+Gate lxc_new_instance_by_behavior(const struct lxc_gate_behavior* b)
+{
+	if(NULL == b)
+	{
+		return NULL;
+	}
+
+	return b->create(b);
+}
 
 Gate lxc_new_instance_by_name(const char* name)
 {
@@ -819,4 +917,26 @@ Signal lxc_get_signal_by_name(const char* str)
 	}
 
 	return NULL;
+}
+
+
+Wire lxc_get_input_wire(Gate gate, Signal signal, uint index)
+{
+	if(NULL == gate)
+	{
+		return NULL;
+	}
+
+	return gate->behavior->get_input_wire(gate, signal, index);
+}
+
+
+Wire lxc_get_output_wire(Gate gate, Signal signal, uint index)
+{
+	if(NULL == gate)
+	{
+		return NULL;
+	}
+
+	return gate->behavior->get_output_wire(gate, signal, index);
 }
