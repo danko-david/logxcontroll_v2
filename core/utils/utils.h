@@ -129,11 +129,11 @@ void array_pnt_free_all(void** array_addr);
 void array_pnt_dbg_printf_char_array(void** array, char* array_name);
 
 
-int safe_strcpy(char* dst, int max_length, char* src);
+int safe_strcpy(char* dst, int max_length, const char* src);
 
 int gnu_libc_backtrace_symbol(void* addr, char* ret_str, size_t max_length);
 
-
+void gnu_libc_print_backtraced_symbol(void* addr);
 
 Wire* find_mixed_wire_location(Wire* mixed_type_wires, uint length, Signal signal, uint index);
 
@@ -172,5 +172,7 @@ void queue_pop_intermediate_element
 //TODO add map element
 //TODO remove map element
 //TODO map key_val by key
+
+void print_checkpoint(char* str);
 
 #endif /* UTILS_H_ */

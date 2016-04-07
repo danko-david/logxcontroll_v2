@@ -186,7 +186,7 @@ int switch_wire_input(Gate instance, Signal signal, Wire wire, uint index)
 		return 0;
 	}
 
-	return LXC_ERROR_PORT_OUT_OF_RANGE;
+	return LXC_ERROR_ENTITY_OUT_OF_RANGE;
 }
 
 void switch_change_case(struct lxc_gate_switch* sw, CaseFrame case_frame)
@@ -340,7 +340,7 @@ int switch_wire_output(Gate instance, Signal signal, Wire wire, unsigned int ind
 		return 0;
 	}
 
-	return LXC_ERROR_PORT_OUT_OF_RANGE;
+	return LXC_ERROR_ENTITY_OUT_OF_RANGE;
 }
 
 bool is_port_exists(char* name, struct wire_port** port, uint length)

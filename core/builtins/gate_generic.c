@@ -51,6 +51,11 @@ int lxc_port_get_absindex
 	int tindex = -1;
 	Signal* types = fact->managed_types;
 
+	if(NULL == types)
+	{
+		return -1;
+	}
+
 	int i=0;
 	Signal crnt = NULL;
 	while(NULL != (crnt = *types))
@@ -70,7 +75,7 @@ int lxc_port_get_absindex
 
 	uint len = fact->to_abs_size[tindex];
 	if(index < len)
-		return fact->to_abs[tindex][tindex];
+		return fact->to_abs[tindex][index];
 
 	return -1;
 }
@@ -134,6 +139,7 @@ int lxc_port_unchecked_add_new_port
 	}
 	else
 	{
+		//frist we try to find an empty slot
 		for(int i=0;NULL != names[i];++i)
 		{
 			if(lxc_port_empty_name == names[i])
@@ -144,6 +150,8 @@ int lxc_port_unchecked_add_new_port
 			}
 		}
 
+		// if we doesn't find an empty slot (ie no intermediate replace will
+		// be applied) we reserve a new one
 		if(!intermediate)
 		{
 			//determine the next free absolute index
@@ -158,12 +166,12 @@ int lxc_port_unchecked_add_new_port
 	{
 		bool type_replace = false;
 		Signal* mt = factory->managed_types;
-		int* lengths = factory->to_abs_size;
-		if(NULL != mt)
+		uint* lengths = factory->to_abs_size;
+		if(NULL != mt && NULL!= lengths)
 		{
 			for(int i=0;NULL != mt[i] ;++i)
 			{
-				if(0 <= lengths)
+				if(0 == lengths[i])
 				{
 					type_replace = true;
 					ti = i;
@@ -171,8 +179,9 @@ int lxc_port_unchecked_add_new_port
 				}
 			}
 		}
+
 		//if there is no empty managed type
-		//we allocate new place
+		//we allocate new slot for it
 		if(!type_replace)
 		{
 			//index in other array by type
@@ -216,7 +225,7 @@ int lxc_port_unchecked_add_new_port
 
 	if(intermediate)
 	{
-		factory->port_names[next_abs] = copy_string(port_name);
+		factory->port_names[next_abs] = port_name;
 	}
 	else
 	{
@@ -224,7 +233,7 @@ int lxc_port_unchecked_add_new_port
 		array_pnt_append_element
 		(
 			(void***)&(factory->port_names),
-			(void*) copy_string(port_name)
+			(void*) port_name
 		);
 	}
 
@@ -237,12 +246,13 @@ int lxc_port_unchecked_add_new_port
 
 	factory->sensitivity[next_abs] = sensitive;
 
+	factory->max_size = array_pnt_population((void**)factory->port_names);
 	return next_abs;
 }
 
 int lxc_port_count(struct lxc_port_manager* factory)
 {
-	return array_pnt_population((void**)factory->port_names);
+	return factory->max_size;
 }
 
 void lxc_port_remove_port
@@ -278,6 +288,67 @@ void lxc_port_remove_port
 	factory->port_names[abs] = lxc_port_empty_name;
 	--(factory->to_abs_size[ti]);
 	array_pnt_pop_element((void***) &(factory->to_abs[ti]), index);
+
+	factory->max_size = array_pnt_population((void**)factory->port_names);
+}
+
+bool lxc_port_is_any_wire_connected
+(
+	struct lxc_port_manager* mngr,
+	Wire* wires,
+	uint max_length
+)
+{
+	if(NULL == wires)
+	{
+		return false;
+	}
+
+	int size = lxc_port_count(mngr);
+	if(max_length < size)
+	{
+		size = max_length;
+	}
+
+	for(int i=0;i< size;++i)
+	{
+		 if(NULL != wires[i])
+		 {
+			 return true;
+		 }
+	}
+
+	return false;
+}
+
+void lxc_port_wipe_all(struct lxc_port_manager* fact)
+{
+	if(NULL == fact)
+	{
+		return;
+	}
+
+	int ti_max = array_pnt_population(fact->managed_types);
+
+	if(ti_max <= 0)
+	{
+		return;
+	}
+
+	free(fact->managed_types);
+	free(fact->port_names);
+	free(fact->sensitivity);
+
+	for(int i=0;i<ti_max;++i)
+	{
+		free(fact->to_abs[i]);
+	}
+
+	free(fact->to_abs_size);
+
+	memset(fact, 0, sizeof(struct lxc_port_manager));
+
+	lxc_port_init_port_manager_factory(fact);
 }
 
 int lxc_port_get_absindex_by_name(struct lxc_port_manager* fact, const char* name)
@@ -341,6 +412,22 @@ Wire lxc_port_get_wire
 	return arr[abs];
 }
 
+Wire lxc_port_get_wire_safe
+(
+	struct lxc_port_manager* fact,
+	Signal type,
+	uint index,
+	Wire* arr,
+	int port_size
+)
+{
+	int abs = lxc_port_get_absindex(fact, type, index);
+	if(abs < 0 || abs >= port_size)
+		return NULL;
+
+	return arr[abs];
+}
+
 int lxc_port_wiring
 (
 	struct lxc_port_manager* fact,
@@ -387,21 +474,13 @@ int lxc_generic_get_type_max_index(struct lxc_port_manager* fact, Signal type)
 
 static void lxc_generic_portb_init(struct lxc_generic_portb_instance* instance)
 {
-	int insize =	array_pnt_population
-					(
-						(void**)((struct lxc_generic_portb_behavior*)(instance->base.behavior))
-							->input_ports.managed_types
-					);
-	instance->inputs = malloc_zero(sizeof(Wire)*insize);
-	memset(instance->inputs, 0, sizeof(Wire)*insize);
+	struct lxc_generic_portb_behavior* b =
+		(struct lxc_generic_portb_behavior*) instance->base.behavior;
 
-	int outsize =	array_pnt_population
-					(
-						(void**)((struct lxc_generic_portb_behavior*)(instance->base.behavior))
-							->output_ports.managed_types
-					);
+	int insize = lxc_port_count(&(b->input_ports));
+	instance->inputs = malloc_zero(sizeof(Wire)*insize);
+	int outsize = lxc_port_count(&(b->output_ports));
 	instance->outputs = malloc_zero(sizeof(Wire)*outsize);
-	memset(instance->outputs, 0, sizeof(Wire)*outsize);
 }
 
 static Gate lxc_generic_portb_gate_create(const struct lxc_generic_portb_behavior* behav)
@@ -464,12 +543,13 @@ static int lxc_generic_portb_get_input_max_index(Gate instance, Signal type)
 
 static Wire lxc_generic_portb_get_input_wire(Gate instance, Signal type, uint index)
 {
-	return	lxc_port_get_wire
+	return	lxc_port_get_wire_safe
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->input_ports,
 				type,
 				index,
-				((struct lxc_generic_portb_instance*) instance)->inputs
+				((struct lxc_generic_portb_instance*) instance)->inputs,
+				((struct lxc_generic_portb_behavior*) instance->behavior)->input_ports.max_size
 			);
 }
 
@@ -550,12 +630,13 @@ static int lxc_generic_portb_get_output_max_index(Gate instance, Signal type)
 
 static Wire lxc_generic_portb_get_output_wire(Gate instance, Signal type, uint index)
 {
-	return	lxc_port_get_wire
+	return	lxc_port_get_wire_safe
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->output_ports,
 				type,
 				index,
-				((struct lxc_generic_portb_instance*) instance)->outputs
+				((struct lxc_generic_portb_instance*) instance)->outputs,
+				((struct lxc_generic_portb_behavior*) instance->behavior)->output_ports.max_size
 			);
 }
 
@@ -622,21 +703,11 @@ const struct lxc_generic_portb_behavior lxc_generic_portb_prototype =
 
 static void lxc_generic_porti_init(struct lxc_generic_porti_instance* instance)
 {
-	int insize =	array_pnt_population
-					(
-						(void**)((struct lxc_generic_porti_instance*)instance)
-							->input_ports.managed_types
-					);
+	int insize = lxc_port_count(&(instance->input_ports));
 	instance->inputs = malloc_zero(sizeof(Wire)*insize);
-	memset(instance->inputs, 0, sizeof(Wire)*insize);
 
-	int outsize =	array_pnt_population
-					(
-						(void**)((struct lxc_generic_porti_instance*)instance)
-							->output_ports.managed_types
-					);
+	int outsize = lxc_port_count(&(instance->output_ports));
 	instance->outputs = malloc_zero(sizeof(Wire)*outsize);
-	memset(instance->outputs, 0, sizeof(Wire)*outsize);
 }
 
 static Gate lxc_generic_porti_gate_create(const struct lxc_generic_porti_behavior* behav)
@@ -699,12 +770,13 @@ static int lxc_generic_porti_get_input_max_index(Gate instance, Signal type)
 
 static Wire lxc_generic_porti_get_input_wire(Gate instance, Signal type, uint index)
 {
-	return	lxc_port_get_wire
+	return	lxc_port_get_wire_safe
 			(
 				&(((struct lxc_generic_porti_instance*)instance)->input_ports),
 				type,
 				index,
-				((struct lxc_generic_porti_instance*) instance)->inputs
+				((struct lxc_generic_porti_instance*) instance)->inputs,
+				((struct lxc_generic_porti_instance*) instance)->inputs_length
 			);
 }
 
@@ -716,7 +788,7 @@ static void force_index_available
 )
 {
 	int need = lxc_port_count(mngr);
-	if(need < *array_length)
+	if(need >= *array_length)
 	{
 		*array_addr =	realloc_zero
 						(
@@ -738,6 +810,7 @@ static int lxc_generic_porti_wire_input(Gate instance, Signal type, Wire wire, u
 		&(i->inputs),
 		&(i->inputs_length)
 	);
+
 	return	lxc_port_wiring
 			(
 				&(i->input_ports),
@@ -813,12 +886,13 @@ static int lxc_generic_porti_get_output_max_index(Gate instance, Signal type)
 
 static Wire lxc_generic_porti_get_output_wire(Gate instance, Signal type, uint index)
 {
-	return	lxc_port_get_wire
+	return	lxc_port_get_wire_safe
 			(
 				&((struct lxc_generic_porti_instance*)instance)->output_ports,
 				type,
 				index,
-				((struct lxc_generic_porti_instance*) instance)->outputs
+				((struct lxc_generic_porti_instance*) instance)->outputs,
+				((struct lxc_generic_porti_instance*) instance)->outputs_length
 			);
 }
 
@@ -900,12 +974,12 @@ int lxc_add_property
 
 static int generic_enumerate_properties(struct lxc_property_manager* mngr, const char** arr, uint max_index)
 {
-	uint popul = array_pnt_population((void**)mngr->properties);
+	int popul = array_pnt_population((void**)mngr->properties);
 
 	if(0 == popul)
 		return 0;
 
-	if(max_index < popul)
+	if(max_index <= popul)
 		return -popul;
 
 	struct lxc_property** props = mngr->properties;
@@ -1148,7 +1222,9 @@ void lxc_init_from_prototype(void* dst, size_t dst_len, void* src, size_t src_le
 {
 	memcpy(dst, src, src_len);
 	if(dst_len > src_len)
-		memset(dst+dst_len, 0, dst_len-src_len);
+	{
+		memset(offset_bytes(dst, dst_len), 0, dst_len-src_len);
+	}
 }
 
 /*************************** Library Initialization ***************************/
@@ -1200,4 +1276,56 @@ void lxc_init_generic_library()
 	b->get_property_value = generic_porti_propb_get_property_value;
 	b->set_property = generic_porti_propb_set_property;
 
+}
+
+/************************ Generic Value implementations ***********************/
+
+static void generic_value_free(LxcValue value)
+{
+	free(value);
+}
+
+LxcValue generic_value_clone(LxcValue dest)
+{
+	struct lxc_generic_value* val = (struct lxc_generic_value*) dest;
+	struct lxc_generic_value* ret =
+		(struct lxc_generic_value*) lxc_create_generic_value(val->base.type, val->size);
+	memcpy(&(ret->data), &(val->data), val->size);
+	return (LxcValue) ret;
+}
+
+size_t generic_value_size(LxcValue dest)
+{
+	return ((struct lxc_generic_value*) dest)->size;
+}
+
+static int generic_value_ref_diff(LxcValue value, int num)
+{
+	struct lxc_generic_value* val = (struct lxc_generic_value*) value;
+	return __sync_fetch_and_add(&(val->refcount), num)+num;
+}
+
+void* generic_value_data_address(LxcValue value)
+{
+	return (((struct lxc_generic_value*)value)->data);
+}
+
+static struct lxc_value_operation lxc_generic_value_operations =
+{
+	.free = generic_value_free,
+	.clone = generic_value_clone,
+	.size = generic_value_size,
+	.ref_diff = generic_value_ref_diff,
+	.data_address = generic_value_data_address,
+};
+
+LxcValue lxc_create_generic_value(Signal type, size_t size)
+{
+	struct lxc_generic_value* ret =
+		(struct lxc_generic_value*) malloc_zero(sizeof(struct lxc_generic_value)+size);
+	ret->base.type = type;
+	ret->base.operations = &lxc_generic_value_operations;
+	ret->size = size;
+
+	return (LxcValue)ret;
 }

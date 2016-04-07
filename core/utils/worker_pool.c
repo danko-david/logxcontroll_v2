@@ -101,6 +101,4 @@ void lxc_wait_thread_pool_shutdown()
 	//queue_add_element(&busy_head, use, &busy_tail);
 	pthread_spin_unlock(&queue_busy_spin);
 */
-	while(true)
-		pause();
 }

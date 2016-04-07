@@ -144,6 +144,11 @@ struct lxc_value
 {
 	Signal type;
 
+	/**
+	 * Subtype info used for arrays and structs
+	 * */
+	int subtype_info;
+
 	//type of the signal trouth some datatype may be same,
 	//but same type of values may behaviors different.
 	//some primitive values may be placed in a constant pool
@@ -151,8 +156,6 @@ struct lxc_value
 
 	//never may NULL
 	const struct lxc_value_operation* operations;
-
-	int refcount;
 };
 
 #define LXC_GATE_MAX_IO_TYPE_COUNT 20
@@ -160,6 +163,12 @@ struct lxc_value
 /**
  * Represents a wire, connect gates together.
  * A wire has driver(s) and driven gates.
+ *
+ * TODO functionality:
+ * 	- ignore repeated values (on/off)
+ *
+ * 	- token based value management
+ *
  * */
 struct lxc_wire
 {

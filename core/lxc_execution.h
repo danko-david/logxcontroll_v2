@@ -13,6 +13,7 @@
 struct lxc_task
 {
 	Gate instance;
+	Wire wire;
 	LxcValue value;
 	int index;
 };

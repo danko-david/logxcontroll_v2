@@ -7,6 +7,9 @@
 
 #include "core/logxcontroll.h"
 
+//TODO track dlopen handles
+//TODO track loaded libraries (refuse repeated load)
+
 Signal* REGISTERED_SIGNALS = NULL;
 struct library_tree_node** ROOT_NODES = NULL;
 struct lxc_gate_behavior** REGISTERED_BEHAVIORS = NULL;
@@ -89,7 +92,6 @@ int lxc_load_library
 			{
 				array_fix_try_add_last_null((void**) errors, maxlength, (void*)"Signal already registered.");
 				array_fix_try_add_last_null((void**) errors, maxlength, (void*)sigs[i]->name);
-				//TODO unregister then unload
 				return ret;
 			}
 		}
@@ -373,9 +375,22 @@ Workspace get_bootstrapping_workspace()
 
 int lxc_load_shared_library(const char* so_file, const char** errors, int maxlength)
 {
-	void* handle = dlopen(so_file, RTLD_NOW);
+	void* handle = dlopen(so_file, RTLD_NOW | RTLD_GLOBAL);
 	if(NULL == handle)
 	{
+		array_fix_try_add_last_null
+		(
+			(void**) errors,
+			maxlength,
+			"Can't open shared library file."
+		);
+
+		array_fix_try_add_last_null
+		(
+			(void**) errors,
+			maxlength,
+			dlerror()
+		);
 		return LXC_ERROR_LIBRARY_SO_CANT_OPEN;
 	}
 

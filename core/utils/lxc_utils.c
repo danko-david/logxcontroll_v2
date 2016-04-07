@@ -22,9 +22,8 @@ bool lxc_import_new_value(LxcValue new_val, LxcValue* internal_location)
 
 	if(NULL != *internal_location)
 	{
-		lxc_unference_value(*internal_location);
+		lxc_unreference_value(*internal_location);
 	}
-
 
 	*internal_location = new_val;
 
@@ -52,7 +51,7 @@ bool lxc_wipe_value(LxcValue* val)
 {
 	if(NULL != *val)
 	{
-		lxc_unference_value(*val);
+		lxc_unreference_value(*val);
 		*val = NULL;
 		return true;
 	}
@@ -120,3 +119,25 @@ void lxc_portb_republish_internal_value
 
 	lxc_drive_wire_value((Gate) gate, index, out, *addr);
 }
+
+LxcValue lxc_get_value_safe_from_wire_array
+(
+	Wire* wires,
+	int max_length,
+	int index
+)
+{
+	if(index >= max_length)
+	{
+		return NULL;
+	}
+
+	Wire w = wires[index];
+	if(NULL == w)
+	{
+		return NULL;
+	}
+
+	return lxc_get_wire_value(w);
+}
+

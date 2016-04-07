@@ -70,6 +70,9 @@ extern const struct lxc_signal_type lxc_signal_int;
 extern const struct lxc_signal_type lxc_signal_float;
 extern const struct lxc_signal_type lxc_signal_long;
 extern const struct lxc_signal_type lxc_signal_double;
+
+extern const struct lxc_signal_type lxc_signal_string;
+
 extern const struct lxc_signal_type lxc_signal_data;
 
 extern const struct lxc_constant_value lxc_bool_constant_value_true;
@@ -79,6 +82,7 @@ extern const struct lxc_constant_value lxc_bool_constant_value_false;
 struct lxc_primitive_value
 {
 	struct lxc_value base;
+	int refcount;
 	union
 	{
 		char	char_value;

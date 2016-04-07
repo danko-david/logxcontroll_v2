@@ -41,10 +41,8 @@ size_t lxc_size_primitive_value(/*LxcValue value*/)
 static int lxc_ref_diff_primitive_value(LxcValue asdf, int n)
 {
 	struct lxc_primitive_value* val = (struct lxc_primitive_value*) asdf;
-	return __sync_fetch_and_add(&(val->base.refcount), n);
+	return __sync_fetch_and_add(&(val->refcount), n)+n;
 }
-
-
 
 void* lxc_data_address_primitive_value(LxcValue val)
 {
@@ -115,6 +113,11 @@ const struct lxc_signal_type lxc_signal_double =
 	.name = "double",
 };
 
+const struct lxc_signal_type lxc_signal_string =
+{
+	.name = "string",
+};
+
 const struct lxc_signal_type lxc_signal_data =
 {
 	.name = "data",
@@ -124,7 +127,7 @@ const struct lxc_signal_type lxc_signal_data =
 static const struct lxc_primitive_value lxc_bool_value_true =
 {
 	.base.type = &lxc_signal_bool,
-	.base.refcount = 1024,
+	.refcount = 1024,
 	.base.operations = &primitive_constant_value_operations,
 	.char_value = ~0,
 };
@@ -132,7 +135,7 @@ static const struct lxc_primitive_value lxc_bool_value_true =
 static const struct lxc_primitive_value lxc_bool_value_false =
 {
 	.base.type = &lxc_signal_bool,
-	.base.refcount = 1024,
+	.refcount = 1024,
 	.base.operations = &primitive_constant_value_operations,
 	.char_value = 0,
 };
@@ -212,6 +215,8 @@ const struct lxc_loadable_library logxcontroll_loadable_library_builtin =
 	},
 	.signals = (Signal[])
 	{
+		&lxc_signal_system,
+		&lxc_signal_pulse,
 		&lxc_signal_bool,
 		&lxc_signal_byte,
 		&lxc_signal_double,
@@ -220,6 +225,7 @@ const struct lxc_loadable_library logxcontroll_loadable_library_builtin =
 		&lxc_signal_long,
 		&lxc_signal_short,
 
+		&lxc_signal_string,
 		&lxc_signal_data,
 
 		NULL

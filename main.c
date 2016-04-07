@@ -142,15 +142,70 @@ void test()
 		startn(i);
 }
 
+void test_generic_value()
+{
+	LxcValue g = lxc_create_generic_value(&lxc_signal_int, sizeof(int));
+	void* addr = lxc_get_value(g);
+	*((int*)addr) = 10;
+	printf("addr: %p\n", addr);
+	printf("val: %d\n", *((int*) addr));
+}
+
+void test_gate_socket_bring_up()
+{
+	Gate bu = lxc_new_instance_by_name("socket bring up");
+	if(NULL == bu)
+	{
+		printf("new instance is null\n");
+		exit(0);
+	}
+
+	Signal sockaddr = lxc_get_signal_by_name("sockaddr");
+
+	Signal sig_int = lxc_get_signal_by_name("int");
+	Wire fd_conn = lxc_create_wire(sig_int);
+
+	lxc_wire_gate_input(NULL, fd_conn, bu, 0);
+
+	printf("Singal addr: %p\n", sockaddr);
+
+	Wire w = lxc_get_input_wire(bu, sockaddr, 1);
+
+	printf("Wire addr: %p", w);
+
+}
+
+void test_gate_socketaddress_create()
+{
+	Gate g = lxc_new_instance_by_name("socketaddress create");
+
+	char re[200];
+	lxc_set_property_value(g, "family", "INET", re, 200);
+
+	Signal sig_str = lxc_get_signal_by_name("string");
+	Signal sig_int = lxc_get_signal_by_name("int");
+
+	Wire addr = lxc_create_wire(sig_str);
+	Wire port = lxc_create_wire(sig_int);
+
+	lxc_wire_gate_input(NULL, addr, g, 0);
+	lxc_wire_gate_input(NULL, port, g, 0);
+
+	struct lxc_generic_porti_instance* i = g;
+
+	printf("Inputs_length: %d\n", i->inputs_length);
+}
+
 
 int main(/*int dfgsdfg, char** argv*/)
+
 {
 	if(SIG_ERR == signal(SIGSEGV, gnu_libc_print_stack_trace))
 	{
 		printf("Can't register print_stack_trace crash handler\n!");
 	}
 
-	logxcontroll_after_bootstrapping = test_cast;
+	logxcontroll_after_bootstrapping = test_gate_socketaddress_create;
 
 	logxcontroll_main();
 

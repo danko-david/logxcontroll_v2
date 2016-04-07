@@ -220,7 +220,7 @@ passed:
 
 	if(index < 0 || index > get_max_index(instance, signal))
 	{
-		return LXC_ERROR_PORT_OUT_OF_RANGE;
+		return LXC_ERROR_ENTITY_OUT_OF_RANGE;
 	}
 
 	Wire wired = get_wire(instance, signal, index);
@@ -282,7 +282,6 @@ void on_successfull_input_wiring(Signal type, Wire wire, Gate g, uint index)
 		p->index = index;
 		add_port(p, &(wire->drivens), &(wire->drivens_length));
 
-		//TODO in this case reference count management
 		if(g->enabled)
 		{
 			g->behavior->input_value_changed(g, type, wire->current_value, index);
@@ -376,6 +375,39 @@ int lxc_wire_gate_output(Signal type, Wire wire, Gate g, uint index)
 }
 
 
+static void drive_wire_task_execute(Task t)
+{
+	//Gate instance = t->instance;
+	//uint out_index = t->index;
+	Wire wire = t->wire;
+	LxcValue value = t->value;
+
+	free(t);
+
+	lxc_import_new_value(value, &(wire->current_value));
+
+	if(NULL != value)
+	{
+		lxc_unreference_value(value);
+	}
+
+	Port* ports = wire->drivens;
+	Signal signal = wire->type;
+	int len = wire->drivens_length;
+
+	for(int i=0;i<len;++i)
+	{
+		Port p = ports[i];
+		if(NULL == p)
+			return;
+
+		if(p->gate->enabled && NULL != p->gate->behavior->input_value_changed)
+		{
+			p->gate->behavior->input_value_changed(p->gate, signal, value, p->index);
+		}
+	}
+}
+
 //TODO locks for wires
 void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue value)
 {
@@ -384,27 +416,22 @@ void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue val
 
 	//TODO framework debugging mode, update wire value on change
 
-	//tryfree old value
-
-	int i = 0;
-	Port* ports = wire->drivens;
-	Signal signal = wire->type;
-	int len = wire->drivens_length;
-
-	//TODO reference value
-	wire->current_value = value;
-	while(i < len)
+	if(NULL == wire)
 	{
-		Port p = ports[i];
-		if(NULL == p)
-			return;
-
-		if(p->gate->enabled)
-			p->gate->behavior->input_value_changed(p->gate, signal, value, p->index);
-
-		++i;
+		return;
 	}
-	//TODO unreferece value and free if no more ref.
+
+	if(NULL != value)
+	{
+		lxc_reference_value(value);
+	}
+
+	Task t = malloc(sizeof(struct lxc_task));
+	t->instance = instance;
+	t->index = out_index;
+	t->wire = wire;
+	t->value = value;
+	lxc_submit_asyncron_task(drive_wire_task_execute, t);
 }
 
 
@@ -440,6 +467,7 @@ int lxc_refdiff_value(LxcValue value, int count)
 			printf("WARNING: negative reference count for type: \"%s\", value: %s", value->type->name, str);
 		}
 #endif
+
 		if(ret <= 0)
 		{
 			void (*ff)(LxcValue) = value->operations->free;
@@ -451,7 +479,6 @@ int lxc_refdiff_value(LxcValue value, int count)
 
 		return ret;
 	}
-
 
 	return 1024;
 }
@@ -571,6 +598,42 @@ int lxc_get_gate_output_types(Gate gate, Signal* sig, int max_length)
 	{
 		return 0;
 	}
+}
+
+int lxc_get_gate_input_max_index(Gate gate, Signal s)
+{
+	if(NULL == gate || NULL == s)
+	{
+		return 0;
+	}
+
+	int (*get_max)(Gate instance, Signal type) =
+		gate->behavior->get_input_max_index;
+
+	if(NULL == get_max)
+	{
+		return 0;
+	}
+
+	return get_max(gate, s);
+}
+
+int lxc_get_gate_output_max_index(Gate gate, Signal s)
+{
+	if(NULL == gate || NULL == s)
+	{
+		return 0;
+	}
+
+	int (*get_max)(Gate instance, Signal type) =
+		gate->behavior->get_output_max_index;
+
+	if(NULL == get_max)
+	{
+		return 0;
+	}
+
+	return get_max(gate, s);
 }
 
 
@@ -734,7 +797,7 @@ const char* lxc_get_input_label(Gate gate, Signal type, uint index)
 {
 	if(NULL == gate)
 	{
-		return 0;
+		return NULL;
 	}
 
 	return	get_io_label
@@ -743,6 +806,22 @@ const char* lxc_get_input_label(Gate gate, Signal type, uint index)
 				type,
 				index,
 				gate->behavior->get_input_label
+			);
+}
+
+const char* lxc_get_output_label(Gate gate, Signal type, uint index)
+{
+	if(NULL == gate)
+	{
+		return NULL;
+	}
+
+	return	get_io_label
+			(
+				gate,
+				type,
+				index,
+				gate->behavior->get_output_label
 			);
 }
 

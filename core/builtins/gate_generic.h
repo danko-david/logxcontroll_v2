@@ -42,6 +42,7 @@ struct lxc_port_manager
 	//may not be null, if no element managed, it should contains an array whit
 	//single NULL element
 
+	int max_size;
 
 	Signal* managed_types;
 	uint** to_abs;
@@ -78,6 +79,15 @@ void lxc_port_remove_port
 	Signal type,
 	uint index
 );
+
+bool lxc_port_is_any_wire_connected
+(
+	struct lxc_port_manager* mngr,
+	Wire* wires,
+	uint max_length
+);
+
+void lxc_port_wipe_all(struct lxc_port_manager* fact);
 
 int lxc_port_count(struct lxc_port_manager* factory);
 
@@ -206,7 +216,6 @@ struct lxc_property_manager
 {
 	struct lxc_property** properties;
 	void* (*access_property)(Gate, const char*);
-	//void (*notify_property_changed)(Gate,char* property);
 };
 
 int lxc_add_property
@@ -263,6 +272,18 @@ void lxc_init_generic_library();
 void lxc_init_from_prototype(void* dst, size_t dst_len, void* src, size_t src_len);
 
 
+struct lxc_generic_value
+{
+	struct lxc_value base;
+	int refcount;
+	size_t size;
+	char data[0];
+};
 
+/**
+ * Generic value is a simple, reference counted type, which has a simple data
+ * structure, so can be freed with a single free() call.
+ * */
+LxcValue lxc_create_generic_value(Signal, size_t);
 
 #endif /* GATE_LAZY_H_ */

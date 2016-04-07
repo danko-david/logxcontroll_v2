@@ -17,7 +17,7 @@ int lxc_reference_value(LxcValue value);
 //atomically decrement the underlying value's reference count,
 //if reference count is 0 (or less), resource will be freed
 //and current reference count returned.
-int lxc_unference_value(LxcValue value);
+int lxc_unreference_value(LxcValue value);
 
 int lxc_refdiff_value(LxcValue value, int count);
 
@@ -25,13 +25,6 @@ int lxc_refdiff_value(LxcValue value, int count);
 LxcValue lxc_get_wire_value(Wire);
 
 void* lxc_get_value(LxcValue);
-
-/**
- * Generic value is a simple, reference counted type, which has a simple data
- * structure, so can be freed with a single free() call.
- * */
-LxcValue lxc_create_generic_value(Signal, size_t);
-
 
 LxcValue lxc_get_constant_by_name(const char* name);
 
@@ -64,6 +57,11 @@ void lxc_gate_set_enabled(Gate,bool);
 int lxc_get_gate_input_types(Gate, Signal*, int max_length);
 
 int lxc_get_gate_output_types(Gate, Signal*, int max_length);
+
+
+int lxc_get_gate_input_max_index(Gate, Signal);
+
+int lxc_get_gate_output_max_index(Gate, Signal);
 
 const char* lxc_get_input_label(Gate gate, Signal type, uint index);
 

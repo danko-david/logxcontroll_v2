@@ -135,7 +135,6 @@ void* realloc_zero(void* addr, size_t old_len, size_t new_length)
 	}
 
 	return addr;
-
 }
 
 void dbg_print_messages(char** msgs)
@@ -219,7 +218,7 @@ void array_nt_append_element(void*** array_addr, unsigned int* length, void* ele
 		{
 			//allocation one more bigger
 			*array_addr = realloc(*array_addr, len+sizeof(void*));
-			*length = len + sizeof(void*);
+			*length = len + 1;
 			(*array_addr)[len] = element;
 		}
 		else
@@ -451,7 +450,7 @@ int array_pnt_contains(void** array_addr, void* addr)
 
 	for(int i=0;NULL != array_addr[i];++i)
 	{
-		if(addr == *array_addr)
+		if(addr == array_addr[i])
 			return i;
 	}
 
@@ -492,7 +491,7 @@ void array_pnt_dbg_printf_char_array(void** array, char* array_name)
 		printf("%s[%d] = \"%s\"\r\n", array_name, i, arr[i]);
 }
 
-int safe_strcpy(char* dst, int max_length, char* src)
+int safe_strcpy(char* dst, int max_length, const char* src)
 {
 	if(NULL == src || NULL == dst)
 		return 0;
@@ -512,6 +511,14 @@ int safe_strcpy(char* dst, int max_length, char* src)
 }
 
 #include <dlfcn.h>
+
+void gnu_libc_print_backtraced_symbol(void* addr)
+{
+	char sym[200];
+	sym[0] = 0;
+	gnu_libc_backtrace_symbol(addr, sym, sizeof(sym));
+	printf("%s\n",sym);
+}
 
 int gnu_libc_backtrace_symbol(void* addr, char* ret_str, size_t max_length)
 {
@@ -661,4 +668,10 @@ void queue_pop_intermediate_element
 	{
 		intermediate->next = intermediate->prev;
 	}
+}
+
+void print_checkpoint(char* str)
+{
+	printf("%s\r\n", str);
+	fsync(1);
 }

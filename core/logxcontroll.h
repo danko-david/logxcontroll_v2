@@ -40,7 +40,7 @@ void logxcontroll_init_environment();
 
 void logxcontroll_main();
 
-//uncomment if you doesn't want the effect.
+//uncomment if you doesn't want to print out negative refcount values.
 #define DEBUG_FOR_NEGATIVE_REFCOUNT
 
 //TODO only for code build stage purpose;
