@@ -486,6 +486,11 @@ int lxc_refdiff_value(LxcValue value, int count)
 
 LxcValue lxc_get_wire_value(Wire w)
 {
+	if(NULL == w)
+	{
+		return NULL;
+	}
+
 	return w->current_value;
 }
 
