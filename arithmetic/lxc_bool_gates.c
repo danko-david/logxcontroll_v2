@@ -5,7 +5,7 @@
  *      Author: szupervigyor
  */
 
-#include "core/builtins/logic/lxc_bool_gates.h"
+#include "lxc_bool_gates.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -25,12 +25,11 @@ static struct lxc_bool_instance* castGate(Gate gate)
 
 static Gate logx_bool_create(const struct lxc_gate_behavior* be)
 {
-	struct lxc_bool_instance* ret = malloc(sizeof(struct lxc_bool_instance));
+	struct lxc_bool_instance* ret = malloc_zero(sizeof(struct lxc_bool_instance));
 	lxc_init_instance(&(ret->base), be);
 
-	memset(&(ret->inputs), 0, sizeof(ret->inputs));
-
-	ret->output = NULL;
+	//memset(&(ret->inputs), 0, sizeof(ret->inputs));
+	//ret->output = NULL;
 
 	return &(ret->base);
 }
@@ -168,7 +167,7 @@ static Wire logx_bool_get_output_wire(Gate instance, Signal signal, uint index)
 	return castGate(instance)->output;
 }
 
-static int logx_bool_wire_input(Gate instance, Signal signal, Wire wire, uint index)
+static int logx_bool_wire_input(Gate instance, Signal signal, Tokenport wire, uint index)
 {
 	UNUSED(instance);
 	UNUSED(signal);
@@ -192,9 +191,10 @@ static void logx_bool_execute(Gate instance, Signal type, LxcValue value, uint i
 	UNUSED(index);
 	UNUSED(value);
 	Wire out = castGate(instance)->output;
-	if(NULL != out)
+	//if(NULL != out)
 	{
 		bool re = castBGB(instance->behavior)->logic_function(instance);
+
 		lxc_drive_wire_value
 		(
 			instance,
@@ -202,17 +202,12 @@ static void logx_bool_execute(Gate instance, Signal type, LxcValue value, uint i
 			out,
 			(LxcValue)
 				(re?
-					&lxc_bool_constant_value_true
+					lxc_bool_constant_value_true.value
 				:
-					&lxc_bool_constant_value_false
+					lxc_bool_constant_value_false.value
 				)
 		);
 	}
-}
-
-static void logx_bool_input_value_changed(Gate instance, Signal type, LxcValue value, uint index)
-{
-	instance->execution_behavior(instance, type, value, index);
 }
 
 /**
@@ -227,7 +222,6 @@ static const struct lxc_bool_gate_behavior commons =
 	.base.get_input_max_index = return_20,
 	.base.get_input_wire = logx_bool_get_input_wire,
 	.base.wire_input = logx_bool_wire_input,
-	.base.input_value_changed = logx_bool_input_value_changed,
 	.base.execute = logx_bool_execute,
 	.base.get_output_types = logx_bool_get_supported_types,
 	.base.get_output_label = logx_bool_get_output_label,
@@ -243,28 +237,72 @@ static const struct lxc_bool_gate_behavior commons =
 
 #include <stdbool.h>
 
+static bool is_all_input_valid_and_copy(Gate instance, bool values[21], int* ep)
+{
+	Tokenport* in = castGate(instance)->inputs;
+	int to_absorb[21];
+	int i = -1;
+	*ep = 0;
+	while(++i < 21)
+	{
+		Tokenport tp = in[i];
+
+		//that means: unwired port
+		if(NULL == tp)
+		{
+			continue;
+		}
+
+		LxcValue val = lxc_get_token_value(tp);
+
+		if(NULL == val)
+		{
+			return false;
+		}
+		else
+		{
+			to_absorb[*ep] = i;
+			values[*ep] = *((bool*)lxc_get_value(val));
+			(*ep)++;
+		}
+	}
+
+	i = -1;
+	//absorb tokens
+	while(++i < *ep)
+	{
+		lxc_absorb_token(in[to_absorb[i]]);
+	}
+
+
+	return true;
+}
+
 /************************** Logic Gate nand ***********************************/
 
+/**
+ * if there's no input wire, false returned.
+ *
+ * returns false if all input is true;
+ * returns true if least one input is false
+ *
+ * */
 static bool logic_function_nand(Gate instance)
 {
-	Wire* in = castGate(instance)->inputs;
-	int i = 0;
-	while(i < 21)
-	{
-		Wire w = in[i];
-		if(NULL == w)
-			continue;
+	bool values[21];
+	int ep;
 
-		LxcValue val = lxc_get_wire_value(w);
-		if(NULL != val)
+	if(!is_all_input_valid_and_copy(instance, values, &ep))
+	{
+		return false;
+	}
+
+	int i = 0;
+	while(i < ep)
+	{
+		if(0 == values[i])
 		{
-			void* addr = lxc_get_value(val);
-			if(NULL != addr)
-			{
-				char val = *((char*)addr);
-				if(0 != val)
-					return true;
-			}
+			return true;
 		}
 		++i;
 	}
@@ -279,28 +317,25 @@ static struct lxc_bool_gate_behavior logic_nand;
 
 static bool logic_function_nor(Gate instance)
 {
-	Wire* in = castGate(instance)->inputs;
-	int i = 0;
-	int used = 0;
-	while(i < 21)
-	{
-		Wire w = in[i];
-		if(NULL == w)
-			continue;
+	bool values[21];
+	int ep;
 
-		++used;
-		LxcValue val = lxc_get_wire_value(w);
-		void* addr = lxc_get_value(val);
-		if(NULL != addr)
+	if(!is_all_input_valid_and_copy(instance, values, &ep))
+	{
+		return false;
+	}
+
+	int i = 0;
+	while(i < ep)
+	{
+		if(0 != values[i])
 		{
-			char val = *((char*)addr);
-			if(0 != val)
-				return false;
+			return false;
 		}
 		++i;
 	}
 
-	return 0 == used?false:true;
+	return 0 == ep?false:true;
 }
 
 static struct lxc_bool_gate_behavior logic_nor;
@@ -309,28 +344,25 @@ static struct lxc_bool_gate_behavior logic_nor;
 
 static bool logic_function_and(Gate instance)
 {
-	Wire* in = castGate(instance)->inputs;
-	int i = 0;
-	int used = 0;
-	while(i < 21)
-	{
-		Wire w = in[i];
-		if(NULL == w)
-			continue;
+	bool values[21];
+	int ep;
 
-		++used;
-		LxcValue val = lxc_get_wire_value(w);
-		void* addr = lxc_get_value(val);
-		if(NULL != addr)
+	if(!is_all_input_valid_and_copy(instance, values, &ep))
+	{
+		return false;
+	}
+
+	int i = 0;
+	while(i < ep)
+	{
+		if(0 != values[i])
 		{
-			char val = *((char*)addr);
-			if(0 != val)
-				return false;
+			return false;
 		}
 		++i;
 	}
 
-	return 0 == used?false:true;
+	return 0 == ep?false:true;
 }
 
 static struct lxc_bool_gate_behavior logic_and;
@@ -339,23 +371,20 @@ static struct lxc_bool_gate_behavior logic_and;
 
 static bool logic_function_or(Gate instance)
 {
-	Wire* in = castGate(instance)->inputs;
-	int i = 0;
-	int used = 0;
-	while(i < 21)
-	{
-		Wire w = in[i];
-		if(NULL == w)
-			continue;
+	bool values[21];
+	int ep;
 
-		++used;
-		LxcValue val = lxc_get_wire_value(w);
-		void* addr = lxc_get_value(val);
-		if(NULL != addr)
+	if(!is_all_input_valid_and_copy(instance, values, &ep))
+	{
+		return false;
+	}
+
+	int i = 0;
+	while(i < ep)
+	{
+		if(0 != values[i])
 		{
-			char val = *((char*)addr);
-			if(0 != val)
-				return true;
+			return true;
 		}
 		++i;
 	}
@@ -367,6 +396,34 @@ static struct lxc_bool_gate_behavior logic_or;
 
 /****************************** Only for debug ********************************/
 
+static bool logic_function_dbg(Gate instance)
+{
+	Tokenport* in = castGate(instance)->inputs;
+
+	int i=0;
+	while(i<21)
+	{
+		Tokenport tp = in[i];
+		if(NULL != tp)
+		{
+			LxcValue val = lxc_get_token_value(tp);
+			if(NULL != val)
+			{
+				printf("Gate(dbg:%p) [%d]: %s\n", instance, i, *((char*)lxc_get_value(val))?"true":"false");
+			}
+		}
+
+		++i;
+	}
+
+
+	return false;
+}
+
+static struct lxc_bool_gate_behavior logic_dbg;
+
+/***************************** init functions *********************************/
+
 static char*** path_to_primitive_logic =
 	(char**[]){(char*[]){"Primitive", "Logic", NULL},NULL};
 
@@ -377,8 +434,8 @@ static void init_behavior
 	bool(*logic_function)(Gate))
 {
 	memcpy(b, &commons, sizeof(commons));
-	char** name = &(b->base.gate_name);
-	*name = gate_name;
+	char** name = (char**)&(b->base.gate_name);
+	*name = (char*)gate_name;
 	//b->base.gate_name = gate_name;
 	b->logic_function = logic_function;
 
@@ -394,6 +451,7 @@ static int library_operation_function(enum library_operation op, const char** er
 		init_behavior(&logic_nor, "nor", logic_function_nor);
 		init_behavior(&logic_and, "and", logic_function_and);
 		init_behavior(&logic_or, "or", logic_function_or);
+		init_behavior(&logic_dbg, "dbg", logic_function_dbg);
 		return 0;
 	}
 
@@ -415,6 +473,8 @@ struct lxc_loadable_library logxcontroll_loadable_library_bool =
 		&logic_nor,
 		&logic_and,
 		&logic_or,
+
+		&logic_dbg,
 
 		NULL,
 	},

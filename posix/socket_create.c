@@ -63,13 +63,13 @@ static LxcValue* access_internal_variable(Gate i, int wire_abs)
 
 static inline int get_input_value(struct lxc_posix_socket_create_instance* gate, int abs_index)
 {
-	Wire w = gate->base.inputs[abs_index];
+	Tokenport w = gate->base.inputs[abs_index];
 	if(NULL == w)
 	{
 		return -1;
 	}
 
-	LxcValue val = lxc_get_wire_value(w);
+	LxcValue val = lxc_get_token_value(w);
 	if(NULL == val)
 	{
 		return -1;
@@ -208,40 +208,35 @@ static int socket_create_libop
 		(
 			&(posix_socket_create.input_ports),
 			"AF_",
-			&lxc_signal_int,
-			true
+			&lxc_signal_int
 		);
 
 		IN_SOCK = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_create.input_ports),
 			"SOCK_",
-			&lxc_signal_int,
-			true
+			&lxc_signal_int
 		);
 
 		IN_PF = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_create.input_ports),
 			"PF_",
-			&lxc_signal_int,
-			true
+			&lxc_signal_int
 		);
 
 		IN_new = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_create.input_ports),
 			"new",
-			&lxc_signal_pulse,
-			true
+			&lxc_signal_pulse
 		);
 
 		OUT_socket_fd = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_create.output_ports),
 			"socket fd",
-			&lxc_signal_int,
-			false
+			&lxc_signal_int
 		);
 
 
@@ -249,8 +244,7 @@ static int socket_create_libop
 		(
 			&(posix_socket_create.output_ports),
 			"errno",
-			&lxc_signal_int,
-			false
+			&lxc_signal_int
 		);
 
 	}

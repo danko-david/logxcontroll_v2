@@ -107,7 +107,7 @@
 
 Wire lxc_create_wire(Signal type)
 {
-	Wire ret = malloc(sizeof(struct lxc_wire));
+	Wire ret = malloc_zero(sizeof(struct lxc_wire));
 	ret->type = type;
 	ret->current_value = NULL;
 
@@ -121,7 +121,7 @@ Wire lxc_create_wire(Signal type)
 }
 
 //TODO synchronize
-int remove_port(Gate instance, uint index, Port** ports, uint* length)
+int remove_port(Gate instance, uint index, Tokenport** ports, uint* length)
 {
 	if(NULL == *ports)
 	{
@@ -133,7 +133,7 @@ int remove_port(Gate instance, uint index, Port** ports, uint* length)
 		int i = 0;
 		while(i < len)
 		{
-			Port p = (*ports)[i];
+			Tokenport p = (*ports)[i];
 			if(instance == p->gate && index == p->index)
 			{
 				//i found them
@@ -174,9 +174,10 @@ int private_generic_wiring
 	int index,
 	int (*get_max_index)(Gate instance, Signal type),
 	int (*get_types)(Gate instance, Signal* arr, uint max_length),
-	Wire (*get_wire)(Gate instance, Signal type, uint index),
-	int (*wire_function)(Gate instance, Signal signal, Wire wire, uint index),
-	void (*on_success)(Signal type, Wire wire, Gate g, uint index)
+	void* (*get_wire)(Gate instance, Signal type, uint index),
+	bool is_subject_token,
+	int (*wire_function)(Gate instance, Signal signal, void* subject, uint index),
+	void (*on_success)(Signal type, void* subject, Gate g, uint index)
 )
 {
 
@@ -204,7 +205,6 @@ int private_generic_wiring
 		return LXC_ERROR_TOO_MANY_TYPES;
 
 	int i = 0;
-
 	while(i < supp_max)
 	{
 		if(supp[i] == signal)
@@ -223,7 +223,9 @@ passed:
 		return LXC_ERROR_ENTITY_OUT_OF_RANGE;
 	}
 
-	Wire wired = get_wire(instance, signal, index);
+	void* wired = get_wire(instance, signal, index);
+
+	void* subject;
 
 	//now user tries to unwire with specified index
 	if(NULL == wire)
@@ -232,7 +234,7 @@ passed:
 		{
 			return LXC_ERROR_PORT_IS_ALREADY_FREE;
 		}
-
+		//unwiring is independent from the subject (Wire/token)
 		wire_function(instance, signal, NULL, index);
 	}
 	else
@@ -242,7 +244,21 @@ passed:
 			return LXC_ERROR_PORT_IS_IN_USE;
 		}
 
-		wire_function(instance, signal, wire, index);
+		//if subject is Tokenport we create and set a new one
+		if(is_subject_token)
+		{
+			Tokenport p = malloc_zero(sizeof(struct lxc_tokenport));
+			p->gate = instance;
+			p->owner = wire;
+			p->index = index;
+			wire_function(instance, signal, p, index);
+			subject = p;
+		}
+		else
+		{
+			wire_function(instance, signal, wire, index);
+			subject = wire;
+		}
 	}
 
 	//int ret = private_check_signal(g, &type, wire, g->behavior->get_input_types);
@@ -261,36 +277,34 @@ passed:
 		}
 	}
 
-	on_success(signal, wire, instance, index);
+	on_success(signal, subject, instance, index);
 	return 0;
 }
 
 //TODO synchronize
-void add_port(Port add, Port** ports, uint* length)
+void add_port(Tokenport add, Tokenport** ports, uint* length)
 {
-	array_nt_append_element((void***)ports, length, add);
+	array_nt_append_element((void***) ports, length, (void*) add);
 }
 
-void on_successfull_input_wiring(Signal type, Wire wire, Gate g, uint index)
+void on_successfull_input_wiring(Signal type, Tokenport p, Gate g, uint index)
 {
 	//if successfully wired/unwired, register/deregister into the wire.
 	//and notify the wire writer gate to re execute itself
-	if(NULL != wire)
+	if(NULL != p)
 	{
-		Port p = malloc(sizeof(struct lxc_port));
-		p->gate = g;
-		p->index = index;
-		add_port(p, &(wire->drivens), &(wire->drivens_length));
-
+		add_port(p, &(p->owner->drivens), &(p->owner->drivens_length));
+		p->wire_index = array_nt_contains((void**)p->owner->drivens, p->owner->drivens_length, (void*)p);
 		if(g->enabled)
 		{
-			g->behavior->input_value_changed(g, type, wire->current_value, index);
+			//TODO send a generic system notification
+			//g->execution_behavior(g, type, wire->current_value, index);
 		}
 	}
 	else
 	{
 		//this case is clear, notify unwired input
-		g->behavior->input_value_changed(g, type, NULL, index);
+		g->execution_behavior(g, type, NULL, index);
 	}
 }
 
@@ -299,7 +313,7 @@ void on_successfull_output_wiring(Signal type, Wire wire, Gate g, uint index)
 	if(NULL != wire)
 	{
 		//new wire attached, notify the driver
-		Port p = malloc(sizeof(struct lxc_port));
+		Tokenport p = malloc(sizeof(struct lxc_tokenport));
 		p->gate = g;
 		p->index = index;
 		add_port(p, &(wire->drivers), &(wire->drivers_length));
@@ -314,19 +328,19 @@ void on_successfull_output_wiring(Signal type, Wire wire, Gate g, uint index)
 				NULL
 			);
 			lxc_reference_value(notify);
-			g->behavior->input_value_changed(g, notify->type, notify, 0);
+			g->execution_behavior(g, notify->type, notify, 0);
 			lxc_unreference_value(notify);
 		}
 	}
 	else
 	{
 		//notify driven gates, input is unwired
-		Port* ps = wire->drivens;
+		Tokenport* ps = wire->drivens;
 		int len = wire->drivens_length;
 		int i = 0;
 		while(i<len)
 		{
-			Port p = ps[i];
+			Tokenport p = ps[i];
 			if(NULL == p)
 			{
 				return;
@@ -335,7 +349,7 @@ void on_successfull_output_wiring(Signal type, Wire wire, Gate g, uint index)
 			Gate target = p->gate;
 			if(target->enabled)
 			{
-				target->behavior->input_value_changed(target, type, NULL, p->index);
+				target->execution_behavior(target, type, NULL, p->index);
 			}
 		}
 	}
@@ -353,6 +367,7 @@ int lxc_wire_gate_input(Signal type, Wire wire, Gate g, uint index)
 		g->behavior->get_input_max_index,
 		g->behavior->get_input_types,
 		g->behavior->get_input_wire,
+		true,
 		g->behavior->wire_input,
 		on_successfull_input_wiring
 	);
@@ -369,6 +384,7 @@ int lxc_wire_gate_output(Signal type, Wire wire, Gate g, uint index)
 		g->behavior->get_output_max_index,
 		g->behavior->get_output_types,
 		g->behavior->get_output_wire,
+		false,
 		g->behavior->wire_output,
 		on_successfull_output_wiring
 	);
@@ -384,26 +400,25 @@ static void drive_wire_task_execute(Task t)
 
 	free(t);
 
-	lxc_import_new_value(value, &(wire->current_value));
-
 	if(NULL != value)
 	{
 		lxc_unreference_value(value);
 	}
 
-	Port* ports = wire->drivens;
+	Tokenport* ports = wire->drivens;
 	Signal signal = wire->type;
 	int len = wire->drivens_length;
 
-	for(int i=0;i<len;++i)
+	int i;
+	for(i=0;i<len;++i)
 	{
-		Port p = ports[i];
+		Tokenport p = ports[i];
 		if(NULL == p)
 			return;
 
-		if(p->gate->enabled && NULL != p->gate->behavior->input_value_changed)
+		if(p->gate->enabled && NULL != p->gate->execution_behavior)
 		{
-			p->gate->behavior->input_value_changed(p->gate, signal, value, p->index);
+			p->gate->execution_behavior(p->gate, signal, value, p->index);
 		}
 	}
 }
@@ -421,17 +436,15 @@ void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue val
 		return;
 	}
 
-	if(NULL != value)
-	{
-		lxc_reference_value(value);
-	}
+	lxc_import_new_value(value, &(wire->current_value));
 
-	Task t = malloc(sizeof(struct lxc_task));
+	Task t = malloc(sizeof(struct lxc_task));//TODO referenc the value beacuse it can change over the time, and can be finalized before another thread process it
 	t->instance = instance;
 	t->index = out_index;
 	t->wire = wire;
 	t->value = value;
-	lxc_submit_asyncron_task(drive_wire_task_execute, t);
+	//TODO lxc_submit_asyncron_task(drive_wire_task_execute, t);
+	drive_wire_task_execute(t);
 }
 
 
@@ -483,7 +496,7 @@ int lxc_refdiff_value(LxcValue value, int count)
 	return 1024;
 }
 
-
+/* TODO
 LxcValue lxc_get_wire_value(Wire w)
 {
 	if(NULL == w)
@@ -492,6 +505,37 @@ LxcValue lxc_get_wire_value(Wire w)
 	}
 
 	return w->current_value;
+}
+*/
+
+LxcValue lxc_get_token_value(Tokenport tp)
+{
+	if(NULL == tp)
+	{
+		return NULL;
+	}
+
+	return tp->owner->current_value;
+
+	//TODO atomic get
+	struct chain_link_refc* lnk = tp->current_value;
+	if(NULL == tp->current_value)
+	{
+		return NULL;
+	}
+
+	LxcValue val = (LxcValue) lnk->addr;
+
+
+}
+
+//TODO
+void lxc_absorb_token(Tokenport tp)
+{
+
+	//TODO atomic update next chain link
+	//decremenet chainlink refcount
+	//register "notify again" if port can notify
 }
 
 
@@ -534,7 +578,7 @@ void lxc_gate_set_enabled(Gate gate,bool enabled)
 	gate->enabled = enabled;
 
 	void (*ivc)(Gate instance, Signal type, LxcValue value, uint index) =
-		gate->behavior->input_value_changed;
+		gate->execution_behavior;
 
 	if(NULL == ivc)
 	{
@@ -654,7 +698,9 @@ static int fill_labels
 )
 {
 	int permit = max_length - last_free;
-	for(int i=0;i<max;++i)
+
+	int i;
+	for(i=0;i<max;++i)
 	{
 		const char* c = get_label(gate, type, i);
 		arr[last_free+i] = c;
@@ -703,7 +749,8 @@ static int get_labels
 
 	int req_length = 0;
 
-	for(int i=0;i < len;++i)
+	int i;
+	for(i=0;i < len;++i)
 	{
 		int req = get_max_index(gate, sigs[i]);
 		if(req > 0)
@@ -719,7 +766,7 @@ static int get_labels
 
 	int sum = 0;
 
-	for(int i=0;i < len;++i)
+	for(i=0;i < len;++i)
 	{
 		int req = get_max_index(gate, sigs[i]);
 
@@ -890,7 +937,7 @@ int lxc_set_property_value
 		if(0 == ret)
 		{
 			void (*ivc)(Gate instance, Signal type, LxcValue value, uint index) =
-					gate->behavior->input_value_changed;
+					gate->execution_behavior;
 
 			if(NULL != ivc)
 			{
@@ -979,7 +1026,8 @@ LxcValue lxc_get_constant_by_name(const char* name)
 	if(NULL == REGISTERED_CONSTANT_VALUES)
 		return NULL;
 
-	for(int i=0;NULL != REGISTERED_CONSTANT_VALUES[i];++i)
+	int i;
+	for(i=0;NULL != REGISTERED_CONSTANT_VALUES[i];++i)
 	{
 		if(0 == strcmp(name,REGISTERED_CONSTANT_VALUES[i]->name))
 			return REGISTERED_CONSTANT_VALUES[i]->value;
@@ -994,7 +1042,8 @@ Signal lxc_get_signal_by_name(const char* str)
 	if(NULL == REGISTERED_SIGNALS)
 		return NULL;
 
-	for(int i=0;NULL != REGISTERED_SIGNALS[i];++i)
+	int i;
+	for(i=0;NULL != REGISTERED_SIGNALS[i];++i)
 	{
 		if(0 == strcmp(str,REGISTERED_SIGNALS[i]->name))
 			return REGISTERED_SIGNALS[i];

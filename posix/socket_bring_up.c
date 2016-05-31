@@ -415,40 +415,35 @@ static int bring_up_libop
 		(
 			&(posix_socket_bring_up.base.input_ports),
 			"socket fd",
-			&lxc_signal_int,
-			true
+			&lxc_signal_int
 		);
 
 		IN_LOCAL = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.input_ports),
 			"local",
-			&lxc_posix_sockaddr,
-			true
+			&lxc_posix_sockaddr
 		);
 
 		IN_REMOTE = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.input_ports),
 			"remote",
-			&lxc_posix_sockaddr,
-			true
+			&lxc_posix_sockaddr
 		);
 
 		OUT_FD = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.output_ports),
 			"fd",
-			&lxc_signal_int,
-			false
+			&lxc_signal_int
 		);
 
 		OUT_ERRNO = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.output_ports),
 			"errno",
-			&lxc_signal_int,
-			false
+			&lxc_signal_int
 		);
 
 		lxc_add_property

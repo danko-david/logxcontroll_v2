@@ -60,10 +60,12 @@ void lxc_submit_asyncron_task(void (*funct)(void*), void* param)
 
 	pthread_spin_unlock(&queue_free_spin);
 
+
 	if(NULL == use)
 	{
 		use = new_pool_thread();
 	}
+
 
 	pthread_spin_lock(&queue_busy_spin);
 	queue_add_element(&busy_head, use, &busy_tail);

@@ -65,7 +65,9 @@ void gnu_libc_print_stack_trace()
 	printf ("Obtained %zd stack frames.\n", size);
 
 	for (i = 0; i < size; i++)
-	 printf ("%s\n", strings[i]);
+	{
+		printf ("%s\n", strings[i]);
+	}
 
 	free (strings);
 }
@@ -142,8 +144,11 @@ void dbg_print_messages(char** msgs)
 	if(NULL == msgs)
 		return;
 
-	for(int i=0;NULL != msgs[i];++i)
+	int i;
+	for(i=0;NULL != msgs[i];++i)
+	{
 		printf("%s\n", msgs[i]);
+	}
 }
 
 void dbg_crash()
@@ -194,7 +199,7 @@ void array_nt_append_element(void*** array_addr, unsigned int* length, void* ele
 {
 	if(NULL == *array_addr)
 	{
-		*array_addr = malloc(sizeof(Port*));
+		*array_addr = malloc(sizeof(void*));
 		*length = 1;
 		(*array_addr)[0] = element;
 	}
@@ -257,10 +262,13 @@ Wire* find_mixed_wire_location(Wire* mixed_type_wires, unsigned int length, Sign
 		return NULL;
 
 	unsigned int ordinal = 0;
-	for(unsigned int i=0;i < length; ++i)
+	uint i = 0;
+	for(i=0;i < length; ++i)
 	{
 		if(NULL != mixed_type_wires[i])
+		{
 			return NULL;
+		}
 
 		if(signal == mixed_type_wires[i]->type)
 		{
@@ -279,9 +287,14 @@ int array_nt_population(void** array_addr, unsigned int length)
 	if(NULL == array_addr)
 		return 0;
 
-	for(uint i= 0;i < length;++i)
+	uint i;
+	for(i= 0;i < length;++i)
+	{
 		if(NULL == array_addr[i])
+		{
 			return i;
+		}
+	}
 
 	return length;
 }
@@ -351,9 +364,14 @@ int array_fix_contains(void** array_address, uint length, void* val)
 	if(NULL == array_address)
 		return -1;
 
-	for(uint i = 0;i<length;++i)
+	uint i;
+	for(i = 0;i<length;++i)
+	{
 		if(array_address[i] == val)
+		{
 			return i;
+		}
+	}
 
 	return -1;
 }
@@ -365,9 +383,14 @@ int array_fix_population(void** array_address, uint length)
 
 	int population = 0;
 
-	for(uint i = 0;i<length;++i)
+	uint i;
+	for(i = 0;i<length;++i)
+	{
 		if(NULL != array_address[i])
+		{
 			++population;
+		}
+	}
 
 	return population;
 
@@ -378,9 +401,14 @@ int array_fix_first_free_slot(void** array_address, uint length)
 	if(NULL == array_address)
 		return -1;
 
-	for(uint i=0;i<length;++i)
+	uint i;
+	for(i=0;i<length;++i)
+	{
 		if(NULL == array_address[i])
+		{
 			return i;
+		}
+	}
 
 	return -1;
 }
@@ -403,10 +431,15 @@ int array_pnt_last_index(void** array_addr)
 	if(NULL == array_addr || NULL == array_addr[0])
 		return -1;
 
-	for(uint i=1;;++i)
+	uint i = 1;
+	for(;;)
+	{
 		if(NULL == array_addr[i])
+		{
 			return i-1;
-
+		}
+		++i;
+	}
 	//here the process will die by segfault
 	return -1;
 }
@@ -420,8 +453,11 @@ void* array_pnt_pop_element(void*** array_addr, uint index)
 
 	void* ret = (*array_addr)[index];
 
-	for(int i = index;i < lst;++i)//i+1 is NULL at the end of the iteration
+	int i;
+	for(i = index;i < lst;++i)//i+1 is NULL at the end of the iteration
+	{
 		(*array_addr)[i] = (*array_addr)[i+1];
+	}
 
 	(*array_addr) = realloc(array_addr, sizeof(void*)*(lst+1));
 
@@ -448,10 +484,13 @@ int array_pnt_contains(void** array_addr, void* addr)
 	if(NULL == array_addr)
 		return -1;
 
-	for(int i=0;NULL != array_addr[i];++i)
+	int i;
+	for(i=0;NULL != array_addr[i];++i)
 	{
 		if(addr == array_addr[i])
+		{
 			return i;
+		}
 	}
 
 	return -1;
@@ -467,7 +506,8 @@ void array_pnt_free_all(void** array_addr)
 	if(NULL == array_addr)
 		return;
 
-	for(int i=0;NULL != array_addr[i];++i)
+	int i;
+	for(i=0;NULL != array_addr[i];++i)
 	{
 		free(array_addr[i]);
 	}
@@ -487,8 +527,11 @@ void array_pnt_dbg_printf_char_array(void** array, char* array_name)
 
 	char** arr = (char**)array;
 
-	for(int i=0;NULL != arr[i];++i)
+	int i;
+	for(i=0;NULL != arr[i];++i)
+	{
 		printf("%s[%d] = \"%s\"\r\n", array_name, i, arr[i]);
+	}
 }
 
 int safe_strcpy(char* dst, int max_length, const char* src)

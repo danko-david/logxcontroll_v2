@@ -69,16 +69,14 @@ static void inet_on_use(struct lxc_posix_socketaddress_create* gate)
 	(
 		&(gate->base.input_ports),
 		"address",
-		&lxc_signal_string,
-		true
+		&lxc_signal_string
 	);
 
 	lxc_port_unchecked_add_new_port
 	(
 		&(gate->base.input_ports),
 		"port",
-		&lxc_signal_int,
-		true
+		&lxc_signal_int
 	);
 }
 static LxcValue inet_create_socket
@@ -87,7 +85,7 @@ static LxcValue inet_create_socket
 )
 {
 	//get all inputs
-	LxcValue addr = lxc_get_value_safe_from_wire_array
+	LxcValue addr = lxc_get_value_safe_from_tokenport_array
 	(
 		gate->base.inputs,
 		gate->base.inputs_length,
@@ -99,7 +97,7 @@ static LxcValue inet_create_socket
 		return NULL;
 	}
 
-	LxcValue port = lxc_get_value_safe_from_wire_array
+	LxcValue port = lxc_get_value_safe_from_tokenport_array
 	(
 		gate->base.inputs,
 		gate->base.inputs_length,

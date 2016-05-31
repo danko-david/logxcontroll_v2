@@ -65,7 +65,7 @@ typedef struct lxc_instance* Gate;
 typedef const struct lxc_signal_type* Signal;
 typedef struct lxc_wire* Wire;
 typedef struct lxc_value* LxcValue;
-typedef struct lxc_port* Port;
+typedef struct lxc_tokenport* Tokenport;
 
 struct lxc_cast_to
 {
@@ -84,6 +84,12 @@ struct lxc_signal_type
 	const char* name;
 
 	/*
+	 * Assigned by the framework at signal registering time
+	 * used for subtype supporting
+	 */
+	int ordinal;
+
+	/*
 	 * Check signal equals to another.
 	 */
 	bool (*equals)(LxcValue, LxcValue);
@@ -98,8 +104,20 @@ struct lxc_signal_type
 	struct lxc_cast_to** cast_to;
 };
 
-struct lxc_port
+struct chain_link_refc
 {
+	int refcount;
+	struct chain_link_refc* next;
+	void* addr;
+};
+
+struct lxc_tokenport
+{
+	Wire owner;
+	int wire_index;
+
+	struct chain_link_refc* current_value;
+
 	Gate gate;
 	uint index;
 };
@@ -164,21 +182,41 @@ struct lxc_value
  * Represents a wire, connect gates together.
  * A wire has driver(s) and driven gates.
  *
+ * The rest of the dataflow functionalities implemented here:
+ *
+ * - asynchron/token based flow, with single value or per gate input token port
+ * 	with the necessary queue management
+ *
+ * - gate notifying: sensitivity implementation moves here, devuser can turn off
+ * the notifying per port, so the execution logic will not enqueued by writing
+ * the wire's value (gates doesn't need implement sensitivity)
+ *
+ * - debug functionalities: registering hooks before wire writing and before
+ * 	gate notifying
+ *
+ * - on token management: if queue is full, block the writer gate, and
+ * 	propagate back the blocking.
+ *
+ * 		two reason for back propagating the wire's reference:
+ * 			-
+ *
+ *
+ *
+ *
  * TODO functionality:
  * 	- ignore repeated values (on/off)
- *
- * 	- token based value management
  *
  * */
 struct lxc_wire
 {
 	Signal type;
+	//TODO queue and single token for tokenless mode
 	LxcValue current_value;
 
-	Port* drivers;
+	Tokenport* drivers;
 	uint drivers_length;
 
-	Port* drivens;
+	Tokenport* drivens;
 	uint drivens_length;
 };
 
@@ -280,19 +318,19 @@ struct lxc_gate_behavior
 
 	//returns the wire of the specified type and input. returns null if
 	//type not supported or port is not wired
-	Wire (*get_input_wire)(Gate instance, Signal type, uint index);
+	Tokenport (*get_input_wire)(Gate instance, Signal type, uint index);
 
 	//\\tries to wire the input. Signal parameter is redundant, if wire is not null
 	//\\it will be silently ignored, if wire is null gate unwire the input specified
 	//\\by type and index.
 
 	//simply set the wire in the internal data structure specified by signal
-	int (*wire_input)(Gate instance, Signal signal, Wire wire, uint index);
+	int (*wire_input)(Gate instance, Tokenport port);
 
 	//here notified if an input value changed, you can decide do you want to
 	//care about (sensitivity), if you want to execute them without any
 	//modification call instance->execution_behavior(instance,type,value,index)
-	void (*input_value_changed)(Gate instance, Signal type, LxcValue value, uint index);
+	//removed function: void (*input_value_changed)(Gate instance, Signal type, LxcValue value, uint index);
 
 	//execute the gate specific function
 	//this will be called by the input_value_changed function as it implemented
@@ -326,7 +364,7 @@ struct lxc_gate_behavior
 	//\\by the signal type and index.
 
 	//simply set the wire in the internal data structure specified by signal
-	int (*wire_output)(Gate instance, Signal signal, Wire wire, uint index);
+	int (*wire_output)(Gate instance, Signal type, Wire wire, uint port);
 
 	//TODO get_lock_for_execution
 	//a structure of function pointers contains the data for locking
@@ -383,6 +421,15 @@ struct lxc_instance
 	void (*execution_behavior)(Gate instance, Signal type, LxcValue value, uint index);
 
 	char enabled;
+
+	//long_lock
+	/*
+	 * queue for execution (even if direct execution applied, asynchron task
+	 *  also should be enqueued)
+	 */
+
+
+	//atomic reference blocked_by (on token wire value overproducing)
 };
 
 struct lxc_constant_value

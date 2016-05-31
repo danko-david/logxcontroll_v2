@@ -60,7 +60,8 @@ int posix_libop(enum library_operation op, const char** error, int max_length)
 		add_gate(produce_posix_serial());*/
 	}
 
-	for(int i=0;NULL != logxcontroll_loadable_library.gates[i];++i)
+	int i;
+	for(i=0;NULL != logxcontroll_loadable_library.gates[i];++i)
 	{
 		int (*libop)(enum library_operation op, const char** error, int max_length);
 		libop = logxcontroll_loadable_library.gates[i]->library_operation;

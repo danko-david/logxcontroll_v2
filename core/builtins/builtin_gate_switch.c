@@ -81,7 +81,8 @@ int switch_get_input_types(Gate instance, Signal* arr, uint max_length)
 
 	if(NULL != input_ports)
 	{
-		for(unsigned int i=0;i < sw->input_ports_length;++i)
+		uint i;
+		for(i=0;i < sw->input_ports_length;++i)
 		{
 			if(NULL == input_ports[i])
 				break;
@@ -95,7 +96,8 @@ int switch_get_input_types(Gate instance, Signal* arr, uint max_length)
 
 	if(max_length >= set_length)
 	{
-		for(unsigned int i=0;i < set_length;++i)
+		uint i;
+		for(i=0;i < set_length;++i)
 			arr[i] = set[i];
 	}
 
@@ -108,7 +110,8 @@ const char* find_port_label(struct wire_port** arr, uint length, Signal signal, 
 	if(NULL == arr)
 		return NULL;
 
-	for(uint i=0;i < length && NULL != arr[i]; ++i)
+	uint i;
+	for(i=0;i < length && NULL != arr[i]; ++i)
 		if(signal == arr[i]->signal && index == arr[i]->index)
 			return arr[i]->name;
 
@@ -122,7 +125,8 @@ int find_max_index(struct wire_port** arr, unsigned int length, Signal signal)
 
 	uint max = 0;
 
-	for(uint i=0;i < length && NULL != arr[i]; ++i)
+	uint i;
+	for(i=0;i < length && NULL != arr[i]; ++i)
 		if(signal == arr[i]->signal && max > arr[i]->index)
 			max = arr[i]->index;
 
@@ -134,7 +138,8 @@ Wire* find_wire_port_location(struct wire_port** arr, uint length, Signal signal
 	if(NULL == arr)
 			return NULL;
 
-	for(uint i=0;i < length && NULL != arr[i]; ++i)
+	uint i;
+	for(i=0;i < length && NULL != arr[i]; ++i)
 		if(signal == arr[i]->signal && index == arr[i]->index)
 			return &(arr[i]->wire);
 
@@ -206,7 +211,8 @@ void switch_change_case(struct lxc_gate_switch* sw, CaseFrame case_frame)
 
 	Wire* f_wire = case_frame->circuit->inputs;
 
-	for(uint i=0;i<len;++i)
+	uint i;
+	for(i=0;i<len;++i)
 	{
 		//end of wires
 		if(NULL == in[i])
@@ -248,7 +254,8 @@ void switch_input_value_changed(Gate instance, Signal type, LxcValue value, unsi
 		unsigned int len = sw->cases_count;
 		CaseFrame* cases = sw->cases;
 
-		for(unsigned int i = 0;i < len;++i)
+		uint i;
+		for(i = 0;i < len;++i)
 		{
 			if(NULL == cases[i])
 				return;
@@ -286,7 +293,8 @@ int switch_get_output_types(Gate instance, Signal* arr, unsigned int max_length)
 
 	if(NULL != output_ports)
 	{
-		for(uint i=0;i < sw->output_ports_length;++i)
+		uint i;
+		for(i=0;i < sw->output_ports_length;++i)
 		{
 			if(NULL == output_ports[i])
 				break;
@@ -300,7 +308,8 @@ int switch_get_output_types(Gate instance, Signal* arr, unsigned int max_length)
 
 	if(max_length >= set_length)
 	{
-		for(uint i=0;i < set_length;++i)
+		uint i;
+		for(i=0;i < set_length;++i)
 			arr[i] = set[i];
 	}
 
@@ -348,7 +357,8 @@ bool is_port_exists(char* name, struct wire_port** port, uint length)
 	if(NULL == port)
 		return false;
 
-	for(uint i=0;i< length;++i)
+	uint i;
+	for(i=0;i< length;++i)
 	{
 		if(NULL == port[i])
 			return false;
@@ -367,7 +377,8 @@ int max_index_by_type(struct wire_port** port, uint length, Signal type)
 
 	int max = -1;
 
-	for(uint i=0;i < length;++i)
+	uint i;
+	for(i=0;i < length;++i)
 	{
 		if(NULL == port[i])
 			return max;
@@ -414,7 +425,8 @@ int find_port_index_by_name(struct wire_port** ports, uint length, char* name)
 	if(NULL == ports)
 		return -1;
 
-	for(uint i=0;i<length;++i)
+	uint i;
+	for(i=0;i<length;++i)
 		if(strcmp(name, ports[i]->name) == 0)
 			return i;
 
@@ -522,7 +534,6 @@ const struct lxc_gate_behavior builtin_gate_switch =
 	.get_input_max_index = switch_get_input_max_index,
 	.get_input_wire = switch_get_input_wire,
 	.wire_input = switch_wire_input,
-	.input_value_changed = switch_input_value_changed,
 	.execute = NULL,
 	.get_output_types = switch_get_output_types,
 	.get_output_label = switch_get_output_label,

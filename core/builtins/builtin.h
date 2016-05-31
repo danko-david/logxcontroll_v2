@@ -102,7 +102,7 @@ extern const struct lxc_value_operation primitive_constant_value_operations;
 extern const struct lxc_value_operation primitive_variable_value_operations;
 
 #include "core/lxc.h"
-#include "core/lxc_base_impl.h"
+//#include "core/lxc_base_impl.h"
 
 
 extern const struct lxc_loadable_library logxcontroll_loadable_library_builtin;

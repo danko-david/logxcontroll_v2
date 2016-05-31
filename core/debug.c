@@ -24,7 +24,8 @@ void lxc_dbg_print_properties(Gate gate)
 	const char* props[20];
 	int len = lxc_enumerate_properties(gate, props, 20);
 	char buf[200];
-	for(int i=0;i<len;++i)
+	int i;
+	for(i=0;i<len;++i)
 	{
 		lxc_get_property_value(gate, props[i], buf, 200);
 		printf("\t%s: \"%s\"\n", props[i], buf);

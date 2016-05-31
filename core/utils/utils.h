@@ -143,6 +143,8 @@ struct key_value
 	void* value;
 };
 
+//TODO rename DobleLinkedList
+
 struct queue_element
 {
 	struct queue_element* prev;
@@ -174,5 +176,6 @@ void queue_pop_intermediate_element
 //TODO map key_val by key
 
 void print_checkpoint(char* str);
+
 
 #endif /* UTILS_H_ */

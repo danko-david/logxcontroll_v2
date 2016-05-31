@@ -37,7 +37,6 @@
  * */
 struct lxc_port_manager
 {
-	bool sensitive_for_enable;
 	//fix null terminated arrays
 	//may not be null, if no element managed, it should contains an array whit
 	//single NULL element
@@ -50,15 +49,13 @@ struct lxc_port_manager
 
 	//size of managed ports by Signal type (managed_types)
 	uint* to_abs_size;
-
-	bool* sensitivity;
 };
 
 extern const char* lxc_port_empty_name;
 
 bool lxc_port_check_portname_in_use(struct lxc_port_manager*, const char* name);
 
-int lxc_port_unchecked_add_new_port(struct lxc_port_manager*, const char* port_name, Signal type, bool sensitive);
+int lxc_port_unchecked_add_new_port(struct lxc_port_manager*, const char* port_name, Signal type);
 
 void lxc_port_init_port_manager_factory(struct lxc_port_manager* fact);
 
@@ -96,7 +93,7 @@ int lxc_port_get_absindex_by_name(struct lxc_port_manager*, const char* name);
 struct lxc_port_registry
 {
 	struct lxc_port_manager* factory;
-	Wire* wires;
+	Tokenport* wires;
 };
 
 /**
@@ -152,7 +149,7 @@ struct lxc_generic_portb_behavior
 struct lxc_generic_portb_instance
 {
 	struct lxc_instance base;
-	Wire* inputs;
+	Tokenport* inputs;
 	Wire* outputs;
 };
 
@@ -196,7 +193,7 @@ struct lxc_generic_porti_instance
 	struct lxc_port_manager input_ports;
 	struct lxc_port_manager output_ports;
 	uint inputs_length;
-	Wire* inputs;
+	Tokenport* inputs;
 	uint outputs_length;
 	Wire* outputs;
 };

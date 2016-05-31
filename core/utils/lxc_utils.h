@@ -45,9 +45,9 @@ void lxc_portb_republish_internal_value
 	LxcValue* (access_internal_value)(Gate, int wire_abs)
 );
 
-LxcValue lxc_get_value_safe_from_wire_array
+LxcValue lxc_get_value_safe_from_tokenport_array
 (
-	Wire* wires,
+	Tokenport* wires,
 	int max_length,
 	int index
 );

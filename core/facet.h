@@ -22,7 +22,10 @@ int lxc_unreference_value(LxcValue value);
 int lxc_refdiff_value(LxcValue value, int count);
 
 
-LxcValue lxc_get_wire_value(Wire);
+//TODO LxcValue lxc_get_wire_value(Wire);
+LxcValue lxc_get_token_value(Tokenport);
+
+void lxc_absorb_token(Tokenport);
 
 void* lxc_get_value(LxcValue);
 

@@ -129,7 +129,7 @@ static const struct lxc_primitive_value lxc_bool_value_true =
 	.base.type = &lxc_signal_bool,
 	.refcount = 1024,
 	.base.operations = &primitive_constant_value_operations,
-	.char_value = ~0,
+	.char_value = true,
 };
 
 static const struct lxc_primitive_value lxc_bool_value_false =

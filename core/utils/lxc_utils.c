@@ -111,18 +111,18 @@ void lxc_portb_republish_internal_value
 		return;
 	}
 
-	Wire out = ((struct lxc_generic_portb_instance*)gate)->inputs[abs];
+	Tokenport out = ((struct lxc_generic_portb_instance*)gate)->inputs[abs];
 	if(NULL == out)
 	{
 		return;
 	}
 
-	lxc_drive_wire_value((Gate) gate, index, out, *addr);
+	lxc_drive_wire_value((Gate) gate, index, out->owner, *addr);
 }
 
-LxcValue lxc_get_value_safe_from_wire_array
+LxcValue lxc_get_value_safe_from_tokenport_array
 (
-	Wire* wires,
+	Tokenport* tokenports,
 	int max_length,
 	int index
 )
@@ -132,12 +132,12 @@ LxcValue lxc_get_value_safe_from_wire_array
 		return NULL;
 	}
 
-	Wire w = wires[index];
+	Tokenport w = tokenports[index];
 	if(NULL == w)
 	{
 		return NULL;
 	}
 
-	return lxc_get_wire_value(w);
+	return lxc_get_token_value(w);
 }
 

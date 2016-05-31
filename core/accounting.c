@@ -26,7 +26,8 @@ int lxc_register_gate(struct lxc_gate_behavior* entry)
 	const char*** paths = entry->paths;
 	if(NULL != paths)
 	{
-		for(int i=0;NULL != paths[i];++i)
+		int i;
+		for(i=0;NULL != paths[i];++i)
 		{
 			struct library_tree_node* node = get_or_create_library_path(paths[i]);
 			array_pnt_append_element((void***)&(node->gates), (void*)entry);
@@ -71,7 +72,8 @@ int lxc_load_library
 	struct lxc_gate_behavior** gates = lib->gates;
 	if(NULL != gates)
 	{
-		for(int i=0;NULL != gates[i];++i)
+		int i;
+		for(i=0;NULL != gates[i];++i)
 		{
 			int ret = lxc_register_gate(gates[i]);
 			if(0 != ret)
@@ -85,7 +87,8 @@ int lxc_load_library
 	Signal* sigs = lib->signals;
 	if(NULL != sigs)
 	{
-		for(int i=0;NULL != sigs[i];++i)
+		int i;
+		for(i=0;NULL != sigs[i];++i)
 		{
 			int ret = lxc_register_signal(sigs[i]);
 			if(0 != ret)
@@ -101,7 +104,8 @@ int lxc_load_library
 
 	if(NULL != consts)
 	{
-		for(int i=0;NULL != consts[i];++i)
+		int i;
+		for(i=0;NULL != consts[i];++i)
 		{
 			int ret = lxc_register_constant_value(consts[i]);
 			if(0 != ret)
@@ -132,11 +136,14 @@ int lxc_register_constant_value(struct lxc_constant_value* val)
 {
 	if(NULL != REGISTERED_CONSTANT_VALUES)
 	{
-		for(int i=0;NULL != REGISTERED_CONSTANT_VALUES[i];++i)
+		int i;
+		for(i=0;NULL != REGISTERED_CONSTANT_VALUES[i];++i)
+		{
 			if(0 == strcmp(val->name, REGISTERED_CONSTANT_VALUES[i]->name))
 			{
 				return LXC_ERROR_ENTITY_ALREADY_REGISTERED;
 			}
+		}
 	}
 
 	array_pnt_append_element((void***)&REGISTERED_CONSTANT_VALUES, val);
@@ -157,10 +164,14 @@ struct library_tree_node* recursive_search_lib_tree
 	if(NULL == path || NULL == path[lvl])
 		return *crnt;
 
-	for(int i=0;NULL != crnt[i];++i)
+	int i;
+	for(i=0;NULL != crnt[i];++i)
+	{
 		if(strcmp(path[lvl],crnt[i]->name))
+		{
 			return recursive_search_lib_tree(path, lvl+1, crnt[i]->subnodes);
-
+		}
+	}
 	return NULL;
 }
 
@@ -179,7 +190,9 @@ void recursive_search_ahead_lib_tree
 	if(NULL == crnt)
 		return;
 
-	for(int i=0;NULL != crnt[i];++i)
+	int i;
+	for(i=0;NULL != crnt[i];++i)
+	{
 		if(0 == strcmp(path[*lvl], crnt[i]->name))
 		{
 			++(*lvl);
@@ -188,6 +201,7 @@ void recursive_search_ahead_lib_tree
 			recursive_search_ahead_lib_tree(path, lvl, crnt, last);
 			return;
 		}
+	}
 }
 
 void search_ahead_library_path
@@ -249,10 +263,14 @@ void dbg_print_leafs(struct library_tree_node* node, int lvl)
 	if(NULL == ent)
 		return;
 
-	for(int g=0;NULL != ent[g];++g)
+	int g;
+	for(g=0;NULL != ent[g];++g)
 	{
-		for(int i=0;i<lvl;++i)
+		int i;
+		for(i=0;i<lvl;++i)
+		{
 			printf("\t");
+		}
 
 		printf("`%s`\n", ent[g]->gate_name);
 	}
@@ -263,11 +281,14 @@ void dbg_recursive_print_library_tree(struct library_tree_node** node, int lvl, 
 	if(NULL == node)
 		return;
 
-	for(int l=0;NULL != node[l];++l)
+	int l;
+	for(l=0;NULL != node[l];++l)
 	{
-
-		for(int i=0;i<lvl;++i)
+		int i;
+		for(i=0;i<lvl;++i)
+		{
 			printf("\t");
+		}
 
 		printf("%s",node[l]->name);
 		if(leafs)
@@ -300,9 +321,14 @@ struct lxc_gate_behavior* get_gate_entry_by_name(const char* name)
 	if(NULL == REGISTERED_BEHAVIORS)
 		return NULL;
 
-	for(int i=0;NULL != REGISTERED_BEHAVIORS[i];++i)
+	int i;
+	for(i=0;NULL != REGISTERED_BEHAVIORS[i];++i)
+	{
 		if(0 == strcmp(name, REGISTERED_BEHAVIORS[i]->gate_name))
+		{
 			return REGISTERED_BEHAVIORS[i];
+		}
+	}
 
 	return NULL;
 }
@@ -340,9 +366,14 @@ LxcValue (*lxc_get_conversion_function(Signal from, Signal to))(LxcValue)
 	if(NULL == cast)
 		return NULL;
 
-	for(int i=0;NULL != cast[i];++i)
+	int i;
+	for(i=0;NULL != cast[i];++i)
+	{
 		if(to == cast[i]->to)
+		{
 			return cast[i]->cast_function;
+		}
+	}
 
 	return NULL;
 }

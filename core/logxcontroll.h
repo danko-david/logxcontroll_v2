@@ -8,25 +8,16 @@
 #ifndef LOGXCONTROLL_H_
 #define LOGXCONTROLL_H_
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stddef.h>
-#include <stdbool.h>
-
-#include <unistd.h>
-
-#include <string.h>
-#include <errno.h>
+#include "core/platform.h"
 
 
 #include "core/lxc.h"
 #include "core/facet.h"
-#include "core/lxc_base_impl.h"
+//#include "core/lxc_base_impl.h"
 #include "core/lxc_execution.h"
 #include "core/accounting.h"
 #include "core/builtins/gate_generic.h"
 #include "core/builtins/builtin.h"
-#include "core/builtins/logic/lxc_bool_gates.h"
 
 #include "core/utils/lxc_utils.h"
 #include "core/utils/utils.h"

@@ -19,7 +19,7 @@ struct lxc_bool_gate_behavior
 struct lxc_bool_instance
 {
 	struct lxc_instance base;
-	Wire inputs[21];
+	Tokenport inputs[21];
 	Wire output;
 };
 

@@ -151,7 +151,8 @@ static int sockaddress_create_property_validator
 	{
 		int family = *((int*)addr);
 
-		for(int i=0;NULL != IMPLEMENTED_ADDRESS_CREATORS[i];++i)
+		int i;
+		for(i=0;NULL != IMPLEMENTED_ADDRESS_CREATORS[i];++i)
 		{
 			struct create_utils* cre = IMPLEMENTED_ADDRESS_CREATORS[i];
 			if(family == cre->family)
@@ -181,7 +182,8 @@ static int sockaddress_create_property_validator
 
 		struct create_utils* new_create = NULL;
 
-		for(int i=0;NULL != IMPLEMENTED_ADDRESS_CREATORS[i];++i)
+		int i;
+		for(i=0;NULL != IMPLEMENTED_ADDRESS_CREATORS[i];++i)
 		{
 			struct create_utils* cre = IMPLEMENTED_ADDRESS_CREATORS[i];
 			if(0 == strcmp(cre->name, value))
@@ -242,8 +244,7 @@ static void on_new_gate(struct lxc_generic_porti_instance* gate)
 	(
 		&(gate->output_ports),
 		"sockaddr",
-		&lxc_posix_sockaddr,
-		false
+		&lxc_posix_sockaddr
 	);
 }
 
