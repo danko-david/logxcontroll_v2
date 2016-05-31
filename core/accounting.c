@@ -319,7 +319,9 @@ void dbg_print_library_tree(bool leafs)
 struct lxc_gate_behavior* get_gate_entry_by_name(const char* name)
 {
 	if(NULL == REGISTERED_BEHAVIORS)
+	{
 		return NULL;
+	}
 
 	int i;
 	for(i=0;NULL != REGISTERED_BEHAVIORS[i];++i)

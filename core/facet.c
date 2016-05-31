@@ -1015,7 +1015,9 @@ Gate lxc_new_instance_by_name(const char* name)
 {
 	const struct lxc_gate_behavior* behavior = get_gate_entry_by_name(name);
 	if(NULL == behavior)
+	{
 		return NULL;
+	}
 
 	return behavior->create(behavior);
 }
