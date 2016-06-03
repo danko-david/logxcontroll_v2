@@ -23,6 +23,5 @@ struct lxc_bool_instance
 	Wire output;
 };
 
-extern struct lxc_loadable_library logxcontroll_loadable_library_bool;
 
 #endif /* LXC_BOOL_GATES_H_ */

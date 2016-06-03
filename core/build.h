@@ -5,8 +5,10 @@
  *      Author: szupervigyor
  */
 
-#ifndef PLATFORM_H_
-#define PLATFORM_H_
+#include "core/logxcontroll.h"
+
+#ifndef BUILD_H_
+#define BUILD_H_
 
 //http://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
 
@@ -41,6 +43,25 @@
  *		-||-
  *
  * */
+
+void lxc_load_embedded_modules
+(
+	const char** errors,
+	int maxlength
+);
+/*
+Available modules macro:
+#define LXC_EMBED_MODULE_ARITHMETIC
+#define LXC_EMBED_MODULE_POSIX
+*/
+
+#ifdef LXC_EMBED_MODULE_ARITHMETIC
+	#include "arithmetic/arithmetic.h"
+#endif
+
+#ifdef LXC_EMBED_MODULE_POSIX
+	#include "posix/liblxc_posix.h"
+#endif
 
 
 #if __STDC_VERSION__ >= 201101L

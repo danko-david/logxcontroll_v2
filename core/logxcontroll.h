@@ -8,12 +8,13 @@
 #ifndef LOGXCONTROLL_H_
 #define LOGXCONTROLL_H_
 
-#include "core/platform.h"
-
+#include "core/build.h"
 
 #include "core/lxc.h"
+
+
+
 #include "core/facet.h"
-//#include "core/lxc_base_impl.h"
 #include "core/lxc_execution.h"
 #include "core/accounting.h"
 #include "core/builtins/gate_generic.h"

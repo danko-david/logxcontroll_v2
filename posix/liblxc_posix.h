@@ -13,7 +13,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-extern struct lxc_loadable_library logxcontroll_loadable_library;
+
+#ifdef LXC_EMBED_MODULE_POSIX
+	#define POSIX_LIB_STRUCT_NAME logxcontroll_loadable_library_posix
+	extern struct lxc_loadable_library logxcontroll_loadable_library_posix;
+#else
+	#define POSIX_LIB_STRUCT_NAME logxcontroll_loadable_library
+	extern struct lxc_loadable_library logxcontroll_loadable_library;
+#endif
 
 extern const struct lxc_signal_type lxc_posix_sockaddr;
 

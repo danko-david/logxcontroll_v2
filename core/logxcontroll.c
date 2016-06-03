@@ -25,10 +25,11 @@ void logxcontroll_init_environment()
 
 	/*** Register built in Libraries ***/
 	char* errors[20];
-	lxc_load_library(&logxcontroll_loadable_library_builtin, errors, sizeof(errors));
-	//lxc_load_library(&logxcontroll_loadable_library_bool, errors, sizeof(errors));
+	memset(errors, 0, sizeof(errors));
 
-	lxc_load_shared_library("/home/szupervigyor/projektek/LogxKontroll/WS/Liblxc_ieee1003/Default/libLiblxc_ieee1003", errors, 200);
+	lxc_load_embedded_modules(errors, sizeof(errors));
+
+	//lxc_load_shared_library("/home/szupervigyor/projektek/LogxKontroll/WS/Liblxc_ieee1003/Default/libLiblxc_ieee1003", errors, 200);
 
 
 	logxcontroll_intialized = true;

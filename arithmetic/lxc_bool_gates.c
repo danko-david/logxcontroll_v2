@@ -464,7 +464,12 @@ static int library_operation_function(enum library_operation op, const char** er
 }
 
 //loadable library definition
-struct lxc_loadable_library logxcontroll_loadable_library_bool =
+#ifdef LXC_EMBED_MODULE_ARITHMETIC
+	struct lxc_loadable_library logxcontroll_loadable_library_arithmetic
+#else
+	struct lxc_loadable_library logxcontroll_loadable_library
+#endif
+=
 {
 	.library_operation = library_operation_function,
 	.gates = (struct lxc_gate_behavior*[])

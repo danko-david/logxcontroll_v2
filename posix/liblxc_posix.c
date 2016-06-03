@@ -43,7 +43,7 @@ static void add_gate(void* gate)
 {
 	array_pnt_append_element
 	(
-		(void***)&(logxcontroll_loadable_library.gates),
+		(void***)&(POSIX_LIB_STRUCT_NAME.gates),
 		gate
 	);
 }
@@ -61,10 +61,10 @@ int posix_libop(enum library_operation op, const char** error, int max_length)
 	}
 
 	int i;
-	for(i=0;NULL != logxcontroll_loadable_library.gates[i];++i)
+	for(i=0;NULL != POSIX_LIB_STRUCT_NAME.gates[i];++i)
 	{
 		int (*libop)(enum library_operation op, const char** error, int max_length);
-		libop = logxcontroll_loadable_library.gates[i]->library_operation;
+		libop = POSIX_LIB_STRUCT_NAME.gates[i]->library_operation;
 		if(NULL != libop)
 			libop(library_before_load, error, max_length);
 	}
@@ -72,7 +72,12 @@ int posix_libop(enum library_operation op, const char** error, int max_length)
 	return 0;
 }
 
-struct lxc_loadable_library logxcontroll_loadable_library =
+#ifdef LXC_EMBED_MODULE_POSIX
+	struct lxc_loadable_library logxcontroll_loadable_library_posix
+#else
+	struct lxc_loadable_library logxcontroll_loadable_library
+#endif
+=
 {
 	.library_operation = posix_libop,
 	.signals = (Signal[])
