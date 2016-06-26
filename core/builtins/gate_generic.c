@@ -130,7 +130,8 @@ int lxc_port_unchecked_add_new_port
 (
 	struct lxc_port_manager* factory,
 	const char* port_name,
-	Signal type
+	Signal type,
+	int* index_in_type_group
 )
 {
 	bool intermediate = false;
@@ -158,8 +159,8 @@ int lxc_port_unchecked_add_new_port
 			}
 		}
 
-		// if we doesn't find an empty slot (ie no intermediate replace will
-		// be applied) we reserve a new one
+		// if we doesn't find an empty slot (ie no intermediate replace can
+		// be applied) we allocate a new slot
 		if(!intermediate)
 		{
 			//determine the next free absolute index
@@ -167,7 +168,7 @@ int lxc_port_unchecked_add_new_port
 		}
 	}
 
-	//determine the index of the signal
+	//determine the index of the signal (ti means "type index")
 	int ti = array_pnt_contains((void**)factory->managed_types, (void*)type);
 
 	if(ti < 0)
@@ -175,7 +176,7 @@ int lxc_port_unchecked_add_new_port
 		bool type_replace = false;
 		Signal* mt = factory->managed_types;
 		uint* lengths = factory->to_abs_size;
-		if(NULL != mt && NULL!= lengths)
+		if(NULL != mt && NULL != lengths)
 		{
 			int i;
 			for(i=0;NULL != mt[i] ;++i)
@@ -218,6 +219,10 @@ int lxc_port_unchecked_add_new_port
 		}
 
 		factory->to_abs_size[ti] = 0;
+		if(NULL != index_in_type_group)
+		{
+			*index_in_type_group = 0;
+		}
 	}
 
 	//anyway we have to growth the to_abs array for the new element
@@ -230,6 +235,10 @@ int lxc_port_unchecked_add_new_port
 							);
 
 	factory->to_abs[ti][factory->to_abs_size[ti]] = next_abs;
+	if(NULL != index_in_type_group)
+	{
+		*index_in_type_group = factory->to_abs_size[ti];
+	}
 	++(factory->to_abs_size[ti]);
 
 	if(intermediate)

@@ -30,6 +30,8 @@
 #include <string.h>
 #include <errno.h>
 
+
+#include <dlfcn.h>//TODO POSIX supoports dlopen, windows has LoadLibrary function for this job
 /*
  * Required types:
  * 	- atomic_pointer_t
@@ -44,13 +46,16 @@
  *
  * */
 
+//comment this out if you doesn't want to print out negative refcount values.
+#define DEBUG_FOR_NEGATIVE_REFCOUNT
+
 void lxc_load_embedded_modules
 (
 	const char** errors,
 	int maxlength
 );
 /*
-Available modules macro:
+Available embeddable modules macro:
 #define LXC_EMBED_MODULE_ARITHMETIC
 #define LXC_EMBED_MODULE_POSIX
 */

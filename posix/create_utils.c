@@ -69,14 +69,16 @@ static void inet_on_use(struct lxc_posix_socketaddress_create* gate)
 	(
 		&(gate->base.input_ports),
 		"address",
-		&lxc_signal_string
+		&lxc_signal_string,
+		NULL
 	);
 
 	lxc_port_unchecked_add_new_port
 	(
 		&(gate->base.input_ports),
 		"port",
-		&lxc_signal_int
+		&lxc_signal_int,
+		NULL
 	);
 }
 static LxcValue inet_create_socket

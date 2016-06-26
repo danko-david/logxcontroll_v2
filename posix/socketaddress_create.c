@@ -244,7 +244,8 @@ static void on_new_gate(struct lxc_generic_porti_instance* gate)
 	(
 		&(gate->output_ports),
 		"sockaddr",
-		&lxc_posix_sockaddr
+		&lxc_posix_sockaddr,
+		NULL
 	);
 }
 

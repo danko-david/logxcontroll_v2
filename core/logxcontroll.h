@@ -32,9 +32,6 @@ void logxcontroll_init_environment();
 
 void logxcontroll_main();
 
-//uncomment if you doesn't want to print out negative refcount values.
-#define DEBUG_FOR_NEGATIVE_REFCOUNT
-
 //TODO only for code build stage purpose;
 extern void (*logxcontroll_after_bootstrapping)(void);
 
@@ -71,7 +68,7 @@ extern void (*logxcontroll_after_bootstrapping)(void);
  * 		- socket bring up (connect/listen operations for local & remote sockaddr)
  * 		- socket create (and constants like AF_INET, AF_UNIX)
  *			- TODO discover more function like: AF_BLUETOOTH, AF_PACKET
- *		- serial (/dev/tty* )
+ *		- serial (/dev/tty* ) (open && set TC)
  *
  * 	- linux specific gates:
  * 		- proc gpio (linux's /proc/sys/class/gpio ineterface)

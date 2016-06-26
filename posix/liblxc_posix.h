@@ -24,9 +24,13 @@
 
 extern const struct lxc_signal_type lxc_posix_sockaddr;
 
+
+
 /************************ Detailed gate entries ********************************/
 
 extern const char*** lxc_posix_path_socket;
+
+extern const char*** lxc_posix_path_file_descriptor;
 
 //sockaddr_in, sockaddr_un,
 extern void* produce_posix_socket_create();

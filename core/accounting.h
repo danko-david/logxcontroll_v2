@@ -10,9 +10,6 @@
 #ifndef ACCONTING_H_
 #define ACCONTING_H_
 
-#include <dlfcn.h>
-
-
 /*
  	 dl should looking for "logxcontroll_loadable_library_" prefix symbol,
  	 witch a `struct loadable_library`
@@ -83,13 +80,13 @@ extern struct library_tree_node** ROOT_NODES;
 
 /******************************* WORKSPACE DEFS *******************************/
 
-typedef struct workspace* Workspace;
+typedef struct lxc_workspace* Workspace;
 
 //extern unsigned int workspace_autoincrement_id = 0;
 
 unsigned int get_next_workspace_id();
 
-struct workspace
+struct lxc_workspace
 {
 	struct circuit circuit;
 
@@ -101,6 +98,10 @@ struct workspace
 
 	//execution pool
 };
+
+extern Workspace* WORKSPACES;
+
+
 
 /************************ BOOTSTRAPPING WORKSPACE *****************************/
 Workspace BOOTSTRAPPING_WORKSPACE;

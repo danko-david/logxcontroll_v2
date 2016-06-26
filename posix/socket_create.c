@@ -208,35 +208,40 @@ static int socket_create_libop
 		(
 			&(posix_socket_create.input_ports),
 			"AF_",
-			&lxc_signal_int
+			&lxc_signal_int,
+			NULL
 		);
 
 		IN_SOCK = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_create.input_ports),
 			"SOCK_",
-			&lxc_signal_int
+			&lxc_signal_int,
+			NULL
 		);
 
 		IN_PF = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_create.input_ports),
 			"PF_",
-			&lxc_signal_int
+			&lxc_signal_int,
+			NULL
 		);
 
 		IN_new = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_create.input_ports),
 			"new",
-			&lxc_signal_pulse
+			&lxc_signal_pulse,
+			NULL
 		);
 
 		OUT_socket_fd = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_create.output_ports),
 			"socket fd",
-			&lxc_signal_int
+			&lxc_signal_int,
+			NULL
 		);
 
 
@@ -244,7 +249,8 @@ static int socket_create_libop
 		(
 			&(posix_socket_create.output_ports),
 			"errno",
-			&lxc_signal_int
+			&lxc_signal_int,
+			NULL
 		);
 
 	}

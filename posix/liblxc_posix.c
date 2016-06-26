@@ -28,6 +28,15 @@ const struct lxc_signal_type lxc_posix_sockaddr =
 	//TODO cast_to
 };
 
+const char*** lxc_posix_path_file_descriptor =
+(char**[])
+{
+	(char*[])
+	{
+		"Communication", "Networking", "POSIX", "File Descriptor", NULL
+	},
+	NULL
+};
 
 const char*** lxc_posix_path_socket =
 (char**[])

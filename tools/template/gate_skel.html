@@ -1,0 +1,600 @@
+<!doctypeHTML>
+	<html>
+		<head>
+			<meta charset="utf-8"/>
+			<title>LogxControll - gate skeleton generator</title>
+			<style>
+				h2
+				{
+					font-size:14px;
+				}
+				
+			</style>
+		</head>
+
+<!-- We have to be very busy, before we can get lazy - Gáti Attila -->
+
+		<body>
+<div id="skel_main" style="display:none">
+
+$declare$
+
+static int $unit$_libop
+(
+	enum library_operation op,
+	const char** errors,
+	int max_length
+);
+
+static struct lxc_generic_$proto$_behavior $unit$_behavior =
+{
+	.base.library_operation = $unit$_libop,
+};
+
+struct $unit$_instance
+{
+	struct lxc_generic_$proto$_instance base;
+};
+
+//TODO only if there is any stored variables
+static LxcValue* access_internal_variable(Gate i, int wire_abs)
+{
+
+
+	return NULL;
+}
+
+
+static void $unit$_execute(Gate instance, Signal type, LxcValue value, uint index)
+{
+	struct $unit$_instance* gate = (struct $unit$_instance*) instance;
+	if(type == &lxc_signal_system)
+	{
+		struct lxc_system_event* sys =
+			(struct lxc_system_event*) lxc_get_value(value);
+
+		enum lxc_system_event_type type = sys->event_type;
+
+		//todo only if we listen for enable/disable event
+		if(system_event_gate_enabled == type)
+		{
+			operation(gate);
+		}
+		else if(system_event_output_wire_added == type)
+		{
+			//TODO only if there is least one stored variable
+			lxc_portb_republish_internal_value
+			(
+				instance,
+				sys->signal,
+				sys->index,
+				access_internal_variable
+			);
+		}
+	}
+
+	//TODO read all variable
+
+	//TODO do core execution logic
+
+	//TODO store variable, marked as "store"
+}
+
+static int $unit$_libop
+(
+	enum library_operation op,
+	const char** errors,
+	int max_length
+)
+{
+	if(library_before_load == op)
+	{
+		lxc_init_from_prototype
+		(
+			(void*)	&$unit$_behavior,
+			sizeof	($unit$_behavior),
+
+			(void*)	&lxc_generic_$proto$_prototype,
+			sizeof	(lxc_generic_$proto$_prototype)
+		);
+
+		$unit$_behavior$base_lvl$.library_operation = $unit$_libop;
+		$unit$_behavior$base_lvl$.gate_name = "$gate_label$";
+		$unit$_behavior$base_lvl$.paths = ;//TODO path string
+
+		$unit$_behavior$base_lvl-1$.instance_memory_size =
+			sizeof(struct $unit$_instance);
+
+		$unit$_behavior$base_lvl$.execute = $unit$_execute;
+
+$libinit$
+
+		//TODO lxc_port_unchecked_add_new_port
+		
+		//TODO lxc_add_property
+	}
+	return 0;
+}
+
+
+void* produce_$unit$()
+{
+	return (void*) &$unit$_behavior;
+}
+</div>
+
+<div id="library_path_unit" style="display:none">
+	
+
+
+</div>
+
+<div id="signals_select_skel" style="display:none">
+	<select class="signal hook">
+		<option value="choose one">--- Choose one ---</option>
+		<option value="pulse">Pulse (AKA trigger execution logic)</option>
+		<option value="bool">Boolean</option>
+		<option value="byte">byte (AKA sint_8)</option>
+		<option value="short">short (AKA sint_16)</option>
+		<option value="int">integer (AKA sint_32)</option>
+		<option value="long">long (AKA sint_64)</option>
+		<option value="float">float</option>
+		<option value="double">double</option>
+		<option value="string">string (AKA null terminated c string)</option>
+		<option value="data">data (AKA memory space, char* with size)</option>
+		<option value="custom">CUSTOM</option>
+	</select>
+</div>
+
+<div id="port_prototype" style="display:none">
+	<div>
+		Portname: <input class="portname hook"/>&nbsp;&nbsp;&nbsp;
+		<span class="choose_me">Store variable:</span> <input type="checkbox" class="store hook" onchange="ch_show(this, 1, 'on_store')"/>&nbsp;&nbsp;&nbsp;
+		<div class="on_store" style="display:none">
+			Variable name: <input class="varname hook"/>&nbsp;&nbsp;&nbsp;
+			Republish: <input type="checkbox" class="republish hook"/>&nbsp;&nbsp;&nbsp;
+			Demanding: <input type="checkbox" class="demanding hook"/>&nbsp;&nbsp;&nbsp;
+		</div>
+		<button onclick="this.parentNode.remove();render()">-</button>
+	</div>
+</div>
+
+<div id="property_prototype" style="display:none">
+
+<!---------------------------------------------------------------------------->
+
+</div>
+
+	<h1>Gate skeleton generator</h1>
+
+	Gate label:<input id="gate_label" class="hook"/>
+	<br/>
+	<br/>
+	Superclass:<select id="proto">
+		<option value="">Choose one</option>
+		<option value="portb">Ports in behavior</option>
+		<option value="portb_propb">Ports in behavior with properties</option>
+		<option value="porti">Ports in gate</option>
+		<option value="porti_propb">Ports in gate with properties</option>
+	</select>
+
+	<br/>
+	<br/>
+
+	<!-- TODO library path -->
+	<div id="lib_path">
+		<ul>
+			<li>
+				<input type="radio" onclick="show_my_li_group()" id="libpath_libvar"><label for="libpath_libvar">Library variable</label>
+			</li>
+
+			<li>
+				<input type="radio" onclick="show_my_li_group()" id="libpath_custom"><label for="libpath_custom">Custom path</label>
+				<div id="custom_path_box">
+				</div>
+			</li>
+		
+		</ul>
+	</div>
+	
+
+	<br/>
+	<br/>
+
+	<div class="inb" style="display:none">
+		Input ports:<br/>
+		<div id="ins">
+		</div>
+		<button onclick="create_io(true)">+</button>
+	
+		<br/>
+		<br/>
+	
+		Output ports:<br/>
+		<div id="outs">
+		</div>
+		<button onclick="create_io(false)">+</button>
+	</div>	
+	<br/>
+	<br/>
+	
+	<!-- TODO list of properties -->
+	<div class="has_prop">
+	
+	
+	</div>
+	
+	
+	<pre style="color:red" id="errors"></pre>
+	<br/>
+	<br/>
+	Output:<br/>
+	<textarea cols="100" rows="100" id="output">
+	</textarea>
+
+				<script>
+					//THX http://stackoverflow.com/questions/18391212/is-it-not-possible-to-stringify-an-error-using-json-stringify
+					if (!('toJSON' in Error.prototype))
+					Object.defineProperty(Error.prototype, 'toJSON', {
+					    value: function () {
+					        var alt = {};
+
+					        Object.getOwnPropertyNames(this).forEach(function (key) {
+					            alt[key] = this[key];
+					        }, this);
+
+					        return alt;
+					    },
+					    configurable: true,
+					    writable: true
+					});
+					
+					window.is_valuable = function(v)
+					{
+						return null != v && undefined != v;
+					}
+					
+					window.ch_show = function(current, lvl, dst)
+					{
+						var tar = current;
+						for(var i=0;i<lvl;++i)
+						{
+							if(is_valuable(tar))
+							{
+								tar = tar.parentNode;
+							}
+							else
+							{
+								break;
+							}
+						}
+						
+						if(is_valuable(tar))
+						{
+							tar = tar.getElementsByClassName(dst);
+							if(is_valuable(dst) && tar.length > 0)
+							{
+								tar = tar[0];
+								tar.style.display = current.checked?"inline-block":"none";
+							}
+						}
+					}
+				
+					function import_var(varname)
+					{
+						window[varname] = document.getElementById(varname);
+					}
+					
+					import_var("errors");
+					
+					import_var("gate_label");
+					import_var("skel_main");
+					import_var("output");
+					import_var("proto");
+					
+					window.onEach = function(e, f)
+					{
+						for(var i=0;i<e.length;++i)
+						{
+							f(e[i]);
+						}
+					}
+					
+					window.show_my_li_group = function()
+					{
+						
+						
+						
+					}
+					
+					//if "superclass" modified
+					proto.onchange = function()
+					{
+						var show = proto.value.indexOf("portb") >= 0;
+						onEach
+						(
+							document.getElementsByClassName("inb"),
+							function(e)
+							{
+								e.style.display = show?"inline-block":"none";
+							}
+						);
+						
+						show = proto.value.indexOf("propb") >= 0;
+						onEach
+						(
+							document.getElementsByClassName("has_prop"),
+							function(e)
+							{
+								e.style.display = show?"inline-block":"none";
+							}
+						);
+						
+						render();
+					}
+					
+					function parseHTML(val)
+					{
+						var div = document.createElement('div');
+						div.innerHTML = val;
+						var elements = div.childNodes[0];
+					}
+					
+					/**
+					 * Clones the element inside of tag identifiyed by the given id.
+					 */
+					function clone_of(id)
+					{
+						var elem = document.getElementById(id);
+						return elem.children[0].cloneNode(true);
+					}
+					
+					function check_c_variable_name(name)
+					{
+						return name.match(/^[_a-z]\w*$/);
+					}
+					
+					function replace_skel_var(template, variable, value)
+					{
+						return template.replace(new RegExp("\\$"+variable+"\\$", "g"),value);
+					}
+					
+					function eval_all_by_class(cls)
+					{
+						var sel = document.getElementsByClassName(cls);
+						var ret = [];
+						for(var i=0;i<sel.length;++i)
+						{
+							ret[i] = sel[i].eval();
+						}
+						return ret;
+					}
+					
+					function check_and_add_name(store, varname, loc)
+					{
+						for(var i =0;i<store.length;++i)
+						{
+							if(varname == store[i][0])
+							{
+								throw "Name collision: "+varname+" "+loc+" and "+store[i][1];
+							}
+						}
+						
+						store.push([varname, loc]);
+					}
+					
+					function variablify(str)
+					{
+						str = str.toUpperCase();
+						str = str.replace(/ /g,"_")
+						return str;
+					}
+					
+					function render()
+					{
+						try
+						{
+							output.innerHTML = "";
+							errors.innerHTML = "";
+							
+							var skel = skel_main.innerHTML;
+							
+							var decl_vars = []; //variables must be unique
+							var decl_pns = [];	//port labels mast be unique
+							
+							{
+								//todo check online: is the name of the gate is already registered 
+								skel = replace_skel_var(skel, "gate_label", gate_label.value);
+							}
+							
+							var gate_varname = variablify(gate_label.value).toLowerCase();
+							
+							{
+								skel = replace_skel_var(skel, "unit", gate_varname);
+							}
+							
+							
+							{
+								if(proto.value.length == 0)
+								{
+									throw "Choose the \"superclass\" of the gate";
+								}
+								skel = replace_skel_var(skel, "proto", proto.value);
+							}
+							
+							//TODO $base_lvl$
+							
+							if(proto.value.indexOf("propb") >= 0)
+							{
+								
+								skel = replace_skel_var(skel, "base_lvl", ".base.base");
+								skel = replace_skel_var(skel, "base_lvl-1", ".base");
+							}
+							else
+							{
+								skel = replace_skel_var(skel, "base_lvl", ".base");
+								skel = replace_skel_var(skel, "base_lvl-1", "");
+							}
+							
+							//TODO if gate stores the port information in instance
+							//ports can be added in at creation time, but then we
+							//need to create a little bit different code
+							if(proto.value.indexOf("portb") >=0)
+							{
+								function portgen(in_out, ps)
+								{
+									var libinit = "";
+
+									for(var i=0;i<ps.length;++i)
+									{
+										var dat = ps[i];
+										check_and_add_name(decl_pns, dat.portname, (in_out?"Input":"Output")+" port (label:"+dat.portname+")");
+										
+										var signal = dat.signal;
+										if(signal == "choose one")
+										{
+											throw "Specify the signal type of the "+(in_out?"in":"out")+"put port ("+dat.portname+")";
+										}
+										else if(signal == "custom")
+										{
+											signal = "//TODO insert your signal type here";
+										}
+										else
+										{
+											signal = "&lxc_signal_"+signal+"";
+										}
+										//check signal selected
+										
+										var vn = variablify(dat.portname);
+										
+										libinit +=
+										"		"+(in_out?"IN_ABS_":"OUT_ABS_")+vn+" = lxc_port_unchecked_add_new_port\n"+
+										"		(\n"+
+										"			&("+gate_varname+"_behavior.base.output_ports),\n"+
+										"			\""+dat.portname+"\",\n"+
+										"			"+signal+",\n"+
+										"			&"+(in_out?"IN_":"OUT_")+vn+"\n"+
+										"		);\n"+
+										"		\n";
+
+										decl_vars.push((in_out?"IN_ABS_":"OUT_ABS_")+vn);
+										decl_vars.push((in_out?"IN_":"OUT_")+vn);
+										
+										if(in_out == false)
+										{
+											//generate access function to the variables
+											//TODO add generated code for store, republish, and demanding											
+										}
+									}
+									
+									return libinit;
+								}
+								
+								//inputs
+								var ins = eval_all_by_class("in_port");
+								var outs = eval_all_by_class("out_port");
+								
+								var binit = "";
+								
+								binit += portgen(true, ins);
+								binit += portgen(false, outs);
+								
+								skel = replace_skel_var(skel, "libinit", binit);
+								
+								//TODO props
+								console.log(decl_vars);
+								
+								var decl = "";
+								for(var i =0;i<decl_vars.length;++i)
+								{
+									decl += "int "+decl_vars[i]+";\n";
+								}
+								console.log(decl);
+								//TODO variables
+								skel = replace_skel_var(skel, "declare", decl);
+							}
+							//props
+							
+							output.innerHTML = skel;
+						}
+						catch(e)
+						{
+							window.e = e;
+							console.log(e);
+							errors.innerHTML = JSON.stringify(e, null, 2);
+						}
+					}
+					
+					function hook(elem, func)
+					{
+						elem.onchange = func;
+						elem.oninput = func;
+					}
+					
+					document.getElementsByTagName("body")[0].addEventListener('click', render);
+					document.getElementsByTagName("body")[0].addEventListener('change', render);
+					document.getElementsByTagName("body")[0].addEventListener('oninput', render);
+					
+					var mods = document.getElementsByClassName("hook");
+					
+					for(var i=0;i<mods.length;++i)
+					{
+						hook(mods[i], render);
+					}
+					
+					function find_first_class(elem, cls)
+					{
+						var re = elem.getElementsByClassName(cls);
+						if(is_valuable(re) && re.length > 0)
+						{
+							return re[0];
+						}
+						
+						return null;
+					}
+					
+					function attr_of_fist_found_by_class(elem, cls, attr)
+					{
+						var elem = find_first_class(elem, cls);
+						if(is_valuable(elem))
+						{
+							return elem[attr];
+						}
+						return null;
+					}
+					
+					//name, signal_type, (store[true]: variable_name, republish, demanding)
+					window.create_io = function(in_out)//TODO store internal, TODO republish, TODO demanding
+					{
+						var elem = clone_of("port_prototype");
+						elem.classList.add(in_out?"in_port":"out_port");
+						
+						elem.insertBefore(clone_of("signals_select_skel"), elem.getElementsByClassName("portname")[0].nextSibling);
+						
+						if(in_out)
+						{
+							elem.getElementsByClassName("store")[0].remove();
+							elem.getElementsByClassName("on_store")[0].remove()
+							elem.getElementsByClassName("choose_me")[0].remove()
+						}
+						
+						elem.eval = function()//returns with the parsed port data 
+						{
+							var ret = {};
+							ret["portname"] =	attr_of_fist_found_by_class(elem, "portname", "value");
+							ret["signal"] =		attr_of_fist_found_by_class(elem, "signal", "value");
+							ret["store"] =		attr_of_fist_found_by_class(elem, "store", "checked");
+							ret["varname"] =	attr_of_fist_found_by_class(elem, "varname", "value");
+							ret["republish"] =	attr_of_fist_found_by_class(elem, "store", "checked");
+							ret["demanding"] =	attr_of_fist_found_by_class(elem, "demanding", "checked");
+							return ret;
+						}
+						
+						document.getElementById(in_out?"ins":"outs").appendChild(elem);
+					}
+					
+					
+					
+				</script>
+		</body>
+	</html>

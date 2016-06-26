@@ -55,7 +55,7 @@ extern const char* lxc_port_empty_name;
 
 bool lxc_port_check_portname_in_use(struct lxc_port_manager*, const char* name);
 
-int lxc_port_unchecked_add_new_port(struct lxc_port_manager*, const char* port_name, Signal type);
+int lxc_port_unchecked_add_new_port(struct lxc_port_manager*, const char* port_name, Signal type, int* index_in_type_group);
 
 void lxc_port_init_port_manager_factory(struct lxc_port_manager* fact);
 

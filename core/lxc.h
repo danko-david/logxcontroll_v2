@@ -414,13 +414,16 @@ struct lxc_instance
 	//not always means, control flow will execute the gate specific opeartion.
 
 	//TODO framework data eg locks
+	char enabled;
+
+	char* ref_des;
 
 	//in this method you can implement signal sensitivity.
 	//or in this method you can store the given LxcVale and execure later or
 	//other way than with the current control flow or thread.
 	void (*execution_behavior)(Gate instance, Signal type, LxcValue value, uint index);
 
-	char enabled;
+
 
 	//long_lock
 	/*
@@ -533,6 +536,8 @@ struct lxc_loadable_library
 
 
 };
+
+
 
 
 #endif /* LOGX_H_ */

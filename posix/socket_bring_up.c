@@ -37,12 +37,12 @@ static struct lxc_generic_portb_propb_behavior posix_socket_bring_up =
 static const int MODE_CONNECT = 0;
 static const int MODE_LISTEN = 1;
 
-static int IN_SOCKET_FD;
-static int IN_LOCAL;
-static int IN_REMOTE;
+static int IN_ABS_SOCKET_FD;
+static int IN_ABS_LOCAL;
+static int IN_ABS_REMOTE;
 
-static int OUT_FD;
-static int OUT_ERRNO;
+static int OUT_ABS_FD;
+static int OUT_ABS_ERRNO;
 
 struct lxc_posix_bring_up_instance
 {
@@ -62,11 +62,11 @@ static LxcValue* access_internal_variable(Gate g, int index)
 	struct lxc_posix_bring_up_instance* gate =
 			(struct lxc_posix_bring_up_instance*) g;
 
-	if(index == OUT_FD)
+	if(index == OUT_ABS_FD)
 	{
 		return &(gate->out_fd);
 	}
-	else if(index == OUT_ERRNO)
+	else if(index == OUT_ABS_ERRNO)
 	{
 		return &(gate->out_errno);
 	}
@@ -76,10 +76,10 @@ static LxcValue* access_internal_variable(Gate g, int index)
 
 static void pass_through_fd(struct lxc_posix_bring_up_instance* gate)
 {
-	Wire out = gate->base.outputs[OUT_FD];
+	Wire out = gate->base.outputs[OUT_ABS_FD];
 	if(NULL != out)
 	{
-		lxc_drive_wire_value((Gate) gate, OUT_FD, out, gate->socket_fd);
+		lxc_drive_wire_value((Gate) gate, OUT_ABS_FD, out, gate->socket_fd);
 	}
 }
 
@@ -99,13 +99,13 @@ static void publish_errno(struct lxc_posix_bring_up_instance* gate, int error_nu
 	gate->out_errno = val;
 	int* err = (int*) lxc_get_value(val);
 	*err = error_number;
-	Wire out = gate->base.outputs[OUT_ERRNO];
+	Wire out = gate->base.outputs[OUT_ABS_ERRNO];
 	if(NULL == out)
 	{
 		return;
 	}
 
-	lxc_drive_wire_value((Gate) gate, OUT_ERRNO, out, val);
+	lxc_drive_wire_value((Gate) gate, OUT_ABS_ERRNO, out, val);
 }
 
 static int do_bring_up(struct lxc_posix_bring_up_instance* gate)
@@ -263,15 +263,15 @@ static void bring_up_execute(Gate instance, Signal type, LxcValue value, uint in
 
 	bool again = false;
 
-	if(abs == IN_SOCKET_FD)
+	if(abs == IN_ABS_SOCKET_FD)
 	{
 		again = lxc_import_new_value(value, &(gate->socket_fd));
 	}
-	else if(abs == IN_LOCAL)
+	else if(abs == IN_ABS_LOCAL)
 	{
 		again = lxc_import_new_value(value, &(gate->local));
 	}
-	else if(abs == IN_REMOTE)
+	else if(abs == IN_ABS_REMOTE)
 	{
 		printf("new value: %p\n", value);
 		again = lxc_import_new_value(value, &(gate->remote));
@@ -411,39 +411,44 @@ static int bring_up_libop
 		posix_socket_bring_up.properties.access_property =
 				bring_up_access_property;
 
-		IN_SOCKET_FD = lxc_port_unchecked_add_new_port
+		IN_ABS_SOCKET_FD = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.input_ports),
 			"socket fd",
-			&lxc_signal_int
+			&lxc_signal_int,
+			NULL
 		);
 
-		IN_LOCAL = lxc_port_unchecked_add_new_port
+		IN_ABS_LOCAL = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.input_ports),
 			"local",
-			&lxc_posix_sockaddr
+			&lxc_posix_sockaddr,
+			NULL
 		);
 
-		IN_REMOTE = lxc_port_unchecked_add_new_port
+		IN_ABS_REMOTE = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.input_ports),
 			"remote",
-			&lxc_posix_sockaddr
+			&lxc_posix_sockaddr,
+			NULL
 		);
 
-		OUT_FD = lxc_port_unchecked_add_new_port
+		OUT_ABS_FD = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.output_ports),
 			"fd",
-			&lxc_signal_int
+			&lxc_signal_int,
+			NULL
 		);
 
-		OUT_ERRNO = lxc_port_unchecked_add_new_port
+		OUT_ABS_ERRNO = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.output_ports),
 			"errno",
-			&lxc_signal_int
+			&lxc_signal_int,
+			NULL
 		);
 
 		lxc_add_property
@@ -461,7 +466,7 @@ static int bring_up_libop
 			&(posix_socket_bring_up.properties),
 			"backlog",
 			"Backlog used for listen mode",
-			"Specified the maximal number of pending connections before remote host's connect's refuse.",
+			"Specified the maximal number of pending connections before refusing remote host's connect's.",
 			"128",
 			backlog_validation
 		);
