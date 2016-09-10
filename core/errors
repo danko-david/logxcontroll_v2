@@ -1,0 +1,109 @@
+g++ -fPIC -I/usr/lib/jvm/default-java/include/ -fpermissive -pthread -I/home/szupervigyor/projektek/LogxKontroll/WS/repository/ -shared -o LogxControll.amd64.so LogxControll.cpp -lutil 
+LogxControll.cpp: In function ‘void java_bridge_execute(Gate, Signal, LxcValue, uint)’:
+LogxControll.cpp:29:70: error: too few arguments to function ‘int lxc_port_get_absindex(lxc_port_manager*, Signal, int, uint)’
+   int abs = lxc_port_get_absindex(&(g->base.input_ports), type, index);
+                                                                      ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:20:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/builtins/gate_generic.h:75:5: note: declared here
+ int lxc_port_get_absindex(struct lxc_port_manager*, Signal, int, uint);
+     ^
+LogxControll.cpp: In function ‘void Java_eu_logxcontroll_LogxControll_initNative(JNIEnv*, jobject)’:
+LogxControll.cpp:118:38: warning: invalid conversion from ‘jobject {aka _jobject*}’ to ‘jclass {aka _jclass*}’ [-fpermissive]
+    classString = env->NewGlobalRef(cS);
+                                      ^
+LogxControll.cpp:129:40: warning: invalid conversion from ‘jobject {aka _jobject*}’ to ‘jclass {aka _jclass*}’ [-fpermissive]
+    callbackClass = env->NewGlobalRef(cC);
+                                        ^
+LogxControll.cpp: In function ‘int Java_eu_logxcontroll_LogxControll_lxcGetPortMaxIndex(JNIEnv*, jobject, long int, long int, jboolean)’:
+LogxControll.cpp:322:63: error: too few arguments to function ‘int lxc_get_gate_input_max_index(Gate, Signal, int)’
+      lxc_get_gate_input_max_index((Gate) gate, (Signal) signal)
+                                                               ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:17:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/facet.h:71:5: note: declared here
+ int lxc_get_gate_input_max_index(Gate, Signal, int);
+     ^
+LogxControll.cpp:324:64: error: too few arguments to function ‘int lxc_get_gate_output_max_index(Gate, Signal, int)’
+      lxc_get_gate_output_max_index((Gate) gate, (Signal) signal);
+                                                                ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:17:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/facet.h:73:5: note: declared here
+ int lxc_get_gate_output_max_index(Gate, Signal, int);
+     ^
+LogxControll.cpp: In function ‘_jstring* Java_eu_logxcontroll_LogxControll_lxcGetIOLabel(JNIEnv*, jobject, long int, jboolean, long int, int)’:
+LogxControll.cpp:331:57: error: too few arguments to function ‘const char* lxc_get_input_label(Gate, Signal, int, uint)’
+     lxc_get_input_label((Gate) gate, (Signal) sig, index)
+                                                         ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:17:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/facet.h:75:13: note: declared here
+ const char* lxc_get_input_label(Gate gate, Signal type, int, uint index);
+             ^
+LogxControll.cpp:333:57: error: too few arguments to function ‘const char* lxc_get_output_label(Gate, Signal, int, uint)’
+     lxc_get_output_label((Gate)gate, (Signal) sig, index);
+                                                         ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:17:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/facet.h:77:13: note: declared here
+ const char* lxc_get_output_label(Gate gate, Signal type, int, uint index);
+             ^
+LogxControll.cpp: In function ‘long int Java_eu_logxcontroll_LogxControll_lxcGetWire(JNIEnv*, jobject, long int, bool, long int, int)’:
+LogxControll.cpp:347:72: error: too few arguments to function ‘lxc_tokenport* lxc_get_input_wire(Gate, Signal, int, uint)’
+    return (long) lxc_get_input_wire((Gate) gate, (Signal) signal, index);
+                                                                        ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:17:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/facet.h:80:11: note: declared here
+ Tokenport lxc_get_input_wire(Gate, Signal, int, uint);
+           ^
+LogxControll.cpp:351:73: error: too few arguments to function ‘lxc_wire* lxc_get_output_wire(Gate, Signal, int, uint)’
+    return (long) lxc_get_output_wire((Gate) gate, (Signal) signal, index);
+                                                                         ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:17:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/facet.h:86:6: note: declared here
+ Wire lxc_get_output_wire(Gate, Signal, int, uint);
+      ^
+LogxControll.cpp: In function ‘int Java_eu_logxcontroll_LogxControll_lxcPortGetAbsIndex(JNIEnv*, jobject, long int, long int, int)’:
+LogxControll.cpp:501:85: error: too few arguments to function ‘int lxc_port_get_absindex(lxc_port_manager*, Signal, int, uint)’
+   return lxc_port_get_absindex((struct lxc_port_manager*) pm, (Signal) signal, index);
+                                                                                     ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:20:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/builtins/gate_generic.h:75:5: note: declared here
+ int lxc_port_get_absindex(struct lxc_port_manager*, Signal, int, uint);
+     ^
+LogxControll.cpp: In function ‘void Java_eu_logxcontroll_LogxControll_lxcPortRemovePort(JNIEnv*, jobject, long int, long int, int)’:
+LogxControll.cpp:506:77: error: too few arguments to function ‘void lxc_port_remove_port(lxc_port_manager*, Signal, int, uint)’
+   lxc_port_remove_port((struct lxc_port_manager*) pm, (Signal) signal, index);
+                                                                             ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:20:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/builtins/gate_generic.h:87:6: note: declared here
+ void lxc_port_remove_port
+      ^
+LogxControll.cpp: In function ‘_jstring* Java_eu_logxcontroll_LogxControll_gnuLibcBacktraceSymbol(JNIEnv*, jobject, long int)’:
+LogxControll.cpp:664:51: warning: invalid conversion from ‘long int’ to ‘void*’ [-fpermissive]
+   gnu_libc_backtrace_symbol(addr, sym, sizeof(sym));
+                                                   ^
+In file included from /home/szupervigyor/projektek/LogxKontroll/WS/repository/core/logxcontroll.h:24:0,
+                 from LogxControll.cpp:4:
+/home/szupervigyor/projektek/LogxKontroll/WS/repository/core/utils/utils.h:134:5: note: initializing argument 1 of ‘int gnu_libc_backtrace_symbol(void*, char*, size_t)’
+ int gnu_libc_backtrace_symbol(void* addr, char* ret_str, size_t max_length);
+     ^
+LogxControll.cpp: In function ‘long int Java_eu_logxcontroll_LogxControll_lxc_get_token_value(JNIEnv*, jobject, long int)’:
+LogxControll.cpp:670:46: warning: invalid conversion from ‘LxcValue {aka lxc_value*}’ to ‘long int’ [-fpermissive]
+   return lxc_get_token_value((Tokenport) addr);
+                                              ^
+LogxControll.cpp: In function ‘int lxc_get_wire_subtype(JNIEnv*, jobject, long int)’:
+LogxControll.cpp:680:14: warning: NULL used in arithmetic [-Wpointer-arith]
+   if(NULL == addr)
+              ^
+Exception in thread "main" java.lang.UnsatisfiedLinkError: LogxControll shared library not found!
+	at eu.logxcontroll.LogxControll.<clinit>(LogxControll.java:46)
+	at eu.logxcontroll.LxcLibraryTreeNode.<init>(LxcLibraryTreeNode.java:13)
+	at eu.logxcontroll.LxcLibraryTreeNode.<clinit>(LxcLibraryTreeNode.java:89)
+	at eu.logxcontroll.test.LibraryTree.main(LibraryTree.java:146)
+

@@ -107,8 +107,14 @@
 
 Wire lxc_create_wire(Signal type)
 {
+	if(NULL == type)
+	{
+		return NULL;
+	}
+
 	Wire ret = malloc_zero(sizeof(struct lxc_wire));
 	ret->type = type;
+	ret->subtype = 0;
 	ret->current_value = NULL;
 
 	ret->drivers = NULL;
@@ -169,27 +175,30 @@ int remove_port(Gate instance, uint index, Tokenport** ports, uint* length)
 int private_generic_wiring
 (
 	Signal signal,
+	int subtype,
 	Wire wire,
 	Gate instance,
 	int index,
-	int (*get_max_index)(Gate instance, Signal type),
-	int (*get_types)(Gate instance, Signal* arr, uint max_length),
-	void* (*get_wire)(Gate instance, Signal type, uint index),
+	int (*get_max_index)(Gate instance, Signal type, int subtype),
+	int (*get_types)(Gate instance, Signal* arr, int* subs, uint max_length),
+	void* (*get_wire)(Gate instance, Signal type, int subtype, uint index),
 	bool is_subject_token,
-	int (*wire_function)(Gate instance, Signal signal, void* subject, uint index),
-	void (*on_success)(Signal type, void* subject, Gate g, uint index)
+	int (*wire_function)(Gate instance, Signal signal, int subtype, void* subject, uint index),
+	void (*on_success)(Signal type, int subtype, void* subject, Gate g, uint index)
 )
 {
-
 	//is the call legal?
 	if(NULL == signal && NULL == wire)
+	{
 		return LXC_ERROR_BAD_CALL;
+	}
 
 	//setting value if missing
 	if(NULL == signal)
 	{
 		signal = wire->type;
 	}
+
 	//signal is not null. But if the wire not null it is use the same type?
 	else if(NULL != wire && signal != wire->type)
 	{
@@ -198,16 +207,18 @@ int private_generic_wiring
 
 	//Check signal is supported
 	Signal supp[LXC_GATE_MAX_IO_TYPE_COUNT];
+	int sub[LXC_GATE_MAX_IO_TYPE_COUNT];
 
-	int supp_max = get_types(instance, supp, LXC_GATE_MAX_IO_TYPE_COUNT);
+	int supp_max = get_types(instance, supp, sub, LXC_GATE_MAX_IO_TYPE_COUNT);
 
 	if(supp_max < -LXC_GATE_MAX_IO_TYPE_COUNT)
 		return LXC_ERROR_TOO_MANY_TYPES;
 
 	int i = 0;
+
 	while(i < supp_max)
 	{
-		if(supp[i] == signal)
+		if(supp[i] == signal && sub[i] == subtype)
 			goto passed;
 
 		++i;
@@ -218,12 +229,12 @@ int private_generic_wiring
 passed:
 
 
-	if(index < 0 || index > get_max_index(instance, signal))
+	if(index < 0 || index > get_max_index(instance, signal, subtype))
 	{
 		return LXC_ERROR_ENTITY_OUT_OF_RANGE;
 	}
 
-	void* wired = get_wire(instance, signal, index);
+	void* wired = get_wire(instance, signal, subtype, index);
 
 	void* subject;
 
@@ -235,8 +246,9 @@ passed:
 			return LXC_ERROR_PORT_IS_ALREADY_FREE;
 		}
 		//unwiring is independent from the subject (Wire/token)
-		wire_function(instance, signal, NULL, index);
+		wire_function(instance, signal, subtype, NULL, index);
 	}
+	//tie a new wire in.
 	else
 	{
 		if(NULL != wired)
@@ -251,12 +263,12 @@ passed:
 			p->gate = instance;
 			p->owner = wire;
 			p->index = index;
-			wire_function(instance, signal, p, index);
+			wire_function(instance, signal, subtype, p, index);
 			subject = p;
 		}
 		else
 		{
-			wire_function(instance, signal, wire, index);
+			wire_function(instance, signal, subtype, wire, index);
 			subject = wire;
 		}
 	}
@@ -277,7 +289,7 @@ passed:
 		}
 	}
 
-	on_success(signal, subject, instance, index);
+	on_success(signal, subtype, subject, instance, index);
 	return 0;
 }
 
@@ -287,12 +299,13 @@ void add_port(Tokenport add, Tokenport** ports, uint* length)
 	array_nt_append_element((void***) ports, length, (void*) add);
 }
 
-void on_successfull_input_wiring(Signal type, Tokenport p, Gate g, uint index)
+void on_successfull_input_wiring(Signal type, int subtype, void* /*Tokenport*/ tp, Gate g, uint index)
 {
 	//if successfully wired/unwired, register/deregister into the wire.
 	//and notify the wire writer gate to re execute itself
-	if(NULL != p)
+	if(NULL != tp)
 	{
+		Tokenport p = (Tokenport) tp;
 		add_port(p, &(p->owner->drivens), &(p->owner->drivens_length));
 		p->wire_index = array_nt_contains((void**)p->owner->drivens, p->owner->drivens_length, (void*)p);
 		if(g->enabled)
@@ -304,13 +317,14 @@ void on_successfull_input_wiring(Signal type, Tokenport p, Gate g, uint index)
 	else
 	{
 		//this case is clear, notify unwired input
-		g->execution_behavior(g, type, NULL, index);
+		g->execution_behavior(g, type, subtype, NULL, index);
 	}
 }
 
-void on_successfull_output_wiring(Signal type, Wire wire, Gate g, uint index)
+void on_successfull_output_wiring(Signal type,int subtype, void* /*Wire*/ w, Gate g, uint index)
 {
-	if(NULL != wire)
+	Wire wire = (Wire) w;
+	if(NULL != w)
 	{
 		//new wire attached, notify the driver
 		Tokenport p = malloc(sizeof(struct lxc_tokenport));
@@ -324,11 +338,12 @@ void on_successfull_output_wiring(Signal type, Wire wire, Gate g, uint index)
 			(
 				system_event_output_wire_added,
 				type,
+				subtype,
 				index,
 				NULL
 			);
 			lxc_reference_value(notify);
-			g->execution_behavior(g, notify->type, notify, 0);
+			g->execution_behavior(g, notify->type, 0, notify, 0);
 			lxc_unreference_value(notify);
 		}
 	}
@@ -349,43 +364,45 @@ void on_successfull_output_wiring(Signal type, Wire wire, Gate g, uint index)
 			Gate target = p->gate;
 			if(target->enabled)
 			{
-				target->execution_behavior(target, type, NULL, p->index);
+				target->execution_behavior(target, type, subtype, NULL, p->index);
 			}
 		}
 	}
 }
 
-int lxc_wire_gate_input(Signal type, Wire wire, Gate g, uint index)
+int lxc_wire_gate_input(Signal type, int subtype, Wire wire, Gate g, uint index)
 {
 	//at this point type is maybe modified, but to a legal value.
 	return private_generic_wiring
 	(
 		type,
+		subtype,
 		wire,
 		g,
 		index,
 		g->behavior->get_input_max_index,
 		g->behavior->get_input_types,
-		g->behavior->get_input_wire,
+		(void*) g->behavior->get_input_wire,
 		true,
-		g->behavior->wire_input,
+		(void*) g->behavior->wire_input,
 		on_successfull_input_wiring
 	);
 }
 
-int lxc_wire_gate_output(Signal type, Wire wire, Gate g, uint index)
+int lxc_wire_gate_output(Signal type, int subtype, Wire wire, Gate g, uint index)
 {
 	return private_generic_wiring
 	(
 		type,
+		subtype,
 		wire,
 		g,
 		index,
 		g->behavior->get_output_max_index,
 		g->behavior->get_output_types,
-		g->behavior->get_output_wire,
+		(void*) g->behavior->get_output_wire,
 		false,
-		g->behavior->wire_output,
+		(void*) g->behavior->wire_output,
 		on_successfull_output_wiring
 	);
 }
@@ -418,7 +435,7 @@ static void drive_wire_task_execute(Task t)
 
 		if(p->gate->enabled && NULL != p->gate->execution_behavior)
 		{
-			p->gate->execution_behavior(p->gate, signal, value, p->index);
+			p->gate->execution_behavior(p->gate, signal, wire->subtype, value, p->index);
 		}
 	}
 }
@@ -525,7 +542,7 @@ LxcValue lxc_get_token_value(Tokenport tp)
 	}
 
 	LxcValue val = (LxcValue) lnk->addr;
-
+	return val;
 
 }
 
@@ -577,7 +594,7 @@ void lxc_gate_set_enabled(Gate gate,bool enabled)
 
 	gate->enabled = enabled;
 
-	void (*ivc)(Gate instance, Signal type, LxcValue value, uint index) =
+	void (*ivc)(Gate instance, Signal type, int subtype, LxcValue value, uint index) =
 		gate->execution_behavior;
 
 	if(NULL == ivc)
@@ -593,6 +610,7 @@ void lxc_gate_set_enabled(Gate gate,bool enabled)
 			system_event_gate_enabled,
 			NULL,
 			0,
+			0,
 			NULL
 		);
 	}
@@ -603,26 +621,27 @@ void lxc_gate_set_enabled(Gate gate,bool enabled)
 			system_event_gate_disabled,
 			NULL,
 			0,
+			0,
 			NULL
 		);
 	}
 
 	lxc_reference_value(notify);
-	ivc(gate, notify->type, notify, 0);
+	ivc(gate, notify->type, 0, notify, 0);
 	lxc_unreference_value(notify);
 }
 
-int lxc_get_gate_input_types(Gate gate, Signal* sig, int max_length)
+int lxc_get_gate_input_types(Gate gate, Signal* sig, int* sub, int max_length)
 {
 	if(NULL == gate)
 	{
 		return 0;
 	}
 
-	//it's not mandantory to have inputs
+	//it's not mandatory to have inputs
 	if(NULL != gate->behavior->get_input_types)
 	{
-		return gate->behavior->get_input_types(gate, sig, max_length);
+		return gate->behavior->get_input_types(gate, sig, sub, max_length);
 	}
 	else
 	{
@@ -631,7 +650,7 @@ int lxc_get_gate_input_types(Gate gate, Signal* sig, int max_length)
 }
 
 
-int lxc_get_gate_output_types(Gate gate, Signal* sig, int max_length)
+int lxc_get_gate_output_types(Gate gate, Signal* sig, int* sub, int max_length)
 {
 	if(NULL == gate)
 	{
@@ -641,7 +660,7 @@ int lxc_get_gate_output_types(Gate gate, Signal* sig, int max_length)
 	//it's not mandantory to have outputs
 	if(NULL != gate->behavior->get_output_types)
 	{
-		return gate->behavior->get_output_types(gate, sig, max_length);
+		return gate->behavior->get_output_types(gate, sig, sub, max_length);
 	}
 	else
 	{
@@ -649,49 +668,45 @@ int lxc_get_gate_output_types(Gate gate, Signal* sig, int max_length)
 	}
 }
 
-int lxc_get_gate_input_max_index(Gate gate, Signal s)
+static int get_io_min_max(bool direction, Gate gate, Signal s, int subtype)
 {
 	if(NULL == gate || NULL == s)
 	{
 		return 0;
 	}
 
-	int (*get_max)(Gate instance, Signal type) =
-		gate->behavior->get_input_max_index;
+	int (*get_max)(Gate, Signal, int) =
+		direction == DIRECTION_IN?
+			gate->behavior->get_input_max_index
+		:
+			gate->behavior->get_output_max_index;
 
 	if(NULL == get_max)
 	{
 		return 0;
 	}
 
-	return get_max(gate, s);
+	return get_max(gate, s, subtype);
 }
 
-int lxc_get_gate_output_max_index(Gate gate, Signal s)
+
+int lxc_get_gate_input_max_index(Gate gate, Signal s, int subtype)
 {
-	if(NULL == gate || NULL == s)
-	{
-		return 0;
-	}
-
-	int (*get_max)(Gate instance, Signal type) =
-		gate->behavior->get_output_max_index;
-
-	if(NULL == get_max)
-	{
-		return 0;
-	}
-
-	return get_max(gate, s);
+	return get_io_min_max(DIRECTION_IN, gate, s, subtype);
 }
 
+int lxc_get_gate_output_max_index(Gate gate, Signal s, int subtype)
+{
+	return get_io_min_max(DIRECTION_OUT, gate, s, subtype);
+}
 
 static int fill_labels
 (
 	Gate gate,
 	Signal type,
+	int subtype,
 	int max,
-	const char* (*get_label)(Gate gate, Signal sig, uint index),
+	const char* (*get_label)(Gate gate, Signal sig, int subtype, uint index),
 	const char** arr,
 	uint last_free,
 	int max_length
@@ -702,7 +717,7 @@ static int fill_labels
 	int i;
 	for(i=0;i<max;++i)
 	{
-		const char* c = get_label(gate, type, i);
+		const char* c = get_label(gate, type, subtype, i);
 		arr[last_free+i] = c;
 
 		if(--permit == 0)
@@ -718,13 +733,14 @@ static int get_labels
 	Gate gate,
 	const char** arr,
 	int max_length,
-	int (*get_types)(Gate instance, Signal* arr, uint max_length),
-	int (*get_max_index)(Gate instance, Signal type),
-	const char* (*get_label)(Gate instance, Signal signal, uint index)
+	int (*get_types)(Gate instance, Signal* arr, int* subs, uint max_length),
+	int (*get_max_index)(Gate instance, Signal type, int subtype),
+	const char* (*get_label)(Gate instance, Signal signal, int subtype, uint index)
 )
 {
 	//assert has enough place for all port name
 	Signal sigs[LXC_GATE_MAX_IO_TYPE_COUNT];
+	int subs[LXC_GATE_MAX_IO_TYPE_COUNT];
 
 	if(NULL == get_types)
 	{
@@ -735,6 +751,7 @@ static int get_labels
 				(
 					gate,
 					sigs,
+					subs,
 					LXC_GATE_MAX_IO_TYPE_COUNT
 				);
 
@@ -752,7 +769,8 @@ static int get_labels
 	int i;
 	for(i=0;i < len;++i)
 	{
-		int req = get_max_index(gate, sigs[i]);
+		int a;
+		int req = get_max_index(gate, sigs[i], subs[i]);
 		if(req > 0)
 		{
 			req_length += req;
@@ -768,7 +786,7 @@ static int get_labels
 
 	for(i=0;i < len;++i)
 	{
-		int req = get_max_index(gate, sigs[i]);
+		int req = get_max_index(gate, sigs[i], subs[i]);
 
 		if(req <= 0)
 		{
@@ -779,6 +797,7 @@ static int get_labels
 		(
 			gate,
 			sigs[i],
+			subs[i],
 			req,
 			get_label,
 			arr,
@@ -832,8 +851,9 @@ static const char* get_io_label
 (
 	Gate gate,
 	Signal type,
+	int subtype,
 	uint index,
-	const char* (*get_label)(Gate instance, Signal signal, uint index)
+	const char* (*get_label)(Gate instance, Signal signal, int subtype, uint index)
 )
 {
 	if(NULL == type || NULL == get_label)
@@ -841,11 +861,11 @@ static const char* get_io_label
 		return NULL;
 	}
 
-	return get_label(gate, type, index);
+	return get_label(gate, type, subtype, index);
 }
 
 
-const char* lxc_get_input_label(Gate gate, Signal type, uint index)
+const char* lxc_get_input_label(Gate gate, Signal type, int subtype, uint index)
 {
 	if(NULL == gate)
 	{
@@ -856,12 +876,13 @@ const char* lxc_get_input_label(Gate gate, Signal type, uint index)
 			(
 				gate,
 				type,
+				subtype,
 				index,
 				gate->behavior->get_input_label
 			);
 }
 
-const char* lxc_get_output_label(Gate gate, Signal type, uint index)
+const char* lxc_get_output_label(Gate gate, Signal type, int subtype, uint index)
 {
 	if(NULL == gate)
 	{
@@ -872,6 +893,7 @@ const char* lxc_get_output_label(Gate gate, Signal type, uint index)
 			(
 				gate,
 				type,
+				subtype,
 				index,
 				gate->behavior->get_output_label
 			);
@@ -936,7 +958,7 @@ int lxc_set_property_value
 
 		if(0 == ret)
 		{
-			void (*ivc)(Gate instance, Signal type, LxcValue value, uint index) =
+			void (*ivc)(Gate instance, Signal type, int subtype, LxcValue value, uint index) =
 					gate->execution_behavior;
 
 			if(NULL != ivc)
@@ -946,10 +968,11 @@ int lxc_set_property_value
 					system_event_property_modified,
 					NULL,
 					0,
+					0,
 					property
 				);
 				lxc_reference_value(notify);
-				ivc(gate, notify->type, notify, 0);
+				ivc(gate, notify->type, 0, notify, 0);
 				lxc_unreference_value(notify);
 			}
 		}
@@ -1055,23 +1078,41 @@ Signal lxc_get_signal_by_name(const char* str)
 }
 
 
-Wire lxc_get_input_wire(Gate gate, Signal signal, uint index)
+Tokenport lxc_get_input_wire(Gate gate, Signal signal, int subtype, uint index)
 {
 	if(NULL == gate)
 	{
 		return NULL;
 	}
 
-	return gate->behavior->get_input_wire(gate, signal, index);
+	return gate->behavior->get_input_wire(gate, signal, subtype, index);
 }
 
 
-Wire lxc_get_output_wire(Gate gate, Signal signal, uint index)
+Wire lxc_get_output_wire(Gate gate, Signal signal, int subtype, uint index)
 {
 	if(NULL == gate)
 	{
 		return NULL;
 	}
 
-	return gate->behavior->get_output_wire(gate, signal, index);
+	return gate->behavior->get_output_wire(gate, signal, subtype, index);
 }
+
+Signal lxc_get_signal_by_ordinal(int ordinal)
+{
+	if(ordinal < 0)
+	{
+		return NULL;
+	}
+
+	int len = array_pnt_population((void**) REGISTERED_SIGNALS);
+	if(ordinal < len)
+	{
+		return NULL;
+	}
+
+	return REGISTERED_SIGNALS[ordinal];
+
+}
+

@@ -1,0 +1,46 @@
+cmake_minimum_required(VERSION 2.6)
+
+project("LogxControll")
+
+set(LogxControll_VERSION_MAJOR 0)
+set(LogxControll_VERSION_MINOR 0)
+set(LogxControll_VERSION_PATCH 0)
+set(LogxControll_VERSION_TWEAK 1)
+
+#every single module includes `core/logxcontroll.h` and the `core` directory
+#located here
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+#this is basically a shared library project
+#add_library(logx SHARED)
+
+file(READ ../build.conf BUILDCONFIG)
+
+MESSAGE(STATUS "THIS IS A MESSAGE")
+#https://cmake.org/cmake/help/v3.0/command/string.html
+foreach(LINE ${BUILDCONFIG})						# for(String line:buildconfig_file_lines)
+	#trucate comments						# {
+	MESSAGE(STATUS "LINE READED: " ${LINE})
+	string(REPLACE "#.*" "" LINE ${LINE})				# 	line = preg_replace("#.*", line);
+	string(STRIP ${LINE} LINE)					#	line = line.trim();
+	string(LENGTH ${LINE} STRLEN)					#	strlen = line.length();
+	if(${STRLEN} GREATER 0)						#	if(strlen > 0){
+		SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D${LINE}")	#		CMAKE_XXX_FLAGS += " -D"+line;
+		if(${LINE} MATCHES "^LXC_EMBED_MODULE_")		#		if(line.startWith("LXC_EMBED_MODULE_")){
+			string(SUBSTRING ${LINE} 17, -1, DEPMOD)	#
+			add_dependencies(logx DEPMOD)			#			add_dependencies(line.substringAfter("LXC_EMBED_MODULE_");
+		endif()							# 		}
+	endif()								# 	}	
+endforeach()								# }
+
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLXC_EMBED_MODULE_POSIX")
+#add_dependencies(logx "posix")
+
+#string(REPLACE " " ";" REPLACED_FLAGS ${CMAKE_CXX_FLAGS})
+#target_compile_options(logx INTERFACE ${REPLACED_FLAGS})
+
+#add_subdirectory(core)
+#add_subdirectory(posix)
+#add_subdirectory(arithmetic)
+#add_subdirectory(java-bindings)
+#add_subdirectory(...)

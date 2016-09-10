@@ -8,7 +8,7 @@
 #include "core/builtins/builtin_gate_switch.h"
 
 typedef struct case_frame* CaseFrame;
-
+/* TODO reimpl
 struct case_frame
 {
 	LxcValue case_value;
@@ -60,7 +60,7 @@ Gate create_switch_gate(const struct lxc_gate_behavior* behavior)
 	return ret;
 }
 
-void switch_gate_destroy(/*Gate instance*/)
+void switch_gate_destroy()
 {
 	//TODO complex task
 }
@@ -529,26 +529,26 @@ const struct lxc_gate_behavior builtin_gate_switch =
 	.gate_name = "switch",
 	.create = create_switch_gate,
 	.destroy = switch_gate_destroy,
-	.get_input_types = switch_get_input_types,
+//TODO subtypes	.get_input_types = switch_get_input_types,
 	.get_input_label = switch_get_input_label,
 	.get_input_max_index = switch_get_input_max_index,
-	.get_input_wire = switch_get_input_wire,
-	.wire_input = switch_wire_input,
+//TODO subtypes	.get_input_wire = switch_get_input_wire,
+//TODO subtypes	.wire_input = switch_wire_input,
 	.execute = NULL,
-	.get_output_types = switch_get_output_types,
+//TODO subtypes	.get_output_types = switch_get_output_types,
 	.get_output_label = switch_get_output_label,
 	.get_output_max_index = switch_get_output_max_index,
 	.get_output_wire = switch_get_output_wire,
 	.wire_output = switch_wire_output,
 //	.enumerate_properties = switch_enumerate_properties,
-/*
+/ *
 		const char* (*get_property_label)(Gate instance, const char* property);
 		const char* (*get_property_description)(Gate instance, const char* property);
 
 	.get_property_value = switch_get_property_value,
-*/
-	.gatectl = switch_gatectl,
+* /
+	.gatectl = (void*) switch_gatectl,
 	//int (*set_property)(Gate instance, const char* property, char* value, char* err, int max_length);
 };
-
+*/
 

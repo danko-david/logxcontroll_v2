@@ -15,7 +15,7 @@ struct library_tree_node** ROOT_NODES = NULL;
 struct lxc_gate_behavior** REGISTERED_BEHAVIORS = NULL;
 struct lxc_constant_value** REGISTERED_CONSTANT_VALUES;
 
-int lxc_register_gate(struct lxc_gate_behavior* entry)
+int lxc_register_gate(const struct lxc_gate_behavior* entry)
 {
 	struct lxc_gate_behavior* in = get_gate_entry_by_name(entry->gate_name);
 	if(NULL != in)
@@ -69,7 +69,7 @@ int lxc_load_library
 	}
 
 	//load signals and gate behaviors
-	struct lxc_gate_behavior** gates = lib->gates;
+	const struct lxc_gate_behavior** gates = lib->gates;
 	if(NULL != gates)
 	{
 		int i;
@@ -100,7 +100,7 @@ int lxc_load_library
 		}
 	}
 
-	struct lxc_constant_value** consts = lib->constants;
+	const struct lxc_constant_value** consts = lib->constants;
 
 	if(NULL != consts)
 	{
@@ -132,7 +132,7 @@ int lxc_load_library
 	return 0;
 }
 
-int lxc_register_constant_value(struct lxc_constant_value* val)
+int lxc_register_constant_value(const struct lxc_constant_value* val)
 {
 	if(NULL != REGISTERED_CONSTANT_VALUES)
 	{
@@ -146,7 +146,7 @@ int lxc_register_constant_value(struct lxc_constant_value* val)
 		}
 	}
 
-	array_pnt_append_element((void***)&REGISTERED_CONSTANT_VALUES, val);
+	array_pnt_append_element((void***)&REGISTERED_CONSTANT_VALUES, (void*) val);
 	return 0;
 }
 
@@ -398,8 +398,8 @@ Workspace get_bootstrapping_workspace()
 {
 	if(NULL == BOOTSTRAPPING_WORKSPACE)
 	{
-		BOOTSTRAPPING_WORKSPACE = malloc(sizeof(struct workspace));
-		memset(BOOTSTRAPPING_WORKSPACE, 0, sizeof(struct workspace));
+		BOOTSTRAPPING_WORKSPACE = malloc(sizeof(struct lxc_workspace));
+		memset(BOOTSTRAPPING_WORKSPACE, 0, sizeof(struct lxc_workspace));
 		BOOTSTRAPPING_WORKSPACE_BUILDER(BOOTSTRAPPING_WORKSPACE);
 	}
 
@@ -443,3 +443,111 @@ int lxc_load_shared_library(const char* so_file, const char** errors, int maxlen
 	return 0;
 };
 
+/******************************************************************************/
+struct lxc_struct_descriptor** REGISTERED_STRUCT_SUBTYPES = NULL;
+
+static struct lxc_struct_descriptor* lxc_do_register_structure
+(
+	const char* name,
+	struct lxc_struct_entry** entrys_array_pnt
+)
+{
+	//clone entry structure
+	int len = array_pnt_population((void**)entrys_array_pnt);
+
+	struct lxc_struct_entry** into = malloc((1+len)*sizeof(void*));
+
+	int i=0;
+	while(i < len)
+	{
+		struct lxc_struct_entry* src = entrys_array_pnt[i];
+		struct lxc_struct_entry* ent = malloc(sizeof(struct lxc_struct_entry));
+		ent->field_name = copy_string(src->field_name);
+		ent->type = src->type;
+		ent->subtype = src->subtype;
+		into[i] = ent;
+
+		++i;
+	}
+
+	into[len] = NULL;
+
+	//create descriptor
+	struct lxc_struct_descriptor* d =
+		(struct lxc_struct_descriptor*)
+			malloc_zero(sizeof(struct lxc_struct_descriptor));
+
+	d->name = copy_string(name);
+
+	//register and assign ordinal
+	int ordinal = array_pnt_append_element((void***)&REGISTERED_STRUCT_SUBTYPES, (void*) d);
+	d->ordinal = -ordinal;
+
+	return d;
+}
+
+struct lxc_struct_descriptor* lxc_get_struct_subtype_by_name
+(
+	const char* name
+)
+{
+	if(NULL == REGISTERED_STRUCT_SUBTYPES)
+	{
+		return NULL;
+	}
+
+	struct lxc_struct_descriptor* ptr = REGISTERED_STRUCT_SUBTYPES[0];
+	while(NULL != ptr)
+	{
+		if(0 == strcmp(name, ptr->name))
+		{
+			return ptr;
+		}
+		++ptr;
+	}
+
+	return NULL;
+}
+
+
+struct lxc_struct_descriptor* lxc_register_struct_type
+(
+	const char* name,
+	struct lxc_struct_entry** entrys_array_pnt,
+	int* error
+)
+{
+	//TODO library lock
+
+	//check init
+	if(NULL == REGISTERED_STRUCT_SUBTYPES)
+	{
+		struct lxc_struct_entry* no_entry = NULL;
+		//register placeholder for the 0'th place
+		lxc_do_register_structure
+		(
+			"\r\n",
+			&no_entry
+		);
+	}
+
+	//check for name
+	struct lxc_struct_descriptor* re = lxc_get_struct_subtype_by_name(name);
+	if(NULL != re)
+	{
+		if(NULL != error)
+		{
+			*error = LXC_ERROR_ENTITY_ALREADY_REGISTERED;
+		}
+
+		return NULL;
+	}
+	else
+	{
+		return lxc_do_register_structure
+		(
+			name,
+			entrys_array_pnt
+		);
+	}
+}

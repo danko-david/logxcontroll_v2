@@ -16,6 +16,19 @@
 
  * */
 
+/***************************** Behavior register ******************************/
+
+extern struct lxc_gate_behavior** REGISTERED_BEHAVIORS;
+//TODO constant pool
+
+struct library_tree_node* get_or_create_library_path(const char** path);
+
+int lxc_load_library(const struct lxc_loadable_library* lib, const char** error, int max_length);
+int lxc_register_gate(const struct lxc_gate_behavior* entry);
+struct lxc_gate_behavior* get_gate_entry_by_name(const char* name);
+
+/***************************** Signal register ********************************/
+
 /*
  * Builtin fuction used for search signals. It's also essential for library
  * */
@@ -24,22 +37,56 @@ extern struct lxc_constant_value** REGISTERED_CONSTANT_VALUES;
 
 int lxc_register_signal(Signal);
 
-extern struct lxc_gate_behavior** REGISTERED_BEHAVIORS;
-//TODO constant pool
+/************************* Struct subtype register ****************************/
 
-struct library_tree_node* get_or_create_library_path(const char** path);
-
-int lxc_load_library(const struct lxc_loadable_library* lib, const char** error, int max_length);
-int lxc_register_gate(struct lxc_gate_behavior* entry);
-struct lxc_gate_behavior* get_gate_entry_by_name(const char* name);
+extern struct lxc_struct_descriptor** REGISTERED_STRUCT_SUBTYPES;
 
 
+struct lxc_struct_entry
+{
+	const char* field_name;
+	Signal type;
+	int subtype;
+};
 
+struct lxc_struct_descriptor
+{
+	/**
+	 * subtype ordinal.
+	 * always less than zero.
+	 * */
+	int ordinal;
+	const char* name;
+	struct lxc_struct_entry** entrys_array_pnt;
+};
+
+
+/**
+ * Registers the structure type and returns it's descriptor or NULL if fails.
+ * errno parameter set to zero on success and errno or lxc_errno value on fail.
+ * Don't modify returnd structure.
+ * */
+struct lxc_struct_descriptor* lxc_register_struct_type
+(
+	const char* name,
+	struct lxc_struct_entry** entrys_array_pnt,
+	int* error
+);
+
+/**
+ * search for structure type and returns it's descriptor.
+ * Don't modify returned structure
+ * */
+struct lxc_struct_descriptor* lxc_get_struct_subtype_by_name(const char* name);
+
+
+
+/******************** Type conversion functions *******************************/
 
 LxcValue (*lxc_get_conversion_function(Signal from, Signal to))(LxcValue);
 int lxc_register_conversion_function(Signal from, Signal to, LxcValue (*function)(LxcValue));
 
-int lxc_register_constant_value(struct lxc_constant_value* val);
+int lxc_register_constant_value(const struct lxc_constant_value* val);
 
 /*
  *
@@ -48,6 +95,8 @@ int lxc_register_constant_value(struct lxc_constant_value* val);
  * useful constants like: AF_INET as int
  *
  */
+
+/********************* loaded libraries and tree ******************************/
 
 /*
  * Basically for loadable so
@@ -61,8 +110,6 @@ struct lxc_lib
 
 int lxc_load_shared_library(const char* so_file, const char** error, int maxlength);
 
-
-/***************************/
 
 struct library_tree_node
 {
@@ -113,8 +160,5 @@ void default_bootstrapping_workspace_builder(Workspace);
 #ifndef BOOTSTRAPPING_WORKSPACE_BUILDER
 	#define BOOTSTRAPPING_WORKSPACE_BUILDER default_bootstrapping_workspace_builder;
 #endif
-
-/************************* LIBRARY REGISTRATION *******************************/
-
 
 #endif /* ACCONTING_H_ */

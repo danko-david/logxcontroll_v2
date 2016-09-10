@@ -70,6 +70,7 @@ static void inet_on_use(struct lxc_posix_socketaddress_create* gate)
 		&(gate->base.input_ports),
 		"address",
 		&lxc_signal_string,
+		0,
 		NULL
 	);
 
@@ -78,6 +79,7 @@ static void inet_on_use(struct lxc_posix_socketaddress_create* gate)
 		&(gate->base.input_ports),
 		"port",
 		&lxc_signal_int,
+		0,
 		NULL
 	);
 }

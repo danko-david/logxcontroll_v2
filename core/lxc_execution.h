@@ -25,7 +25,7 @@ Task lxc_create_task(Gate instance, LxcValue value, int index);
 
 void lxc_execute_task(Task task);
 
-void default_execution_behavior(Gate instance, Signal type, LxcValue value, uint index);
+void default_execution_behavior(Gate instance, Signal type, int subtype, LxcValue value, uint index);
 
 
 

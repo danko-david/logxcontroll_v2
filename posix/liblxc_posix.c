@@ -29,9 +29,9 @@ const struct lxc_signal_type lxc_posix_sockaddr =
 };
 
 const char*** lxc_posix_path_file_descriptor =
-(char**[])
+(const char**[])
 {
-	(char*[])
+	(const char*[])
 	{
 		"Communication", "Networking", "POSIX", "File Descriptor", NULL
 	},
@@ -39,9 +39,9 @@ const char*** lxc_posix_path_file_descriptor =
 };
 
 const char*** lxc_posix_path_socket =
-(char**[])
+(const char**[])
 {
-	(char*[])
+	(const char*[])
 	{
 		"Communication", "Networking", "POSIX", "Socket", NULL
 	},

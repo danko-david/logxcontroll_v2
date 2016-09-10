@@ -68,7 +68,7 @@ void lxc_submit_asyncron_task(void (*funct)(void*), void* param)
 
 
 	pthread_spin_lock(&queue_busy_spin);
-	queue_add_element(&busy_head, use, &busy_tail);
+	queue_add_element(&busy_head, &use->queue_element, &busy_tail);
 	pthread_spin_unlock(&queue_busy_spin);
 
 	rrt_try_rerun_if_free(&(use->rerunnable), funct, param);

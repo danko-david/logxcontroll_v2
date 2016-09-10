@@ -39,10 +39,10 @@ public class PortManager extends NativeObject
 		}
 	}
 	
-	public int getAbsIndex(Signal sig, int index)
+	public int getAbsIndex(Signal sig, int subtype, int index)
 	{
 		Signal.assertValid(sig);
-		return LogxControll.lxcPortGetAbsIndex(ptr, sig.ptr, index);
+		return LogxControll.lxcPortGetAbsIndex(ptr, sig.ptr, subtype, index);
 	}
 	
 	public int getAbsIndexByPortName(String name)

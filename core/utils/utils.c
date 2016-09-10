@@ -105,7 +105,7 @@ void* string_to_pointer(char* ptr)
 	return (void*) strtol(ptr, NULL, 16);
 }
 
-char* copy_string(char* str)
+char* copy_string(const char* str)
 {
 	char* ret = malloc(strlen(str)+1);
 	strcpy(ret, str);

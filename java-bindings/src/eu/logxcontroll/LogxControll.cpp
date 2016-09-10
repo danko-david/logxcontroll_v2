@@ -17,7 +17,7 @@ extern "C"
 		jobject* callbacks;
 	};
 
-	static void java_bridge_execute(Gate instance, Signal type, LxcValue value, uint index)
+	static void java_bridge_execute(Gate instance, Signal type, int subtype, LxcValue value, uint index)
 	{
 		if(NULL == type)
 		{
@@ -26,7 +26,7 @@ extern "C"
 
 		struct java_bridge_instance* g = (struct java_bridge_instance*) instance;
 
-		int abs = lxc_port_get_absindex(&(g->base.input_ports), type, index);
+		int abs = lxc_port_get_absindex(&(g->base.input_ports), type, subtype, index);
 		if(abs > -1 || g->cb_length > abs)
 		{
 			jobject cb = g->callbacks[abs];
@@ -42,6 +42,7 @@ extern "C"
 						callbackJavaMethod,
 						(long) instance,
 						(long) type,
+						subtype,
 						index,
 						(long) value
 					);
@@ -115,7 +116,7 @@ extern "C"
 		}
 		else
 		{
-			classString = env->NewGlobalRef(cS);
+			classString = (jclass) env->NewGlobalRef(cS);
 			env->DeleteLocalRef(cS);
 		}
 
@@ -126,14 +127,14 @@ extern "C"
 		}
 		else
 		{
-			callbackClass = env->NewGlobalRef(cC);
+			callbackClass = (jclass) env->NewGlobalRef(cC);
 			env->DeleteLocalRef(cC);
 		}
 
-		callbackJavaMethod = env->GetMethodID(callbackClass, "callback", "(JJIJ)V");
+		callbackJavaMethod = env->GetMethodID(callbackClass, "callback", "(JJIIJ)V");
 		if(NULL == callbackJavaMethod)
 		{
-			env->FatalError("Can't find LogxControllCallback's callback(JJIJ)V function.");
+			env->FatalError("Can't find LogxControllCallback's callback(JJIIJ)V function.");
 		}
 		else
 		{
@@ -245,14 +246,14 @@ extern "C"
 	}
 
 
-	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcWireGateInput(JNIEnv * env, jobject obj, long signal, long wire, long gate, int index)
+	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcWireGateInput(JNIEnv * env, jobject obj, long signal, int subtype, long wire, long gate, int index)
 	{
-		return lxc_wire_gate_input((Signal) signal, (Wire) wire, (Gate) gate, index);
+		return lxc_wire_gate_input((Signal) signal, subtype, (Wire) wire, (Gate) gate, index);
 	}
 
-	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcWireGateOutput(JNIEnv * env, jobject obj, long signal, long wire, long gate, int index)
+	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcWireGateOutput(JNIEnv * env, jobject obj, long signal, int subtype, long wire, long gate, int index)
 	{
-		return lxc_wire_gate_output((Signal) signal, (Wire) wire, (Gate) gate, index);
+		return lxc_wire_gate_output((Signal) signal, subtype, (Wire) wire, (Gate) gate, index);
 	}
 
 	JNIEXPORT long JNICALL Java_eu_logxcontroll_LogxControll_lxcCreateWire(JNIEnv * env, jobject obj, long signal)
@@ -292,63 +293,46 @@ extern "C"
 		return env->NewStringUTF(name);
 	}
 
-	JNIEXPORT jobject JNICALL Java_eu_logxcontroll_LogxControll_lxcGetGateInputTypes(JNIEnv * env, jobject obj, long gate)
-	{
-		Signal sig[LXC_GATE_MAX_IO_TYPE_COUNT];
-		int len = lxc_get_gate_input_types((Gate) gate, sig, LXC_GATE_MAX_IO_TYPE_COUNT);
-		if(len < 0)
-		{
-			return NULL;
-		}
-
-		jlongArray ret = env->NewLongArray(len);
-		long* arr = (long*) env->GetPrimitiveArrayCritical(ret, NULL);
-		for(int i=0;i<len;++i)
-		{
-			arr[i] = (long) sig[i];
-		}
-
-
-		return ret;
-	}
-
+	//TODO a new type required for this, a type can manage specified types (signal and subtype)
 	JNIEXPORT jobject JNICALL Java_eu_logxcontroll_LogxControll_lxcGetGateIOTypes(JNIEnv * env, jobject obj, long gate, jboolean direction)
 	{
 		Signal sig[LXC_GATE_MAX_IO_TYPE_COUNT];
+		int subs[LXC_GATE_MAX_IO_TYPE_COUNT];
 		int len = 	direction?
-						lxc_get_gate_input_types((Gate) gate, sig, LXC_GATE_MAX_IO_TYPE_COUNT)
+						lxc_get_gate_input_types((Gate) gate, sig, subs, LXC_GATE_MAX_IO_TYPE_COUNT)
 					:
-						lxc_get_gate_output_types((Gate) gate, sig, LXC_GATE_MAX_IO_TYPE_COUNT);
+						lxc_get_gate_output_types((Gate) gate, sig, subs, LXC_GATE_MAX_IO_TYPE_COUNT);
 		if(len < 0)
 		{
 			return NULL;
 		}
 
-		jlongArray ret = env->NewLongArray(len);
+		jlongArray ret = env->NewLongArray(len*2);
 		long* arr = (long*) env->GetPrimitiveArrayCritical(ret, NULL);
-		for(int i=0;i<len;++i)
+		for(int i=0;i<len;i+=2)
 		{
-			arr[i] = (long) sig[i];
+			arr[i*2] = (long) sig[i];
+			arr[i*2+1] = (long) subs[i];
 		}
 
 		return ret;
 	}
 
-	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcGetPortMaxIndex(JNIEnv * env, jobject obj, long gate, long signal, jboolean direction)
+	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcGetPortMaxIndex(JNIEnv * env, jobject obj, long gate, long signal, int subtype, jboolean direction)
 	{
 		return	direction?
-					lxc_get_gate_input_max_index((Gate) gate, (Signal) signal)
+					lxc_get_gate_input_max_index((Gate) gate, (Signal) signal, subtype)
 				:
-					lxc_get_gate_output_max_index((Gate) gate, (Signal) signal);
+					lxc_get_gate_output_max_index((Gate) gate, (Signal) signal, subtype);
 	}
 
-	JNIEXPORT jstring JNICALL Java_eu_logxcontroll_LogxControll_lxcGetIOLabel(JNIEnv * env, jobject obj, long gate, jboolean direction, long sig, int index)
+	JNIEXPORT jstring JNICALL Java_eu_logxcontroll_LogxControll_lxcGetIOLabel(JNIEnv * env, jobject obj, long gate, jboolean direction, long sig, int subtype, int index)
 	{
 		const char* ret =
 			direction?
-				lxc_get_input_label((Gate) gate, (Signal) sig, index)
+				lxc_get_input_label((Gate) gate, (Signal) sig, subtype, index)
 			:
-				lxc_get_output_label((Gate)gate, (Signal) sig, index);
+				lxc_get_output_label((Gate)gate, (Signal) sig, subtype, index);
 
 		if(NULL == ret)
 		{
@@ -358,15 +342,15 @@ extern "C"
 		return env->NewStringUTF(ret);
 	}
 
-	JNIEXPORT long JNICALL Java_eu_logxcontroll_LogxControll_lxcGetWire(JNIEnv * env, jobject obj, long gate, bool direction, long signal, int index)
+	JNIEXPORT long JNICALL Java_eu_logxcontroll_LogxControll_lxcGetWire(JNIEnv * env, jobject obj, long gate, bool direction, long signal, int subtype, int index)
 	{
 		if(direction == DIRECTION_IN)
 		{
-			return (long) lxc_get_input_wire((Gate) gate, (Signal) signal, index);
+			return (long) lxc_get_input_wire((Gate) gate, (Signal) signal, subtype, index);
 		}
 		else
 		{
-			return (long) lxc_get_output_wire((Gate) gate, (Signal) signal, index);
+			return (long) lxc_get_output_wire((Gate) gate, (Signal) signal, subtype, index);
 		}
 	}
 
@@ -502,26 +486,26 @@ extern "C"
 		return ret;
 	}
 
-	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxcPortUncheckedAddNewPort(JNIEnv * env, jobject obj, long pm, jstring name, long type)
+	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxcPortUncheckedAddNewPort(JNIEnv * env, jobject obj, long pm, jstring name, long type, int subtype)
 	{
 		const char* n = env->GetStringUTFChars(name, NULL);
-		lxc_port_unchecked_add_new_port((struct lxc_port_manager*) pm, n, (Signal) type);
+		lxc_port_unchecked_add_new_port((struct lxc_port_manager*) pm, n, (Signal) type, subtype, NULL);
 		env->ReleaseStringUTFChars(name, n);
 	}
 
-	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxcPortUncheckedAddNewPort1(JNIEnv * env, jobject obj, long pm, long name, long type)
+	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxcPortUncheckedAddNewPort1(JNIEnv * env, jobject obj, long pm, long name, long type, int subtype)
 	{
-		lxc_port_unchecked_add_new_port((struct lxc_port_manager*) pm, (const char*) name, (Signal) type);
+		lxc_port_unchecked_add_new_port((struct lxc_port_manager*) pm, (const char*) name, (Signal) type, subtype, NULL);
 	}
 
-	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcPortGetAbsIndex(JNIEnv * env, jobject obj, long pm, long signal, int index)
+	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcPortGetAbsIndex(JNIEnv * env, jobject obj, long pm, long signal, int subtype, int index)
 	{
-		return lxc_port_get_absindex((struct lxc_port_manager*) pm, (Signal) signal, index);
+		return lxc_port_get_absindex((struct lxc_port_manager*) pm, (Signal) signal, subtype, index);
 	}
 
-	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxcPortRemovePort(JNIEnv * env, jobject obj, long pm, long signal, int index)
+	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxcPortRemovePort(JNIEnv * env, jobject obj, long pm, long signal, int subtype, int index)
 	{
-		lxc_port_remove_port((struct lxc_port_manager*) pm, (Signal) signal, index);
+		lxc_port_remove_port((struct lxc_port_manager*) pm, (Signal) signal, subtype, index);
 	}
 
 	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcPortGetAbsindexByName(JNIEnv * env, jobject obj, long pm, jstring name)
@@ -679,17 +663,37 @@ extern "C"
 	{
 		char sym[200];
 		sym[0] = 0;
-		gnu_libc_backtrace_symbol(addr, sym, sizeof(sym));
+		gnu_libc_backtrace_symbol((void*) addr, sym, sizeof(sym));
 		return env->NewStringUTF(sym);
 	}
 
-	JNIEXPORT long JNICALL Java_eu_logxcontroll_LogxControll_lxc_get_token_value(JNIEnv * env, jobject obj, long addr)
+	JNIEXPORT long JNICALL Java_eu_logxcontroll_LogxControll_lxcGetTokenValue(JNIEnv * env, jobject obj, long addr)
 	{
-		return lxc_get_token_value((Tokenport) addr);
+		return (long) lxc_get_token_value((Tokenport) addr);
 	}
 
-	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxc_absorb_token(JNIEnv * env, jobject obj, long addr)
+	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxcAbsorbToken(JNIEnv * env, jobject obj, long addr)
 	{
 		lxc_absorb_token((Tokenport)addr);
 	}
+
+	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcGetWireSubtype(JNIEnv * env, jobject obj, long addr)
+	{
+		if(0 == addr)
+		{
+			return 0;
+		}
+		return ((Wire)addr)->subtype;
+	}
+
+	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_lxcGetSignalTypeOrdinal(JNIEnv * env, jobject obj, long signal)
+	{
+		return ((Signal) signal)->ordinal;
+	}
+
+	JNIEXPORT long JNICALL Java_eu_logxcontroll_LogxControll_lxcGetSignalByOrdinal(JNIEnv * env, jobject obj, int ordinal)
+	{
+		return (long) lxc_get_signal_by_ordinal(ordinal);
+	}
+
 }

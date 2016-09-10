@@ -41,7 +41,50 @@
  *
  *
  *
+ *	Notes:
+ *		You may wonder about what's whit this subtype shit?
+ *		I prefer type safety.
+ *		(So just raw array and struct and matrix and whateveryouwant types
+ *		without notating type inside is not come into mind.)
+ *		I had to decide between two solution:
+ *		Register every single subtype as signal
+ *			(like struct image, struct termios, char[], int[], bool[],
+ *				int matrix, double matrix, whateverstorage whatevertype)
+ *	OR
  *
+ *		i use this subtype solution: the system has main types:
+ *			- int, double, data, etc (this primitives has no meaning if have subtypes,
+ *				yet i have no idea for it's porpuse)
+ *			- complex types like: array, struct, (later more added like: complex, matrix,)
+ *
+ *		Every single main type has an ordinal (always greater than 0) which assigned at signal register time.
+ *		for example: char => 1, int =>2, data=> 3
+ *		So if the type is array and subtype is 2 that's mean you have an array of ints (LxcValue and int data).
+ *
+ *		Structures has a registering facility in accounting.{h,c} and also an ordinal assigned
+ *		to every single registered struct. But this ordinals are less than 0.
+ *
+ *		0 ordinal (and subtype) is reserved, and means: not matter. So by convention
+ *		A gate with struct input signal and 0 subtype means any subtype can be assigned.
+ *		LOL smash type safety.
+ *		it's a good "backdoor" for some porpuse. eg for serialization.
+ *
+ *		TODO: concept will be more consist if i create "any" type with hard coded
+ *		0 ordinal and specify for the port manager to accept any kind of wire for
+ *		this port. I have an idea about a built in serialization technic.
+ *		Casting types are planned right now, another idea is to define a visitor
+ *		value creator, builder methods, which provide a generic way to discover/
+ *		search/iterate through any kind of type.
+ *
+ *		That's means we provide a generic way, and loadable modules may implement
+ *		it's own data {,de}serializing method like JSON, BSON, msgpack etc.
+ *
+ *		At the end you need a pair of gate:
+ *			- which accept `any` type of data and puts `data` on the output
+ *			- and accepts `data` and produce `any` type
+ *
+ *		because the framework has cast_to method, `any` type can be casted to
+ *		the underlying type (like instanceof in OO langs.)
  *
  * */
 #include "core/logxcontroll.h"
@@ -94,6 +137,9 @@ struct lxc_signal_type
 	 */
 	bool (*equals)(LxcValue, LxcValue);
 
+	//TODO visit
+
+	//TODO create new and build
 
 	/**
 	 * Map is array_pnt of key_value*
@@ -210,6 +256,7 @@ struct lxc_value
 struct lxc_wire
 {
 	Signal type;
+	int subtype;
 	//TODO queue and single token for tokenless mode
 	LxcValue current_value;
 
@@ -307,25 +354,25 @@ struct lxc_gate_behavior
 
 	//if you implement a gate supports more than MAX_GATE_IO_TYPE_COUNT
 	//increment the value and recompile core utilities.
-	int (*get_input_types)(Gate instance, Signal* arr, uint max_length);
+	int (*get_input_types)(Gate instance, Signal* arr, int* subtype, uint max_length);
 
 	//get the input user friandly name
-	const char* (*get_input_label)(Gate instance, Signal signal, uint index);
+	const char* (*get_input_label)(Gate instance, Signal signal, int subtype, uint index);
 
 	//get the max index of the specified type, returns negative value if
 	//type not supported
-	int (*get_input_max_index)(Gate instance, Signal type);
+	int (*get_input_max_index)(Gate instance, Signal type, int subtype);
 
 	//returns the wire of the specified type and input. returns null if
 	//type not supported or port is not wired
-	Tokenport (*get_input_wire)(Gate instance, Signal type, uint index);
+	Tokenport (*get_input_wire)(Gate instance, Signal type, int subtype,  uint index);
 
 	//\\tries to wire the input. Signal parameter is redundant, if wire is not null
 	//\\it will be silently ignored, if wire is null gate unwire the input specified
 	//\\by type and index.
 
 	//simply set the wire in the internal data structure specified by signal
-	int (*wire_input)(Gate instance, Tokenport port);
+	int (*wire_input)(Gate instance, Tokenport port, Signal sig, int subtype, unsigned int index);
 
 	//here notified if an input value changed, you can decide do you want to
 	//care about (sensitivity), if you want to execute them without any
@@ -342,29 +389,27 @@ struct lxc_gate_behavior
 	//
 	//TODO etc.
 	//TODO precise doc how does it do.
-	void (*execute)(Gate instance, Signal type, LxcValue value, uint index);
+	void (*execute)(Gate instance, Signal type, int subtype, LxcValue value, uint index);
 
 
-	int (*get_output_types)(Gate instance, Signal* arr, uint max_length);
+	int (*get_output_types)(Gate instance, Signal* arr, int* subtype, uint max_length);
 
-	const char* (*get_output_label)(Gate instance, Signal signal, uint index);
+	const char* (*get_output_label)(Gate instance, Signal signal, int subtype, uint index);
 
 	//get the max index of the specified type, returns negative value if
 	//type not supported
-	int (*get_output_max_index)(Gate instance, Signal type);
+	int (*get_output_max_index)(Gate instance, Signal type, int subtype);
 
 	//returns the wire of the specified type and output. returns null if
 	//type not supported or port is not wired
-	Wire (*get_output_wire)(Gate instance, Signal type, uint index);
-
-
+	Wire (*get_output_wire)(Gate instance, Signal type, int subtype, uint index);
 
 	//\\tries to wire the input. Signal parameter is redundant if wire is not null
 	//\\and it will be silently ignored, if wire is null gate unwires the input specified
 	//\\by the signal type and index.
 
 	//simply set the wire in the internal data structure specified by signal
-	int (*wire_output)(Gate instance, Signal type, Wire wire, uint port);
+	int (*wire_output)(Gate instance, Signal type, int subtype, Wire wire, uint port);
 
 	//TODO get_lock_for_execution
 	//a structure of function pointers contains the data for locking
@@ -421,7 +466,7 @@ struct lxc_instance
 	//in this method you can implement signal sensitivity.
 	//or in this method you can store the given LxcVale and execure later or
 	//other way than with the current control flow or thread.
-	void (*execution_behavior)(Gate instance, Signal type, LxcValue value, uint index);
+	void (*execution_behavior)(Gate instance, Signal type, int subtype, LxcValue value, uint index);
 
 
 
@@ -438,15 +483,18 @@ struct lxc_instance
 struct lxc_constant_value
 {
 	const char* name;
-	LxcValue value;
+	const LxcValue value;
 };
 
 /************************ Framework system events *****************************/
 
 enum lxc_system_event_type
 {
-	system_event_gate_enabled,
+	//note: Never change enable and disable event position
+	//some condition assume that disable is 0 and enable is the 1
+	//system event
 	system_event_gate_disabled,
+	system_event_gate_enabled,
 
 	/**
 	 * system_event_input_wire_added,
@@ -474,6 +522,7 @@ struct lxc_system_event
 {
 	enum lxc_system_event_type event_type;
 	Signal signal;
+	int subtype;
 	int index;
 	const char* name;
 };
@@ -524,10 +573,10 @@ struct lxc_loadable_library
 	int (*library_operation)(enum library_operation, const char** error, int max_length);
 
 	//NULL terminated array (array_pnt)
-	struct lxc_gate_behavior** gates;
+	const struct lxc_gate_behavior** gates;
 	//Signals used by the library
 	Signal* signals;
-	struct lxc_constant_value** constants;
+	const struct lxc_constant_value** constants;
 
 	//TODO struct types
 

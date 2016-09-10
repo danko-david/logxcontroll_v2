@@ -59,4 +59,9 @@ public class Wire extends NativeObject
 		String type = sig == null? "NULL":sig.getName();
 		return "struct lxc_wire `Wire` {"+type+"} ["+Long.toHexString(ptr)+"]";
 	}
+
+	public int getSubtype()
+	{
+		return LogxControll.getWireSubtype(this);
+	}
 }

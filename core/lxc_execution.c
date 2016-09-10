@@ -32,6 +32,7 @@ void lxc_execute_task(Task task)
 	(
 		g,
 		NULL == value? NULL : value->type,
+		task->wire->subtype,
 		value,
 		task->index
 	);

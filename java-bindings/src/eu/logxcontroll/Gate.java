@@ -56,24 +56,24 @@ public class Gate extends NativeObject
 		LogxControll.lxcGateEnable(ptr, true, enabled);
 	}
 	
-	public Signal[] getInputTypes()
+	public FullSignalType[] getInputTypes()
 	{
 		return LogxControll.getGateInputTypes(this);
 	}
 	
-	public Signal[] getOutputTypes()
+	public FullSignalType[] getOutputTypes()
 	{
 		return LogxControll.getGateOutputTypes(this);
 	}
 	
-	public String getInputLabel(Signal sig, int index)
+	public String getInputLabel(Signal sig, int subtype, int index)
 	{
-		return LogxControll.getInputLabel(this, sig, index);
+		return LogxControll.getInputLabel(this, sig, subtype, index);
 	}
 
-	public String getOutputLabel(Signal sig, int index)
+	public String getOutputLabel(Signal sig, int subtype, int index)
 	{
-		return LogxControll.getOutputLabel(this, sig, index);
+		return LogxControll.getOutputLabel(this, sig, subtype, index);
 	}
 
 	public String[] getProperties()
@@ -103,41 +103,41 @@ public class Gate extends NativeObject
 	
 	public void wireInput(Wire w, int index) throws LogxControllException
 	{
-		LogxControll.wireGateInput(null, w, this, index);
+		LogxControll.wireGateInput(null, w.getSubtype(), w, this, index);
 	}
 	
 	public void unwireInput(Signal sig, int index) throws LogxControllException
 	{
-		LogxControll.wireGateInput(sig, null, this, index);
+		LogxControll.wireGateInput(sig, 0, null, this, index);
 	}
 	
 	public void wireOutput(Wire w, int index) throws LogxControllException
 	{
-		LogxControll.wireGateOutput(null, w, this, index);
+		LogxControll.wireGateOutput(null, w.getSubtype(), w, this, index);
 	}
 	
-	public void unwireOutput(Signal sig, int index) throws LogxControllException
+	public void unwireOutput(Signal sig, int subtype, int index) throws LogxControllException
 	{
-		LogxControll.wireGateOutput(sig, null, this, index);
+		LogxControll.wireGateOutput(sig, subtype, null,  this, index);
 	}
 	
-	public Tokenport getInputWire(Signal type, int index)
+	public Tokenport getInputWire(Signal type, int subtype, int index)
 	{
-		return LogxControll.getInputWire(this, type, index);
+		return LogxControll.getInputWire(this, type, subtype, index);
 	}
 	
-	public Wire getOutputWire(Signal type, int index)
+	public Wire getOutputWire(Signal type, int subtype, int index)
 	{
-		return LogxControll.getOutputWire(this, type, index);
+		return LogxControll.getOutputWire(this, type, subtype, index);
 	}
 	
-	public int getInputMaxIndex(Signal s)
+	public int getInputMaxIndex(Signal s, int subtype)
 	{
-		return LogxControll.getGateInputMaxIndex(this, s);
+		return LogxControll.getGateInputMaxIndex(this, s, subtype);
 	}
-	public int getOutputMaxIndex(Signal s)
+	public int getOutputMaxIndex(Signal s, int subtype)
 	{
-		return LogxControll.getGateOutputMaxIndex(this, s);
+		return LogxControll.getGateOutputMaxIndex(this, s, subtype);
 	}
 	
 	public String toString()
@@ -148,25 +148,25 @@ public class Gate extends NativeObject
 	protected void printPorts(boolean direction)
 	{
 		System.out.println(direction?"\tInput ports:":"\tOutput ports:");
-		Signal[] types = 	direction?
+		FullSignalType[] types = 	direction?
 								getInputTypes()
 							:
 								getOutputTypes();
-		for(Signal s:types)
+		for(FullSignalType s:types)
 		{
 			int max = 	direction?
-							getInputMaxIndex(s)
+							getInputMaxIndex(s.getSignal(), s.getSubtype())
 						:
-							getOutputMaxIndex(s);
+							getOutputMaxIndex(s.getSignal(), s.getSubtype());
 			if(max > 0)
 			{
 				System.out.println("\t\t"+s);
 				for(int i=0;i<max;++i)
 				{
 					String label = 	direction?
-									getInputLabel(s, i)
+									getInputLabel(s.getSignal(), s.getSubtype(), i)
 								:
-									getOutputLabel(s, i);
+									getOutputLabel(s.getSignal(), s.getSubtype(), i);
 					System.out.println("\t\t\t"+label);
 				}
 			}

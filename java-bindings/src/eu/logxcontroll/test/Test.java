@@ -20,7 +20,7 @@ public class Test
 {
 	public static void main(String[] args) throws Throwable
 	{
-		loadPosixLibrary();
+		//loadPosixLibrary();
 		//showLibraryTree();
 		//System.exit(0);
 		testPosixSockets();
@@ -33,7 +33,7 @@ public class Test
 		LogxControllCallback cb = new LogxControllCallback()
 		{
 			@Override
-			public void execute(Gate gate, Signal type, int input, LxcValue value)
+			public void execute(Gate gate, Signal type, int subtype, int input, LxcValue value)
 			{
 				System.out.println
 				(
@@ -52,19 +52,19 @@ public class Test
 		
 		bridge.dbgPrintAll();
 		
-		bridge.addInputPort(sig_int, "int0", true, cb);
+		bridge.addInputPort(sig_int, 0, "int0", true, cb);
 		
 		bridge.dbgPrintAll();
 		
-		bridge.addInputPort(sig_int, "int1", true, cb);
+		bridge.addInputPort(sig_int, 0, "int1", true, cb);
 		
 		bridge.dbgPrintAll();
 		
-		bridge.addInputPort(sig_int, "int2", true, cb);
+		bridge.addInputPort(sig_int, 0, "int2", true, cb);
 		
 		bridge.dbgPrintAll();
 		
-		bridge.addInputPort(sig_long, "long0", true, cb);
+		bridge.addInputPort(sig_long, 0, "long0", true, cb);
 		
 		bridge.dbgPrintAll();
 	}
@@ -78,8 +78,9 @@ public class Test
 		LogxControllCallback cb = new LogxControllCallback()
 		{
 			@Override
-			public void execute(Gate gate, Signal type, int input, LxcValue value)
+			public void execute(Gate gate, Signal type,  int subtype, int input, LxcValue value)
 			{
+				System.out.println(gate+" "+type+" "+subtype+" "+input+" "+value);
 				if(!type.getName().equals("int"))
 				{
 					System.out.println("Nem int!");
@@ -142,7 +143,6 @@ public class Test
 		Wire addr = LogxControll.createWire(signal_string);
 		Wire port = LogxControll.createWire(signal_int);
 		
-		
 		socketaddress_create.wireInput(addr, 0);
 		socketaddress_create.wireInput(port, 0);
 		socketaddress_create.wireOutput(remote, 0);
@@ -179,16 +179,16 @@ public class Test
 		LxcValue dst_port = createIntValue(3000);
 		
 		//0
-		bridge.addInputPort(signal_int, "in_fd", true, cb);
+		bridge.addInputPort(signal_int, 0, "in_fd", true, cb);
 		
 		//1
-		bridge.addInputPort(signal_int, "errno_in", true, cb);
+		bridge.addInputPort(signal_int, 0, "errno_in", true, cb);
 		
 		//2
-		bridge.addInputPort(signal_int, "errno_bring", true, cb);
+		bridge.addInputPort(signal_int, 0, "errno_bring", true, cb);
 		
 		//3
-		bridge.addInputPort(signal_int, "port_num", true, cb);
+		bridge.addInputPort(signal_int, 0, "port_num", true, cb);
 		
 		bridge.wireInput(in_fd, 0);
 		bridge.wireInput(error_bring, 1);
@@ -238,7 +238,7 @@ public class Test
 		return ret;
 	}
 	
-	public static void loadPosixLibrary()
+	public static void _loadPosixLibrary()
 	{
 		String[] ret = LogxControll.loadSharedLibrary("/home/szupervigyor/projektek/LogxKontroll/WS/LogxControllCore/Shared/libLogxControllCore.elf");
 		
@@ -261,7 +261,7 @@ public class Test
 		LogxControllCallback cb = new LogxControllCallback()
 		{
 			@Override
-			public void execute(Gate gate, Signal type, int input, LxcValue value)
+			public void execute(Gate gate, Signal type, int subtype, int input, LxcValue value)
 			{
 				System.out.println
 				(
@@ -283,7 +283,7 @@ public class Test
 		
 		Wire in = LogxControll.createWire(bool);
 		
-		bridge.addInputPort(bool, "bool", true, cb);
+		bridge.addInputPort(bool, 0, "bool", true, cb);
 		
 		bridge.wireInput(in, 0);
 		

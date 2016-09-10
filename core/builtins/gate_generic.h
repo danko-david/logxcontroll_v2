@@ -9,6 +9,11 @@
 #ifndef GATE_LAZY_H_
 #define GATE_LAZY_H_
 
+struct lxc_full_signal_type
+{
+	Signal signal;
+	int subtype;
+};
 
 /**
  * Manages the input or output ports
@@ -43,7 +48,8 @@ struct lxc_port_manager
 
 	int max_size;
 
-	Signal* managed_types;
+	struct lxc_full_signal_type* managed_types;
+
 	uint** to_abs;
 	const char** port_names;
 
@@ -55,17 +61,25 @@ extern const char* lxc_port_empty_name;
 
 bool lxc_port_check_portname_in_use(struct lxc_port_manager*, const char* name);
 
-int lxc_port_unchecked_add_new_port(struct lxc_port_manager*, const char* port_name, Signal type, int* index_in_type_group);
+int lxc_port_unchecked_add_new_port
+(
+	struct lxc_port_manager*,
+	const char* port_name,
+	Signal type,
+	int subtype,
+	int* index_in_type_group
+);
 
 void lxc_port_init_port_manager_factory(struct lxc_port_manager* fact);
 
-int lxc_port_get_absindex(struct lxc_port_manager*, Signal, uint);
+int lxc_port_get_absindex(struct lxc_port_manager*, Signal, int, uint);
 
 void lxc_port_get_type_and_index_by_absindex
 (
 	struct lxc_port_manager* fact,
 	uint absindex,
 	Signal* type,
+	int* subtype,
 	int* managed_type_index,
 	int* index
 );
@@ -74,13 +88,14 @@ void lxc_port_remove_port
 (
 	struct lxc_port_manager* factory,
 	Signal type,
+	int subtype,
 	uint index
 );
 
 bool lxc_port_is_any_wire_connected
 (
 	struct lxc_port_manager* mngr,
-	Wire* wires,
+	void** /*Wire or Tokenport*/ wires,
 	uint max_length
 );
 
@@ -261,6 +276,7 @@ int lxc_portb_get_absindex
 	struct lxc_generic_portb_instance* gate,
 	bool direction,
 	Signal type,
+	int subtype,
 	uint index
 );
 

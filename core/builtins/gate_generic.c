@@ -14,6 +14,7 @@ void lxc_port_get_type_and_index_by_absindex
 	struct lxc_port_manager* fact,
 	uint absindex,
 	Signal* type,
+	int* subtype,
 	int* managed_type_index,
 	int* index
 )
@@ -25,12 +26,13 @@ void lxc_port_get_type_and_index_by_absindex
 	{
 		uint max = *(fact->to_abs_size);
 		uint* arr = to_abs[i];
-		int a;
+		uint a;
 		for(a = 0;a < max;++a)
 		{
 			if(absindex == arr[a])
 			{
-				*type = fact->managed_types[i];
+				*type = fact->managed_types[i].signal;
+				*subtype = fact->managed_types[i].subtype;
 				*managed_type_index = i;
 				*index = a;
 				return;
@@ -48,11 +50,12 @@ int lxc_port_get_absindex
 (
 	struct lxc_port_manager* fact,
 	Signal type,
+	int subtype,
 	uint index
 )
 {
 	int tindex = -1;
-	Signal* types = fact->managed_types;
+	struct lxc_full_signal_type* types = fact->managed_types;
 
 	if(NULL == types)
 	{
@@ -60,17 +63,18 @@ int lxc_port_get_absindex
 	}
 
 	int i=0;
-	Signal crnt = NULL;
-	while(NULL != (crnt = *types))
+	if(NULL != types)
 	{
-		if(type == crnt)
+		while(NULL != types[i].signal)
 		{
-			tindex = i;
-			break;
-		}
+			if(type == types[i].signal && subtype == types[i].subtype)
+			{
+				tindex = i;
+				break;
+			}
 
-		++i;
-		++types;
+			++i;
+		}
 	}
 
 	if(-1 == tindex)
@@ -131,6 +135,7 @@ int lxc_port_unchecked_add_new_port
 	struct lxc_port_manager* factory,
 	const char* port_name,
 	Signal type,
+	int subtype,
 	int* index_in_type_group
 )
 {
@@ -169,22 +174,51 @@ int lxc_port_unchecked_add_new_port
 	}
 
 	//determine the index of the signal (ti means "type index")
-	int ti = array_pnt_contains((void**)factory->managed_types, (void*)type);
+	int ti = 0;
+	struct lxc_full_signal_type* kv = factory->managed_types;
 
+	//this may here NULL if first time called.
+	if(NULL == kv)
+	{
+		ti = -1;
+	}
+	else
+	{
+		while(true)
+		{
+			if(NULL == kv[ti].signal)
+			{
+				ti = -1;
+				break;
+			}
+
+			if(kv[ti].signal == type && kv[ti].subtype == subtype)
+			{
+				break;
+			}
+
+			++ti;
+		}
+	}
+
+	//if type not yet registered
 	if(ti < 0)
 	{
+		//first i try to find an empty type slot.
 		bool type_replace = false;
-		Signal* mt = factory->managed_types;
+		struct lxc_full_signal_type* mt = factory->managed_types;
 		uint* lengths = factory->to_abs_size;
+		int iterate = 0;
 		if(NULL != mt && NULL != lengths)
 		{
-			int i;
-			for(i=0;NULL != mt[i] ;++i)
+			for(iterate=0;NULL != mt[iterate].signal ;++iterate)
 			{
-				if(0 == lengths[i])
+				if(0 == lengths[iterate])
 				{
 					type_replace = true;
-					ti = i;
+					ti = iterate;
+					mt[iterate].signal = type;
+					mt[iterate].subtype = subtype;
 					break;
 				}
 			}
@@ -194,24 +228,30 @@ int lxc_port_unchecked_add_new_port
 		//we allocate new slot for it
 		if(!type_replace)
 		{
-			//index in other array by type
-			ti =	array_pnt_append_element
-					(
-						(void***) &(factory->managed_types),
-						(void*) type
-					);
-		}
-		//for new signal types, we need a new to_abs array under the
-		//specified index `ti`, this array contains a single value,
-		//the next highest abs index and the size
-		//of the array should be registered under factory->to_abs_size[ti];
+			ti = iterate;
 
-		//first i create a new empty array for new signal type and a new single
-		//slot for the size, then in common operation i add them all.
+			factory->managed_types = realloc
+			(
+				factory->managed_types,
+				(2+iterate)*sizeof(struct lxc_full_signal_type)
+			);
 
-		//the to_abs, sure it will be under the same index as ti!
-		if(!type_replace)
-		{
+			factory->managed_types[ti].signal = type;
+			factory->managed_types[ti].subtype = subtype;
+
+			factory->managed_types[ti+1].signal = NULL;
+
+
+			//for new signal types, we need a new to_abs array under the
+			//specified index `ti`, this array contains a single value,
+			//the next highest abs index and the size
+			//of the array should be registered under factory->to_abs_size[ti];
+
+			//first i create a new empty array for new signal type and a new single
+			//slot for the size, then in common operation i add them all.
+
+			//the to_abs, sure it will be under the same index as ti!
+
 			int** toabs = NULL;
 			array_pnt_init((void***)&toabs);
 			array_pnt_append_element((void***)&(factory->to_abs), (void*)toabs);
@@ -244,19 +284,22 @@ int lxc_port_unchecked_add_new_port
 	if(intermediate)
 	{
 		factory->port_names[next_abs] = port_name;
+		//recalculate length
+		factory->max_size = array_pnt_population((void**)factory->port_names);
+		return next_abs;
 	}
 	else
 	{
 		//add the wire name to the end of the array
-		array_pnt_append_element
+		int ni = array_pnt_append_element
 		(
 			(void***)&(factory->port_names),
 			(void*) port_name
 		);
-	}
 
-	factory->max_size = array_pnt_population((void**)factory->port_names);
-	return next_abs;
+		factory->max_size = ni+1;
+		return ni+1;
+	}
 }
 
 int lxc_port_count(struct lxc_port_manager* factory)
@@ -268,6 +311,7 @@ void lxc_port_remove_port
 (
 	struct lxc_port_manager* factory,
 	Signal type,
+	int subtype,
 	uint index
 )
 {
@@ -275,23 +319,27 @@ void lxc_port_remove_port
 	//port_names => address of identity char*
 	//update to_abs_size
 
-	Signal* sigs = factory->managed_types;
+	struct lxc_full_signal_type* sigs = factory->managed_types;
 	int ti = -1;
 
-	int i;
-	for(i=0;NULL != sigs[i];++i)
+
+	if(NULL != sigs)
 	{
-		if(type == sigs[i])
+		int i;
+		for(i=0;NULL != sigs[i].signal;++i)
 		{
-			ti = i;
-			break;
+			if(type == sigs[i].signal && subtype == sigs[i].subtype)
+			{
+				ti = i;
+				break;
+			}
 		}
 	}
 
 	if(-1 == ti)
 		return;
 
-	int abs = lxc_port_get_absindex(factory, type, index);
+	int abs = lxc_port_get_absindex(factory, type, subtype, index);
 	if(abs < 0)
 		return;
 
@@ -305,7 +353,7 @@ void lxc_port_remove_port
 bool lxc_port_is_any_wire_connected
 (
 	struct lxc_port_manager* mngr,
-	Wire* wires,
+	void** /*Wire or Tokenport*/ wires,
 	uint max_length
 )
 {
@@ -339,7 +387,14 @@ void lxc_port_wipe_all(struct lxc_port_manager* fact)
 		return;
 	}
 
-	int ti_max = array_pnt_population((void**)fact->managed_types);
+	struct lxc_full_signal_type* it = fact->managed_types;
+
+	int ti_max = -1;
+
+	if(NULL != it)
+	{
+		while(NULL != it[ti_max++].signal);
+	}
 
 	if(ti_max <= 0)
 	{
@@ -382,7 +437,9 @@ int lxc_port_get_absindex_by_name(struct lxc_port_manager* fact, const char* nam
 void lxc_port_init_port_manager_factory(struct lxc_port_manager* fact)
 {
 	memset(fact, 0, sizeof(struct lxc_port_manager));
-	array_pnt_init((void***)&(fact->managed_types));
+	fact->managed_types = malloc(sizeof(struct lxc_full_signal_type));
+	fact->managed_types->signal = NULL;
+
 	array_pnt_init((void***)&(fact->port_names));
 	array_pnt_init((void***)&(fact->to_abs));
 	array_pnt_init((void***)&(fact->to_abs_size));
@@ -392,48 +449,58 @@ int lxc_port_fill_types
 (
 	struct lxc_port_manager* fact,
 	Signal* dst_arr,
+	int* subtypes,
 	uint max_length
 )
 {
-	Signal* src = fact->managed_types;
-	uint popul = array_pnt_population((void**)src);
+	struct lxc_full_signal_type* src = fact->managed_types;
+	uint popul = 0;
+
+	while(NULL != src[popul].signal)
+	{
+		++popul;
+	}
+
 	if(max_length < popul)
 		return -popul;
 
-	int i;
+	uint i;
 	for(i=0;i<popul;++i)
 	{
-		dst_arr[i] = src[i];
+		dst_arr[i] = src[i].signal;
+		subtypes[i] = src[i].subtype;
 	}
 
 	return popul;
 }
 
-Wire lxc_port_get_wire
+void* lxc_port_get_wire
 (
 	struct lxc_port_manager* fact,
 	Signal type,
+	int subtype,
 	uint index,
-	Wire* arr
+	void** arr
 )
 {
-	int abs = lxc_port_get_absindex(fact, type, index);
+	int abs = lxc_port_get_absindex(fact, type, subtype, index);
 	if(abs < 0)
 		return NULL;
 
 	return arr[abs];
 }
 
-Wire lxc_port_get_wire_safe
+void* lxc_port_get_wire_safe
 (
 	struct lxc_port_manager* fact,
 	Signal type,
+	int subtype,
 	uint index,
-	Wire* arr,
+	void** arr,
 	int port_size
 )
 {
-	int abs = lxc_port_get_absindex(fact, type, index);
+	int abs = lxc_port_get_absindex(fact, type, subtype, index);
 	if(abs < 0 || abs >= port_size)
 		return NULL;
 
@@ -444,12 +511,13 @@ int lxc_port_wiring
 (
 	struct lxc_port_manager* fact,
 	Signal type,
+	int subtype,
 	uint index,
-	Wire* arr,
-	Wire w
+	void** arr,
+	void* w
 )
 {
-	int abs = lxc_port_get_absindex(fact, type, index);
+	int abs = lxc_port_get_absindex(fact, type, subtype, index);
 	if(abs < 0)
 		return LXC_ERROR_ENTITY_OUT_OF_RANGE;
 
@@ -462,28 +530,31 @@ const char* lxc_generic_get_port_label
 (
 	struct lxc_port_manager* fact,
 	Signal type,
+	int subtype,
 	uint index
 )
 {
-	int abs = lxc_port_get_absindex(fact, type, index);
+	int abs = lxc_port_get_absindex(fact, type, subtype, index);
 	if(abs < 0)
 		return NULL;
 
 	return fact->port_names[abs];
 }
 
-int lxc_generic_get_type_max_index(struct lxc_port_manager* fact, Signal type)
+int lxc_generic_get_type_max_index(struct lxc_port_manager* fact, Signal type, int subtype)
 {
-	Signal* src = fact->managed_types;
+	struct lxc_full_signal_type* src = fact->managed_types;
 	int i;
-	for(i=0;NULL != src[i];++i)
+	if(NULL != src)
 	{
-		if(type == src[i])
+		for(i=0;NULL != src[i].signal;++i)
 		{
-			return fact->to_abs_size[i];
+			if(type == src[i].signal && subtype == src[i].subtype)
+			{
+				return fact->to_abs_size[i];
+			}
 		}
 	}
-
 	return -1;
 }
 
@@ -500,8 +571,9 @@ static void lxc_generic_portb_init(struct lxc_generic_portb_instance* instance)
 	instance->outputs = malloc_zero(sizeof(Wire)*outsize);
 }
 
-static Gate lxc_generic_portb_gate_create(const struct lxc_generic_portb_behavior* behav)
+static Gate lxc_generic_portb_gate_create(const struct lxc_gate_behavior* behavior)
 {
+	const struct lxc_generic_portb_behavior* behav = (const struct lxc_generic_portb_behavior*) behavior;
 	struct lxc_generic_portb_instance* ret = NULL;
 	ret = malloc_zero(behav->instance_memory_size);
 
@@ -529,109 +601,119 @@ static void lxc_generic_portb_gate_destroy(Gate instance)
 	free(ins->outputs);
 }
 
-static int lxc_generic_portb_get_input_types(Gate instance, Signal* arr, uint max_length)
+static int lxc_generic_portb_get_input_types(Gate instance, Signal* arr, int* subtypes, uint max_length)
 {
 	return	lxc_port_fill_types
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->input_ports,
 				arr,
+				subtypes,
 				max_length
 			);
 }
 
-static const char* lxc_generic_portb_get_input_label(Gate instance, Signal signal, uint index)
+static const char* lxc_generic_portb_get_input_label(Gate instance, Signal signal, int subtype, uint index)
 {
 	return	lxc_generic_get_port_label
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->input_ports,
 				signal,
+				subtype,
 				index
 			);
 }
 
-static int lxc_generic_portb_get_input_max_index(Gate instance, Signal type)
+static int lxc_generic_portb_get_input_max_index(Gate instance, Signal type, int subtype)
 {
 	return	lxc_generic_get_type_max_index
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->input_ports,
-				type
+				type,
+				subtype
 			);
 }
 
-static Wire lxc_generic_portb_get_input_wire(Gate instance, Signal type, uint index)
+static Tokenport lxc_generic_portb_get_input_wire(Gate instance, Signal type, int subtype, uint index)
 {
-	return	lxc_port_get_wire_safe
+	return	(Tokenport) lxc_port_get_wire_safe
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->input_ports,
 				type,
+				subtype,
 				index,
-				((struct lxc_generic_portb_instance*) instance)->inputs,
+				(void**)((struct lxc_generic_portb_instance*) instance)->inputs,
 				((struct lxc_generic_portb_behavior*) instance->behavior)->input_ports.max_size
 			);
 }
 
-static int lxc_generic_portb_wire_input(Gate instance, Signal type, Wire wire, uint index)
+static int lxc_generic_portb_wire_input(Gate instance, Tokenport tp, Signal type, int subtype, uint index)
 {
 	return	lxc_port_wiring
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->input_ports,
 				type,
+				subtype,
 				index,
-				((struct lxc_generic_portb_instance*) instance)->inputs,
-				wire
+				(void**) ((struct lxc_generic_portb_instance*) instance)->inputs,
+				(void*) tp
 			);
 }
 
-static int lxc_generic_portb_get_output_types(Gate instance, Signal* arr, uint max_length)
+static int lxc_generic_portb_get_output_types(Gate instance, Signal* arr, int* subtypes, uint max_length)
 {
 	return	lxc_port_fill_types
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->output_ports,
 				arr,
+				subtypes,
 				max_length
 			);
 }
 
-static const char* lxc_generic_portb_get_output_label(Gate instance, Signal signal, uint index)
+static const char* lxc_generic_portb_get_output_label(Gate instance, Signal signal, int subtype, uint index)
 {
 	return	lxc_generic_get_port_label
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->output_ports,
 				signal,
+				subtype,
 				index
 			);
 }
 
-static int lxc_generic_portb_get_output_max_index(Gate instance, Signal type)
+static int lxc_generic_portb_get_output_max_index(Gate instance, Signal type, int subtype)
 {
 	return	lxc_generic_get_type_max_index
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->output_ports,
-				type
+				type,
+				subtype
 			);
 }
 
-static Wire lxc_generic_portb_get_output_wire(Gate instance, Signal type, uint index)
+static Wire lxc_generic_portb_get_output_wire(Gate instance, Signal type, int subtype, uint index)
 {
-	return	lxc_port_get_wire_safe
+	return	(Wire) lxc_port_get_wire_safe
 			(
 				&((struct lxc_generic_portb_behavior*)instance->behavior)->output_ports,
 				type,
+				subtype,
 				index,
-				((struct lxc_generic_portb_instance*) instance)->outputs,
+				(void**) ((struct lxc_generic_portb_instance*) instance)->outputs,
 				((struct lxc_generic_portb_behavior*) instance->behavior)->output_ports.max_size
 			);
 }
 
-static int lxc_generic_portb_wire_output(Gate instance, Signal type, Wire wire, uint index)
+static int lxc_generic_portb_wire_output(Gate instance, Signal type, int subtype, Wire wire, uint index)
 {
 	return	lxc_port_wiring
 			(
 				&((struct lxc_generic_portb_behavior*)(instance->behavior))->output_ports,
 				type,
+				subtype,
 				index,
-				((struct lxc_generic_portb_instance*) instance)->outputs,
-				wire
+				(void**) ((struct lxc_generic_portb_instance*) instance)->outputs,
+				(void*) wire
 			);
 }
 
@@ -640,6 +722,7 @@ int lxc_portb_get_absindex
 	struct lxc_generic_portb_instance* gate,
 	bool direction,
 	Signal type,
+	int subtype,
 	uint index
 )
 {
@@ -647,9 +730,9 @@ int lxc_portb_get_absindex
 		(struct lxc_generic_portb_behavior*) (gate->base.behavior);
 	return
 		direction?
-			lxc_port_get_absindex(&(b->input_ports), type, index)
+			lxc_port_get_absindex(&(b->input_ports), type, subtype, index)
 		:
-			lxc_port_get_absindex(&(b->output_ports), type, index);
+			lxc_port_get_absindex(&(b->output_ports), type, subtype, index);
 }
 
 const struct lxc_generic_portb_behavior lxc_generic_portb_prototype =
@@ -692,8 +775,9 @@ static void lxc_generic_porti_init(struct lxc_generic_porti_instance* instance)
 	instance->outputs = malloc_zero(sizeof(Wire)*outsize);
 }
 
-static Gate lxc_generic_porti_gate_create(const struct lxc_generic_porti_behavior* behav)
+static Gate lxc_generic_porti_gate_create(const struct lxc_gate_behavior* behavior)
 {
+	const struct lxc_generic_porti_behavior* behav = (const struct lxc_generic_porti_behavior*) behavior;
 	struct lxc_generic_porti_instance* ret = NULL;
 	ret = malloc_zero(behav->instance_memory_size);
 
@@ -721,43 +805,47 @@ static void lxc_generic_porti_gate_destroy(Gate instance)
 	free(ins->outputs);
 }
 
-static int lxc_generic_porti_get_input_types(Gate instance, Signal* arr, uint max_length)
+static int lxc_generic_porti_get_input_types(Gate instance, Signal* arr, int* subtypes, uint max_length)
 {
 	return	lxc_port_fill_types
 			(
 				&((struct lxc_generic_porti_instance*)instance)->input_ports,
 				arr,
+				subtypes,
 				max_length
 			);
 }
 
-static const char* lxc_generic_porti_get_input_label(Gate instance, Signal signal, uint index)
+static const char* lxc_generic_porti_get_input_label(Gate instance, Signal signal, int subtype, uint index)
 {
 	return	lxc_generic_get_port_label
 			(
 				&(((struct lxc_generic_porti_instance*)instance)->input_ports),
 				signal,
+				subtype,
 				index
 			);
 }
 
-static int lxc_generic_porti_get_input_max_index(Gate instance, Signal type)
+static int lxc_generic_porti_get_input_max_index(Gate instance, Signal type, int subtype)
 {
 	return	lxc_generic_get_type_max_index
 			(
 				&(((struct lxc_generic_porti_instance*)instance)->input_ports),
-				type
+				type,
+				subtype
 			);
 }
 
-static Wire lxc_generic_porti_get_input_wire(Gate instance, Signal type, uint index)
+static Tokenport lxc_generic_porti_get_input_wire(Gate instance, Signal type, int subtype, uint index)
 {
-	return	lxc_port_get_wire_safe
+	return	(Tokenport) lxc_port_get_wire_safe
 			(
 				&(((struct lxc_generic_porti_instance*)instance)->input_ports),
 				type,
+				subtype,
 				index,
-				((struct lxc_generic_porti_instance*) instance)->inputs,
+				(void**) ((struct lxc_generic_porti_instance*) instance)->inputs,
 				((struct lxc_generic_porti_instance*) instance)->inputs_length
 			);
 }
@@ -765,7 +853,7 @@ static Wire lxc_generic_porti_get_input_wire(Gate instance, Signal type, uint in
 static void force_index_available
 (
 	struct lxc_port_manager* mngr,
-	Wire** array_addr,
+	void** array_addr,
 	uint* array_length
 )
 {
@@ -782,14 +870,14 @@ static void force_index_available
 	}
 }
 
-static int lxc_generic_porti_wire_input(Gate instance, Signal type, Wire wire, uint index)
+static int lxc_generic_porti_wire_input(Gate instance, Tokenport wire, Signal type, int subtype, uint index)
 {
 	struct lxc_generic_porti_instance* i = (struct lxc_generic_porti_instance*) instance;
 
 	force_index_available
 	(
 		&(i->input_ports),
-		&(i->inputs),
+		(void**) &(i->inputs),
 		&(i->inputs_length)
 	);
 
@@ -797,61 +885,66 @@ static int lxc_generic_porti_wire_input(Gate instance, Signal type, Wire wire, u
 			(
 				&(i->input_ports),
 				type,
+				subtype,
 				index,
-				i->inputs,
-				wire
+				(void**) i->inputs,
+				(void*) wire
 			);
 }
 
-static int lxc_generic_porti_get_output_types(Gate instance, Signal* arr, uint max_length)
+static int lxc_generic_porti_get_output_types(Gate instance, Signal* arr, int* subtypes, uint max_length)
 {
 	return	lxc_port_fill_types
 			(
 				&(((struct lxc_generic_porti_instance*)instance)->output_ports),
 				arr,
+				subtypes,
 				max_length
 			);
 }
 
-static const char* lxc_generic_porti_get_output_label(Gate instance, Signal signal, uint index)
+static const char* lxc_generic_porti_get_output_label(Gate instance, Signal signal, int subtype, uint index)
 {
 	return	lxc_generic_get_port_label
 			(
 				&((struct lxc_generic_porti_instance*)instance)->output_ports,
 				signal,
+				subtype,
 				index
 			);
 }
 
-static int lxc_generic_porti_get_output_max_index(Gate instance, Signal type)
+static int lxc_generic_porti_get_output_max_index(Gate instance, Signal type, int subtype)
 {
 	return	lxc_generic_get_type_max_index
 			(
 				&((struct lxc_generic_porti_instance*)instance)->output_ports,
-				type
+				type,
+				subtype
 			);
 }
 
-static Wire lxc_generic_porti_get_output_wire(Gate instance, Signal type, uint index)
+static Wire lxc_generic_porti_get_output_wire(Gate instance, Signal type, int subtype, uint index)
 {
-	return	lxc_port_get_wire_safe
+	return	(Wire) lxc_port_get_wire_safe
 			(
 				&((struct lxc_generic_porti_instance*)instance)->output_ports,
 				type,
+				subtype,
 				index,
-				((struct lxc_generic_porti_instance*) instance)->outputs,
+				(void**) ((struct lxc_generic_porti_instance*) instance)->outputs,
 				((struct lxc_generic_porti_instance*) instance)->outputs_length
 			);
 }
 
-static int lxc_generic_porti_wire_output(Gate instance, Signal type, Wire wire, uint index)
+static int lxc_generic_porti_wire_output(Gate instance, Signal type, int subtype, Wire wire, uint index)
 {
 	struct lxc_generic_porti_instance* i = (struct lxc_generic_porti_instance*) instance;
 
 	force_index_available
 	(
 		&(i->output_ports),
-		&(i->outputs),
+		(void**)&(i->outputs),
 		&(i->outputs_length)
 	);
 
@@ -859,9 +952,10 @@ static int lxc_generic_porti_wire_output(Gate instance, Signal type, Wire wire, 
 			(
 				&(i->output_ports),
 				type,
+				subtype,
 				index,
-				i->outputs,
-				wire
+				(void**) i->outputs,
+				(void*) wire
 			);
 }
 
@@ -945,7 +1039,7 @@ static int generic_enumerate_properties(struct lxc_property_manager* mngr, const
 	return popul;
 }
 
-static const char* generic_get_property_label(struct lxc_property_manager* mngr, char* property)
+static const char* generic_get_property_label(struct lxc_property_manager* mngr, const char* property)
 {
 	struct lxc_property** props = mngr->properties;
 
@@ -964,7 +1058,7 @@ static const char* generic_get_property_label(struct lxc_property_manager* mngr,
 	return NULL;
 }
 
-static const char* generic_get_property_description(struct lxc_property_manager* mngr, char* property)
+static const char* generic_get_property_description(struct lxc_property_manager* mngr, const char* property)
 {
 	struct lxc_property** props = mngr->properties;
 
@@ -989,8 +1083,8 @@ static int generic_prop_operation
 	Gate instance,
 	struct lxc_property_manager* mngr,
 	bool direction,
-	char* property,
-	char* value,
+	const char* property,
+	const char* value,
 	char* dst,
 	uint max_length
 )
@@ -1022,7 +1116,7 @@ static inline struct lxc_property_manager* get_portb_propb_manager(Gate instance
 	return &(b->properties);
 }
 
-static int generic_portb_propb_get_property_value(Gate instance, char* property, char* dst, uint max_length)
+static int generic_portb_propb_get_property_value(Gate instance, const char* property, char* dst, uint max_length)
 {
 	return	generic_prop_operation
 			(
@@ -1036,7 +1130,7 @@ static int generic_portb_propb_get_property_value(Gate instance, char* property,
 			);
 }
 
-static int generic_portb_propb_set_property(Gate instance, char* property, char* value, char* err, uint max_length)
+static int generic_portb_propb_set_property(Gate instance, const char* property, const char* value, char* err, uint max_length)
 {
 	return	generic_prop_operation
 			(
@@ -1061,7 +1155,7 @@ static int generic_portb_propb_enumerate_properties(Gate instance, const char** 
 }
 
 
-static const char* generic_portb_propb_get_property_label(Gate instance, char* property)
+static const char* generic_portb_propb_get_property_label(Gate instance, const char* property)
 {
 	return	generic_get_property_label
 			(
@@ -1071,7 +1165,7 @@ static const char* generic_portb_propb_get_property_label(Gate instance, char* p
 }
 
 
-static const char* generic_portb_propb_get_property_description(Gate instance, char* property)
+static const char* generic_portb_propb_get_property_description(Gate instance, const char* property)
 {
 	return	generic_get_property_description
 			(
@@ -1088,7 +1182,7 @@ static inline struct lxc_property_manager* get_porti_propb_manager(Gate instance
 	return &(b->properties);
 }
 
-static int generic_porti_propb_get_property_value(Gate instance, char* property, char* dst, uint max_length)
+static int generic_porti_propb_get_property_value(Gate instance, const char* property, char* dst, uint max_length)
 {
 	return	generic_prop_operation
 			(
@@ -1102,7 +1196,7 @@ static int generic_porti_propb_get_property_value(Gate instance, char* property,
 			);
 }
 
-static int generic_porti_propb_set_property(Gate instance, char* property, char* value, char* err, uint max_length)
+static int generic_porti_propb_set_property(Gate instance, const char* property, const char* value, char* err, uint max_length)
 {
 	return	generic_prop_operation
 			(
@@ -1127,7 +1221,7 @@ static int generic_porti_propb_enumerate_properties(Gate instance, const char** 
 }
 
 
-static const char* generic_porti_propb_get_property_label(Gate instance, char* property)
+static const char* generic_porti_propb_get_property_label(Gate instance, const char* property)
 {
 	return	generic_get_property_label
 			(
@@ -1136,7 +1230,7 @@ static const char* generic_porti_propb_get_property_label(Gate instance, char* p
 			);
 }
 
-static const char* generic_porti_propb_get_property_description(Gate instance, char* property)
+static const char* generic_porti_propb_get_property_description(Gate instance, const char* property)
 {
 	return	generic_get_property_description
 			(
@@ -1147,7 +1241,7 @@ static const char* generic_porti_propb_get_property_description(Gate instance, c
 
 static void setup_default_properties
 (
-	struct lxc_property_manager* mngr,
+	const struct lxc_property_manager* mngr,
 	Gate gate
 )
 {
@@ -1172,14 +1266,14 @@ static void setup_default_properties
 
 static Gate lxc_generic_portb_propb_gate_create(const struct lxc_generic_portb_propb_behavior* behav)
 {
-	Gate ret = lxc_generic_portb_gate_create(behav);
+	Gate ret = lxc_generic_portb_gate_create(&behav->base.base);
 	setup_default_properties(&(behav->properties), ret);
 	return ret;
 }
 
 static Gate lxc_generic_porti_propb_gate_create(const struct lxc_generic_porti_propb_behavior* behav)
 {
-	Gate ret = lxc_generic_porti_gate_create(behav);
+	Gate ret = lxc_generic_porti_gate_create(&behav->base.base);
 	setup_default_properties(&(behav->properties), ret);
 	return ret;
 }
@@ -1206,17 +1300,17 @@ void lxc_init_generic_library()
 	 */
 	lxc_init_from_prototype
 	(
-		&lxc_generic_portb_propb_prototype,
+		(void*)&lxc_generic_portb_propb_prototype,
 		sizeof(lxc_generic_portb_propb_prototype),
 
-		&lxc_generic_portb_prototype,
+		(void*)&lxc_generic_portb_prototype,
 		sizeof(lxc_generic_portb_prototype)
 	);
 
 	struct lxc_gate_behavior* a = &(lxc_generic_portb_propb_prototype.base.base);
 
 	lxc_generic_portb_propb_prototype.base.base.create =
-		lxc_generic_portb_propb_gate_create;
+		(void*)lxc_generic_portb_propb_gate_create;
 
 	a->enumerate_properties = generic_portb_propb_enumerate_properties;
 	a->get_property_label = generic_portb_propb_get_property_label;
@@ -1227,17 +1321,17 @@ void lxc_init_generic_library()
 
 	lxc_init_from_prototype
 	(
-		&lxc_generic_porti_propb_prototype,
+		(void*)&lxc_generic_porti_propb_prototype,
 		sizeof(&lxc_generic_porti_propb_prototype),
 
-		&lxc_generic_porti_prototype,
+		(void*)&lxc_generic_porti_prototype,
 		sizeof(lxc_generic_porti_prototype)
 	);
 
 	struct lxc_gate_behavior* b = &(lxc_generic_porti_propb_prototype.base.base);
 
 	lxc_generic_porti_propb_prototype.base.base.create =
-		lxc_generic_porti_propb_gate_create;
+		(void*) lxc_generic_porti_propb_gate_create;
 
 	b->enumerate_properties = generic_porti_propb_enumerate_properties;
 	b->get_property_label = generic_porti_propb_get_property_label;

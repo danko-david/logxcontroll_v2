@@ -6,14 +6,14 @@ import eu.logxcontroll.Signal;
 
 public abstract class LogxControllCallback
 {
-	protected final void callback(long gate, long signal, int input, long value)
+	protected final void callback(long gate, long signal, int subtype, int input, long value)
 	{
 		Gate g = Gate.gateFromPointer(gate);
 		Signal s = Signal.signalFromPointer(signal);
 		LxcValue val = LxcValue.valueFromPointer(value);
 		
-		execute(g, s, input, val);
+		execute(g, s, subtype, input, val);
 	}
 	
-	public abstract void execute(Gate gate, Signal type, int input, LxcValue value);
+	public abstract void execute(Gate gate, Signal type, int subtype, int input, LxcValue value);
 }

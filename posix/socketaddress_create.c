@@ -70,6 +70,7 @@ static void socketaddress_create_execute
 (
 	Gate instance,
 	Signal type,
+	int subtype,
 	LxcValue value,
 	uint index
 )
@@ -121,7 +122,7 @@ static void socketaddress_create_execute
 		if(NULL != addr)
 		{
 			lxc_reference_value(addr);
-			lxc_drive_wire_value(gate, 0, w, addr);
+			lxc_drive_wire_value(&gate->base.base, 0, w, addr);
 		}
 	}
 }
@@ -220,7 +221,7 @@ static int sockaddress_create_property_validator
 			lxc_port_is_any_wire_connected
 			(
 				&(gate->base.input_ports),
-				gate->base.inputs,
+				(void*) gate->base.inputs,
 				gate->base.inputs_length
 			)
 		)
@@ -245,6 +246,7 @@ static void on_new_gate(struct lxc_generic_porti_instance* gate)
 		&(gate->output_ports),
 		"sockaddr",
 		&lxc_posix_sockaddr,
+		0,
 		NULL
 	);
 }

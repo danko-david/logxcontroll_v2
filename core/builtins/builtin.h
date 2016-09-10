@@ -75,9 +75,16 @@ extern const struct lxc_signal_type lxc_signal_string;
 
 extern const struct lxc_signal_type lxc_signal_data;
 
-extern const struct lxc_constant_value lxc_bool_constant_value_true;
+extern const struct lxc_signal_type lxc_signal_struct;
 
+extern const struct lxc_constant_value lxc_bool_constant_value_true;
 extern const struct lxc_constant_value lxc_bool_constant_value_false;
+
+extern const struct lxc_constant_value lxc_integer_constant_value_0;
+extern const struct lxc_constant_value lxc_integer_constant_value_1;
+
+extern const struct lxc_primitive_value lxc_integer_value_0;
+extern const struct lxc_primitive_value lxc_integer_value_1;
 
 struct lxc_primitive_value
 {
@@ -104,6 +111,7 @@ extern const struct lxc_value_operation primitive_variable_value_operations;
 #include "core/lxc.h"
 //#include "core/lxc_base_impl.h"
 
+LxcValue lxc_create_primitive_value(Signal type);
 
 extern const struct lxc_loadable_library logxcontroll_loadable_library_builtin;
 

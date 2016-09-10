@@ -224,7 +224,7 @@ static void bring_again(struct lxc_posix_bring_up_instance* gate)
 	bring_up(gate);
 }
 
-static void bring_up_execute(Gate instance, Signal type, LxcValue value, uint index)
+static void bring_up_execute(Gate instance, Signal type, int subtype, LxcValue value, uint index)
 {
 	struct lxc_posix_bring_up_instance* gate =
 		(struct lxc_posix_bring_up_instance*) instance;
@@ -249,6 +249,7 @@ static void bring_up_execute(Gate instance, Signal type, LxcValue value, uint in
 			(
 				instance,
 				sys->signal,
+				sys->subtype,
 				sys->index,
 				access_internal_variable
 			);
@@ -259,7 +260,7 @@ static void bring_up_execute(Gate instance, Signal type, LxcValue value, uint in
 		}
 	}
 
-	int abs = lxc_portb_get_absindex(&(gate->base), DIRECTION_IN, type, index);
+	int abs = lxc_portb_get_absindex(&(gate->base), DIRECTION_IN, type, subtype, index);
 
 	bool again = false;
 
@@ -411,11 +412,15 @@ static int bring_up_libop
 		posix_socket_bring_up.properties.access_property =
 				bring_up_access_property;
 
+		lxc_port_init_port_manager_factory(&(posix_socket_bring_up.base.input_ports));
+		lxc_port_init_port_manager_factory(&(posix_socket_bring_up.base.output_ports));
+
 		IN_ABS_SOCKET_FD = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_bring_up.base.input_ports),
 			"socket fd",
 			&lxc_signal_int,
+			0,
 			NULL
 		);
 
@@ -424,6 +429,7 @@ static int bring_up_libop
 			&(posix_socket_bring_up.base.input_ports),
 			"local",
 			&lxc_posix_sockaddr,
+			0,
 			NULL
 		);
 
@@ -432,6 +438,7 @@ static int bring_up_libop
 			&(posix_socket_bring_up.base.input_ports),
 			"remote",
 			&lxc_posix_sockaddr,
+			0,
 			NULL
 		);
 
@@ -440,6 +447,7 @@ static int bring_up_libop
 			&(posix_socket_bring_up.base.output_ports),
 			"fd",
 			&lxc_signal_int,
+			0,
 			NULL
 		);
 
@@ -448,6 +456,7 @@ static int bring_up_libop
 			&(posix_socket_bring_up.base.output_ports),
 			"errno",
 			&lxc_signal_int,
+			0,
 			NULL
 		);
 

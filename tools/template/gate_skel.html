@@ -14,9 +14,18 @@
 
 <!-- We have to be very busy, before we can get lazy - Gáti Attila -->
 
+<!-- 
+	TODO section:
+		if a variable stored, generate storage code snippet at the end of the execution logic 
+
+		code snippet generator for execution logic:
+			- release stored variables on disable
+			- read-verify-(return or absorb) - execute - store method
+
+ -->
+
 		<body>
 <div id="skel_main" style="display:none">
-
 $declare$
 
 static int $unit$_libop
@@ -33,51 +42,27 @@ static struct lxc_generic_$proto$_behavior $unit$_behavior =
 
 struct $unit$_instance
 {
-	struct lxc_generic_$proto$_instance base;
-};
+	struct lxc_generic_$instance$_instance base;
+$instance_variables$};
 
-//TODO only if there is any stored variables
-static LxcValue* access_internal_variable(Gate i, int wire_abs)
+$CODEGEN$
+
+static void $unit$_execute
+(
+	Gate instance,
+	Signal type,
+	LxcValue value,
+	uint index
+)
 {
-
-
-	return NULL;
-}
-
-
-static void $unit$_execute(Gate instance, Signal type, LxcValue value, uint index)
-{
-	struct $unit$_instance* gate = (struct $unit$_instance*) instance;
-	if(type == &lxc_signal_system)
-	{
-		struct lxc_system_event* sys =
-			(struct lxc_system_event*) lxc_get_value(value);
-
-		enum lxc_system_event_type type = sys->event_type;
-
-		//todo only if we listen for enable/disable event
-		if(system_event_gate_enabled == type)
-		{
-			operation(gate);
-		}
-		else if(system_event_output_wire_added == type)
-		{
-			//TODO only if there is least one stored variable
-			lxc_portb_republish_internal_value
-			(
-				instance,
-				sys->signal,
-				sys->index,
-				access_internal_variable
-			);
-		}
-	}
+$GATE_CAST$
+$SYSTEM_EVENTS$	
 
 	//TODO read all variable
 
 	//TODO do core execution logic
 
-	//TODO store variable, marked as "store"
+$TODO_AFTER_EXEC$
 }
 
 static int $unit$_libop
@@ -106,12 +91,11 @@ static int $unit$_libop
 			sizeof(struct $unit$_instance);
 
 		$unit$_behavior$base_lvl$.execute = $unit$_execute;
-
-$libinit$
-
-		//TODO lxc_port_unchecked_add_new_port
 		
-		//TODO lxc_add_property
+		lxc_port_init_port_manager_factory(&($unit$_behavior$base_lvl-1$.input_ports));
+		lxc_port_init_port_manager_factory(&($unit$_behavior$base_lvl-1$.output_ports));
+
+$behavior_init$
 	}
 	return 0;
 }
@@ -124,9 +108,20 @@ void* produce_$unit$()
 </div>
 
 <div id="library_path_unit" style="display:none">
-	
+	TODO
 
 
+</div>
+
+<div id="property_prototype" style="display:none">
+	<div>
+		Variable name:<input class="varname"/>
+		Variable type:<input class="vartype"/>
+		Label: <input class="label"/>
+		Description:<input class="description"/>
+		Default value: <input class="default_value"/>
+		<button onclick="this.parentNode.remove();render()">-</button>
+	</div>
 </div>
 
 <div id="signals_select_skel" style="display:none">
@@ -149,7 +144,7 @@ void* produce_$unit$()
 <div id="port_prototype" style="display:none">
 	<div>
 		Portname: <input class="portname hook"/>&nbsp;&nbsp;&nbsp;
-		<span class="choose_me">Store variable:</span> <input type="checkbox" class="store hook" onchange="ch_show(this, 1, 'on_store')"/>&nbsp;&nbsp;&nbsp;
+		<span class="choose_me">Store variable:</span> <input type="checkbox" class="store" onchange="ch_show(this, 1, 'on_store')"/>&nbsp;&nbsp;&nbsp;
 		<div class="on_store" style="display:none">
 			Variable name: <input class="varname hook"/>&nbsp;&nbsp;&nbsp;
 			Republish: <input type="checkbox" class="republish hook"/>&nbsp;&nbsp;&nbsp;
@@ -157,12 +152,6 @@ void* produce_$unit$()
 		</div>
 		<button onclick="this.parentNode.remove();render()">-</button>
 	</div>
-</div>
-
-<div id="property_prototype" style="display:none">
-
-<!---------------------------------------------------------------------------->
-
 </div>
 
 	<h1>Gate skeleton generator</h1>
@@ -185,19 +174,21 @@ void* produce_$unit$()
 	<div id="lib_path">
 		<ul>
 			<li>
-				<input type="radio" onclick="show_my_li_group()" id="libpath_libvar"><label for="libpath_libvar">Library variable</label>
+				<input type="radio" name="libpath" onclick="show_my_li_group()" id="libpath_libvar"><label for="libpath_libvar">Library variable</label>
 			</li>
 
 			<li>
-				<input type="radio" onclick="show_my_li_group()" id="libpath_custom"><label for="libpath_custom">Custom path</label>
+				<input type="radio" name="libpath" onclick="show_my_li_group()" id="libpath_custom"><label for="libpath_custom">Custom path</label>
 				<div id="custom_path_box">
 				</div>
 			</li>
 		
 		</ul>
 	</div>
-	
 
+	<br/>
+	<br/>
+	Accept enable/disable events: <input type="checkbox" class="hook" id="enable_disable"/>
 	<br/>
 	<br/>
 
@@ -217,11 +208,14 @@ void* produce_$unit$()
 	</div>	
 	<br/>
 	<br/>
+	<br/>
 	
-	<!-- TODO list of properties -->
-	<div class="has_prop">
-	
-	
+	<!-- list of properties -->
+	<div class="has_prop" style="display:none">
+		Properties:<br/>
+		<div id="props">
+		</div>
+		<button onclick="create_prop()">+</button>
 	</div>
 	
 	
@@ -291,6 +285,7 @@ void* produce_$unit$()
 					import_var("skel_main");
 					import_var("output");
 					import_var("proto");
+					import_var("enable_disable");
 					
 					window.onEach = function(e, f)
 					{
@@ -356,7 +351,7 @@ void* produce_$unit$()
 					
 					function replace_skel_var(template, variable, value)
 					{
-						return template.replace(new RegExp("\\$"+variable+"\\$", "g"),value);
+						return template.replace(new RegExp("\\$"+variable+"\\$", "g"), value);
 					}
 					
 					function eval_all_by_class(cls)
@@ -372,6 +367,11 @@ void* produce_$unit$()
 					
 					function check_and_add_name(store, varname, loc)
 					{
+						if(!check_c_variable_name(varname))
+						{
+							throw "Not a legal variable name: "+varname+" ("+loc+")";
+						}
+						
 						for(var i =0;i<store.length;++i)
 						{
 							if(varname == store[i][0])
@@ -390,8 +390,22 @@ void* produce_$unit$()
 						return str;
 					}
 					
-					function render()
+					
+					function render(e)
 					{
+						//console.log(arguments);
+						if
+						(
+								undefined == e 
+							|| 
+								undefined == e.explicitOriginalTarget 
+							||
+								!e.explicitOriginalTarget.classList.contains("hook")
+						)
+						{
+							return;
+						}
+						//e.preventDefault();
 						try
 						{
 							output.innerHTML = "";
@@ -399,8 +413,18 @@ void* produce_$unit$()
 							
 							var skel = skel_main.innerHTML;
 							
-							var decl_vars = []; //variables must be unique
-							var decl_pns = [];	//port labels mast be unique
+							var module_vars = []; //variables must be unique
+							var instance_vars = [];//instance variables -||-
+							
+							var decl_pns = [];	//port labels -||-
+							
+							var BEFORE_EXEC = "";
+							
+							var CODEGEN = "";
+							
+							var TODO_AFTER_EXEC = "";
+							
+							var instance_variables = "";
 							
 							{
 								//todo check online: is the name of the gate is already registered 
@@ -422,11 +446,10 @@ void* produce_$unit$()
 								skel = replace_skel_var(skel, "proto", proto.value);
 							}
 							
-							//TODO $base_lvl$
+							var has_properties = proto.value.indexOf("propb") >= 0;
 							
-							if(proto.value.indexOf("propb") >= 0)
+							if(has_properties)
 							{
-								
 								skel = replace_skel_var(skel, "base_lvl", ".base.base");
 								skel = replace_skel_var(skel, "base_lvl-1", ".base");
 							}
@@ -436,15 +459,23 @@ void* produce_$unit$()
 								skel = replace_skel_var(skel, "base_lvl-1", "");
 							}
 							
-							//TODO if gate stores the port information in instance
+							var GATE_CAST = "	struct "+gate_varname+"_instance* gate =\n"+
+											"		(struct "+gate_varname+"_instance*) instance;\n";
+							
+							//TODO if gate stores the port information in instance,
 							//ports can be added in at creation time, but then we
 							//need to create a little bit different code
-							if(proto.value.indexOf("portb") >=0)
+							if(has_properties)
 							{
+								//be careful, variable is declared here
+								//and portgen actually use inside code generator function
+								//but also used after the 
+								var behavior_init = "";
+								
+								var republish = [];
+								
 								function portgen(in_out, ps)
 								{
-									var libinit = "";
-
 									for(var i=0;i<ps.length;++i)
 									{
 										var dat = ps[i];
@@ -463,55 +494,254 @@ void* produce_$unit$()
 										{
 											signal = "&lxc_signal_"+signal+"";
 										}
-										//check signal selected
 										
 										var vn = variablify(dat.portname);
 										
-										libinit +=
+										behavior_init +=
 										"		"+(in_out?"IN_ABS_":"OUT_ABS_")+vn+" = lxc_port_unchecked_add_new_port\n"+
 										"		(\n"+
 										"			&("+gate_varname+"_behavior.base.output_ports),\n"+
 										"			\""+dat.portname+"\",\n"+
 										"			"+signal+",\n"+
+										"			0,\n"+
 										"			&"+(in_out?"IN_":"OUT_")+vn+"\n"+
 										"		);\n"+
 										"		\n";
-
-										decl_vars.push((in_out?"IN_ABS_":"OUT_ABS_")+vn);
-										decl_vars.push((in_out?"IN_":"OUT_")+vn);
+										
+										module_vars.push((in_out?"IN_ABS_":"OUT_ABS_")+vn);
+										module_vars.push((in_out?"IN_":"OUT_")+vn);
 										
 										if(in_out == false)
 										{
-											//generate access function to the variables
-											//TODO add generated code for store, republish, and demanding											
+											if(JSON.parse(dat.republish) == true)
+											{
+												if(JSON.parse(dat.store) == false)
+												{
+													throw "Republishing variable requires value to be stored";
+												}
+											
+												check_and_add_name(instance_vars, dat.varname, dat.varname+" stored instance variable");
+												instance_variables += "	LxcValue "+dat.varname+";\n";
+												TODO_AFTER_EXEC += "	//TODO store variable `"+dat.varname+"`: lxc_import_new_value(_, gate->"+dat.varname+")\n";
+												
+												republish.push(["OUT_ABS_"+vn, dat.varname]);
+											}
 										}
 									}
-									
-									return libinit;
 								}
 								
 								//inputs
 								var ins = eval_all_by_class("in_port");
 								var outs = eval_all_by_class("out_port");
 								
-								var binit = "";
+								portgen(true, ins);
+								portgen(false, outs);
 								
-								binit += portgen(true, ins);
-								binit += portgen(false, outs);
+								//this must be executed after all portgen call
+								if(republish.length > 0)
+								{
+									CODEGEN +=	"static LxcValue* access_internal_variable(Gate instance, int index)\n"+
+												"{\n"+
+												GATE_CAST+"\n";
+												
+									for(var i=0;i<republish.length;++i)
+									{
+										CODEGEN += "	";
+										
+										if(i != 0)
+										{
+											CODEGEN += "else ";
+										}
+										
+										CODEGEN += 	"if(index == "+republish[i][0]+")\n"+
+													"	{\n"+
+													"		return &(gate->"+republish[i][1]+");\n"+
+													"	}\n";
+									}
+												
+									CODEGEN += "	return NULL;\n}\n\n";
+								}
 								
-								skel = replace_skel_var(skel, "libinit", binit);
+								if(has_properties)
+								{
+									var props = document.getElementsByClassName("lxc_property");
+									
+									if(props.length > 0)
+									{
+										behavior_init += 
+											"		"+gate_varname+"_behavior.properties.access_property =\n"+
+											"			"+gate_varname+"_access_property;\n\n";
+										
+										CODEGEN +=	"static void* "+gate_varname+"_access_property(Gate instance, const char* name)\n"+
+													"{\n"+
+													GATE_CAST+"\n";
+													
+										var validations = "";
+										
+										for(var i=0;i<props.length;++i)
+										{
+											var prop = props[i];
+											var info = prop.eval();
+											
+											check_and_add_name(instance_vars, info.varname, info.varname+" property variable");
+											
+											if(!check_c_variable_name(info.vartype))
+											{
+												throw info.vartype+" property variable type is not a legal typename";
+											}
+											
+											CODEGEN += "	";
+											
+											if(0 != i)
+											{
+												CODEGEN += "else ";
+											}
+
+											CODEGEN += 	"if(0 == strcmp(name, \""+info.varname+"\"))\n"+
+														"	{\n"+
+														"		return &(gate->"+info.varname+");\n"+
+														"	}\n";
+											
+											instance_variables += "	"+info.vartype+" "+info.varname+";\n";
+											
+										/*	struct lxc_property_manager* mngr,
+											const char* name,
+											const char* label,
+											const char* description,
+											const char* default_value,
+											int (*property_validator)(Gate instance, bool direction, vo*/
+											
+											behavior_init += 
+											"		lxc_add_property\n"+
+											"		(\n"+
+											"			&("+gate_varname+"_behavior.properties),\n"+
+											"			"+JSON.stringify(info.varname)+",\n"+
+											"			"+JSON.stringify(info.label)+",\n"+
+											"			"+JSON.stringify(info.description)+",\n"+
+											"			"+JSON.stringify(info.default_value)+",\n"+
+											"			"+info.varname+"_validation\n"+
+											"		);\n\n";
+											;
+											
+											validations +=	"static int "+info.varname+"_validation\n"+
+															"(\n"+
+															"	Gate instance,\n"+
+															"	bool direction,\n"+
+															"	"+info.vartype+"* "+info.varname+", /*variable's address in instance*/\n"+
+															"	const char* name,\n"+
+															"	const char* value,\n"+
+															"	char* ret,\n"+
+															"	int max_length\n"+
+															")\n"+
+															"{\n"+
+															"	if(DIRECTION_IN == direction)\n"+
+															"	{\n"+
+															"		//TODO validate and set value if valid or return status code(lxc_errno or standard ERRNO)\n"+
+															"		return 0;\n"+
+															"	}\n"+
+															"	else\n"+
+															"	{\n"+
+															"		//TODO render the value to string\n"+
+															"		return 0;\n"+
+															"	}\n"+
+															"}\n\n"
+										}
+										CODEGEN += "	return NULL;\n}\n\n";
+										
+										CODEGEN += validations;
+									}
+								}
 								
-								//TODO props
-								console.log(decl_vars);
+								//TODO enable disable, any republish
+								var SYSTEM_EVENTS =
+									"	if(type == &lxc_signal_system)\n"+
+									"	{\n";
+								
+								if(enable_disable.checked || republish.length > 0)
+								{
+									var sys_index = 0;
+									
+									//it's a good habit if you always check
+									//what kind of signal is triggered the execution logic
+									//execute the logic only on the right signal type
+									SYSTEM_EVENTS +=
+									"		struct lxc_system_event* sys =\n"+
+									"			(struct lxc_system_event*) lxc_get_value(value);\n"+
+									"\n"+
+									"		enum lxc_system_event_type type = sys->event_type;\n\n";
+									
+									if(enable_disable.checked)
+									{
+										SYSTEM_EVENTS +=
+										"		if\n"+
+										"		(\n"+
+										"			system_event_gate_enabled == type\n"+
+										"		||\n"+
+										"			system_event_gate_disabled == type\n"+
+										"		)\n"+
+										"		{\n"+
+										"			"+gate_varname+"_enable_disable(gate,type);\n"+
+										"			return;\n"+
+										"		}\n";
+										
+										CODEGEN +=
+										"static void "+gate_varname+"_enable_disable\n"+
+										"(\n"+
+										"	struct "+gate_varname+"_instance* gate,\n"+
+										"	enum lxc_system_event_type type\n"+
+										")\n"+
+										"{\n"+
+										"	//TODO operations when gate enabled/disabled\n"+
+										"}\n\n";
+										
+										
+										++sys_index;
+									}
+									
+									if(republish.length > 0)
+									{
+										SYSTEM_EVENTS += "		"
+											if(sys_index > 0)
+											{
+												SYSTEM_EVENTS += "else ";
+											}
+											
+											SYSTEM_EVENTS +=
+											"if(system_event_output_wire_added == type)\n"+
+											"		{\n"+
+											"			lxc_portb_republish_internal_value\n"+
+											"			(\n"+
+											"				instance,\n"+
+											"				sys->signal,\n"+
+											"				sys->index,\n"+
+											"				access_internal_variable\n"+
+											"			);\n"+
+											"			return;\n"+
+											"		}\n";
+									}
+									
+									
+									SYSTEM_EVENTS += "		return;\n	}\n\n";
+								}
+								
+								skel = replace_skel_var(skel, "behavior_init", behavior_init);
 								
 								var decl = "";
-								for(var i =0;i<decl_vars.length;++i)
+								for(var i =0;i<module_vars.length;++i)
 								{
-									decl += "int "+decl_vars[i]+";\n";
+									decl += "int "+module_vars[i]+";\n";
 								}
-								console.log(decl);
 								//TODO variables
 								skel = replace_skel_var(skel, "declare", decl);
+								
+								skel = replace_skel_var(skel, "instance", proto.value.indexOf("portb") >= 0? "portb":"propb");
+								
+								skel = replace_skel_var(skel, "instance_variables", instance_variables);
+								skel = replace_skel_var(skel, "CODEGEN", CODEGEN);
+								skel = replace_skel_var(skel, "TODO_AFTER_EXEC", TODO_AFTER_EXEC);
+								skel = replace_skel_var(skel, "BEFORE_EXEC", BEFORE_EXEC);
+								skel = replace_skel_var(skel, "GATE_CAST", GATE_CAST);
+								skel = replace_skel_var(skel, "SYSTEM_EVENTS", SYSTEM_EVENTS);
 							}
 							//props
 							
@@ -522,6 +752,7 @@ void* produce_$unit$()
 							window.e = e;
 							console.log(e);
 							errors.innerHTML = JSON.stringify(e, null, 2);
+							return;
 						}
 					}
 					
@@ -533,7 +764,7 @@ void* produce_$unit$()
 					
 					document.getElementsByTagName("body")[0].addEventListener('click', render);
 					document.getElementsByTagName("body")[0].addEventListener('change', render);
-					document.getElementsByTagName("body")[0].addEventListener('oninput', render);
+					//document.getElementsByTagName("body")[0].addEventListener('oninput', render);
 					
 					var mods = document.getElementsByClassName("hook");
 					
@@ -593,7 +824,25 @@ void* produce_$unit$()
 						document.getElementById(in_out?"ins":"outs").appendChild(elem);
 					}
 					
-					
+					function create_prop()
+					{
+						var elem = clone_of("property_prototype");
+						
+						elem.classList.add("lxc_property");
+						
+						elem.eval = function()
+						{
+							var ret = {};
+							ret["varname"] = attr_of_fist_found_by_class(elem, "varname", "value");
+							ret["vartype"] = attr_of_fist_found_by_class(elem, "vartype", "value");
+							ret["label"] = attr_of_fist_found_by_class(elem, "label", "value");
+							ret["description"] = attr_of_fist_found_by_class(elem, "description", "value");
+							ret["default_value"] = attr_of_fist_found_by_class(elem, "default_value", "value");
+							return ret;
+						}
+						
+						document.getElementById("props").appendChild(elem);
+					}
 					
 				</script>
 		</body>

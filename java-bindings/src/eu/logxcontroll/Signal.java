@@ -41,6 +41,14 @@ public class Signal extends NativeObject
 		return LogxControll.getSignalName(this);
 	}
 	
+	/**
+	 * Used as subtype 
+	 * */
+	public int getTypeOrdinal()
+	{
+		return LogxControll.getSignalTypeOrdinal(this);
+	}
+	
 	//TODO other attributes
 	
 	public String toString()

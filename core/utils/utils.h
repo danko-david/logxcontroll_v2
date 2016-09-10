@@ -41,7 +41,7 @@ void* string_to_pointer(char*);
 
 char* render_string(int maxlen, char* fmt, void* argptr);
 
-char* copy_string(char* str);
+char* copy_string(const char* str);
 
 void* offset_bytes(void* addr, int bytes);
 

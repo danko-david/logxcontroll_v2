@@ -144,7 +144,7 @@ static void operation(struct lxc_posix_socket_create_instance* gate)
 	}
 }
 
-static void socket_create_execute(Gate instance, Signal type, LxcValue value, uint index)
+static void socket_create_execute(Gate instance, Signal type, int subtype, LxcValue value, uint index)
 {
 	struct lxc_posix_socket_create_instance* gate =
 		(struct lxc_posix_socket_create_instance*) instance;
@@ -166,6 +166,7 @@ static void socket_create_execute(Gate instance, Signal type, LxcValue value, ui
 			(
 				instance,
 				sys->signal,
+				sys->subtype,
 				sys->index,
 				access_internal_variable
 			);
@@ -203,12 +204,15 @@ static int socket_create_libop
 
 		posix_socket_create.base.execute = socket_create_execute;
 
+		lxc_port_init_port_manager_factory(&(posix_socket_create.input_ports));
+		lxc_port_init_port_manager_factory(&(posix_socket_create.output_ports));
 
 		IN_AF = lxc_port_unchecked_add_new_port
 		(
 			&(posix_socket_create.input_ports),
 			"AF_",
 			&lxc_signal_int,
+			0,
 			NULL
 		);
 
@@ -217,6 +221,7 @@ static int socket_create_libop
 			&(posix_socket_create.input_ports),
 			"SOCK_",
 			&lxc_signal_int,
+			0,
 			NULL
 		);
 
@@ -225,6 +230,7 @@ static int socket_create_libop
 			&(posix_socket_create.input_ports),
 			"PF_",
 			&lxc_signal_int,
+			0,
 			NULL
 		);
 
@@ -233,6 +239,7 @@ static int socket_create_libop
 			&(posix_socket_create.input_ports),
 			"new",
 			&lxc_signal_pulse,
+			0,
 			NULL
 		);
 
@@ -241,6 +248,7 @@ static int socket_create_libop
 			&(posix_socket_create.output_ports),
 			"socket fd",
 			&lxc_signal_int,
+			0,
 			NULL
 		);
 
@@ -250,6 +258,7 @@ static int socket_create_libop
 			&(posix_socket_create.output_ports),
 			"errno",
 			&lxc_signal_int,
+			0,
 			NULL
 		);
 

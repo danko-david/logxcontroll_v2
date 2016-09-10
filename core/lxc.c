@@ -13,9 +13,9 @@ void lxc_init_instance(Gate instance, const struct lxc_gate_behavior* behavior)
 	instance->execution_behavior = default_execution_behavior;
 }
 
-void default_execution_behavior(Gate instance, Signal type, LxcValue value, uint index)
+void default_execution_behavior(Gate instance, Signal type, int subtype, LxcValue value, uint index)
 {
-	instance->behavior->execute(instance, type, value, index);
+	instance->behavior->execute(instance, type, subtype, value, index);
 }
 
 void lxc_destroy_simple_free(Gate instance)
@@ -34,7 +34,12 @@ int lxc_add_gate_to_circuit(Circuit circuit, Gate gate)
 {
 	if(NULL != circuit && NULL != gate)
 	{
-		array_nt_append_element(&(circuit->gates), &(circuit->gates_count), gate);
+		array_nt_append_element
+		(
+			(void***) &(circuit->gates),
+			 &(circuit->gates_count),
+			(void*)gate
+		);
 		return 0;
 	}
 	return 1;

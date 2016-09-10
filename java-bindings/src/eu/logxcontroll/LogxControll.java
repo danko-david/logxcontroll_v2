@@ -2,6 +2,8 @@ package eu.logxcontroll;
 
 import java.util.Arrays;
 
+import javax.security.auth.Subject;
+
 import eu.javaexperience.gnu.GccTools;
 import eu.javaexperience.nativ.posix.Posix;
 import eu.logxcontroll.java.LogxControllCallback;
@@ -10,7 +12,7 @@ public class LogxControll
 {
 	static
 	{
-		long ptr = Posix.dlopen("/home/szupervigyor/projektek/LogxKontroll/WS/LogxControllCore/Shared/libLogxControllCore.elf", Posix.RTLD_NOW | Posix.RTLD_GLOBAL);
+		long ptr = Posix.dlopen(System.getProperty("eu.logxcontroll.lib"), Posix.RTLD_NOW | Posix.RTLD_GLOBAL);
 
 		if(0 == ptr)
 		{
@@ -78,9 +80,6 @@ public class LogxControll
 	public static final boolean DIRECTION_IN = true;
 	public static final boolean DIRECTION_OUT = false;
 	
-	
-	
-
 	protected static native int lxcValRefDiff(long value, int ref_diff);
 	
 	public static int referenceValue(LxcValue value)
@@ -188,29 +187,34 @@ public class LogxControll
 		lxcDriveWireValue(driver.ptr, out_index, wire.ptr, LxcValue.pointerFromValue(value));
 	}
 
-	protected static native int lxcWireGateInput(long signal, long wire, long gate, int index);
+	protected static native int lxcWireGateInput(long signal, int subtype, long wire, long gate, int index);
 	
-	public static void wireGateInput(Signal type, Wire wire, Gate g, int index) throws LogxControllException
+	//TODO wrap  to more specific type
+	public static void wireGateInput(Signal type, int subtype, Wire wire, Gate g, int index) throws LogxControllException
 	{
 		int errno =	lxcWireGateInput
 					(
 						Signal.pointerFromSignal(type),
+						subtype,
 						Wire.pointerFromWire(wire),
 						Gate.pointerFromGate(g),
 						index
 					);
 		
 		if(0 != errno)
+		{
 			throw new LogxControllException(errno);
+		}
 	}
 
-	protected static native int lxcWireGateOutput(long type, long wire, long g, int index);
+	protected static native int lxcWireGateOutput(long type, int subtype, long wire, long g, int index);
 	
-	protected static void wireGateOutput(Signal type, Wire wire, Gate g, int index) throws LogxControllException
+	protected static void wireGateOutput(Signal type, int subtype, Wire wire, Gate g, int index) throws LogxControllException
 	{
 		int errno =	lxcWireGateOutput
 				(
 					Signal.pointerFromSignal(type),
+					subtype,
 					Wire.pointerFromWire(wire),
 					Gate.pointerFromGate(g),
 					index
@@ -233,8 +237,6 @@ public class LogxControll
 	
 	public static Gate newInstanceByName(String name)
 	{
-		System.out.println(name);
-		System.out.flush();
 		if(null == name)
 		{
 			return null;
@@ -253,76 +255,70 @@ public class LogxControll
 		return lxcGetGatename(gate.ptr);
 	}
 
+	//TODO a new type required for this, a type can manage specified types (signal and subtype)
 	protected static native long[] lxcGetGateIOTypes(long gate, boolean direction);
 	
-	protected static Signal[] getGateIOTypes(Gate g, boolean direction)
+	protected static FullSignalType[] getGateIOTypes(Gate g, boolean direction)
 	{
 		Gate.assertValid(g);
 		
 		long[] arr = lxcGetGateIOTypes(g.ptr, direction);
 		
-		Signal[] ret = new Signal[arr.length];
-		
-		for(int i=0;i<ret.length;++i)
-		{
-			ret[i] = Signal.signalFromPointer(arr[i]);
-		}
-
-		return ret;
+		return FullSignalType.fetch(arr);
 	}
 
-	public static Signal[] getGateInputTypes(Gate g)
+	public static FullSignalType[] getGateInputTypes(Gate g)
 	{
 		return getGateIOTypes(g, DIRECTION_IN);
 	}
 
-	public static Signal[] getGateOutputTypes(Gate g)
+	public static FullSignalType[] getGateOutputTypes(Gate g)
 	{
 		return getGateIOTypes(g, DIRECTION_OUT);
 	}
 
 
-	private static native int lxcGetPortMaxIndex(long gate, long singal, boolean direction);
+	private static native int lxcGetPortMaxIndex(long gate, long singal, int subtype, boolean direction);
 	
-	public static int getGateInputMaxIndex(Gate gate, Signal s)
+	public static int getGateInputMaxIndex(Gate gate, Signal s, int subtype)
 	{
 		Gate.assertValid(gate);
 		Signal.assertValid(s);
 		
-		return lxcGetPortMaxIndex(gate.ptr, s.ptr, DIRECTION_IN);
+		return lxcGetPortMaxIndex(gate.ptr, s.ptr, subtype, DIRECTION_IN);
 	}
 
-	public static int getGateOutputMaxIndex(Gate gate, Signal s)
+	public static int getGateOutputMaxIndex(Gate gate, Signal s, int subtype)
 	{
 		Gate.assertValid(gate);
 		Signal.assertValid(s);
 		
-		return lxcGetPortMaxIndex(gate.ptr, s.ptr, DIRECTION_OUT);
+		return lxcGetPortMaxIndex(gate.ptr, s.ptr, subtype, DIRECTION_OUT);
 	}
 	
-	protected static native String lxcGetIOLabel(long gate, boolean direction, long sig, int index);
+	protected static native String lxcGetIOLabel(long gate, boolean direction, long sig, int subtype, int index);
 	
-	public static String getInputLabel(Gate g, Signal sig, int index)
+	public static String getInputLabel(Gate g, Signal sig, int subtype, int index)
 	{
 		Gate.assertValid(g);
 		Signal.assertValid(sig);
-		return lxcGetIOLabel(g.ptr, DIRECTION_IN, sig.ptr, index);
+		return lxcGetIOLabel(g.ptr, DIRECTION_IN, sig.ptr, subtype, index);
 	}
 
-	public static String getOutputLabel(Gate g, Signal sig, int index)
+	public static String getOutputLabel(Gate g, Signal sig, int subtype, int index)
 	{
 		Gate.assertValid(g);
 		Signal.assertValid(sig);
-		return lxcGetIOLabel(g.ptr, DIRECTION_OUT, sig.ptr, index);
+		return lxcGetIOLabel(g.ptr, DIRECTION_OUT, sig.ptr, subtype, index);
 	}
 
-	protected static final native long lxcGetWire(long gate, boolean direction, long signal, int index);
+	protected static final native long lxcGetWire(long gate, boolean direction, long signal, int subtype,  int index);
 
-	protected static Object getWire(Gate gate, boolean direction, Signal type, int index)
+	protected static Object getWire(Gate gate, boolean direction, Signal type, int subtype, int index)
 	{
 		Gate.assertValid(gate);
 		Signal.assertValid(type);
-		long ptr = lxcGetWire(gate.ptr, direction, type.ptr, index);
+		long ptr = lxcGetWire(gate.ptr, direction, type.ptr, subtype, index);
 		if(direction == DIRECTION_IN)
 		{
 			return Tokenport.tokenPortFromPointer(ptr);
@@ -333,14 +329,14 @@ public class LogxControll
 		}
 	}
 	
-	public static Tokenport getInputWire(Gate gate, Signal type, int index)
+	public static Tokenport getInputWire(Gate gate, Signal type, int subtype, int index)
 	{
-		return (Tokenport) getWire(gate, DIRECTION_IN, type, index);
+		return (Tokenport) getWire(gate, DIRECTION_IN, type, subtype, index);
 	}
 
-	public static Wire getOutputWire(Gate gate, Signal type, int index)
+	public static Wire getOutputWire(Gate gate, Signal type, int subtype, int index)
 	{
-		return (Wire) getWire(gate, DIRECTION_OUT, type, index);
+		return (Wire) getWire(gate, DIRECTION_OUT, type, subtype, index);
 	}
 	
 	protected static native String[] lxcEnumerateProperties(long gate);
@@ -434,11 +430,11 @@ public class LogxControll
 
 	//static final native void lxcPortUncheckedAddNewPort(long pm, String name, long type, boolean senstitive);
 	
-	static final native void lxcPortUncheckedAddNewPort1(long pm, long name, long type);
+	static final native void lxcPortUncheckedAddNewPort1(long pm, long name, long type, int subtype);
 	
-	static final native int lxcPortGetAbsIndex(long pm, long signal, int index);
+	static final native int lxcPortGetAbsIndex(long pm, long signal, int subtype, int index);
 	
-	static final native int lxcPortRemovePort(long pm, long signal, int index);
+	static final native int lxcPortRemovePort(long pm, long signal, int subtype, int index);
 	
 	static final native int lxcPortGetAbsindexByName(long pm, String name);
 	
@@ -469,28 +465,51 @@ public class LogxControll
 
 	public static native String gnuLibcBacktraceSymbol(long addr);
 
-	static native void lxc_absorb_token(long ptr);
+	static native void lxcAbsorbToken(long ptr);
 	
 	public static void lxc_absorb_token(Tokenport tokenport)
 	{
 		if(null != tokenport)
 		{
-			lxc_absorb_token(tokenport.ptr);
+			lxcAbsorbToken(tokenport.ptr);
 		}
 	}
 
-	static native long lxc_get_token_value(long ptr);
+	static native long lxcGetTokenValue(long ptr);
 
 	
 	public static LxcValue lxc_get_token_value(Tokenport tokenport)
 	{
 		if(null != tokenport)
 		{
-			return LxcValue.valueFromPointer(lxc_get_token_value(tokenport.ptr));
+			return LxcValue.valueFromPointer(lxcGetTokenValue(tokenport.ptr));
 		}
 		
 		return null;
 	}
+	
+	static native int lxcGetWireSubtype(long ptr);
 
-		
+	public static int getWireSubtype(Wire wire)
+	{
+		if(null != wire)
+		{
+			return lxcGetWireSubtype(Wire.pointerFromWire(wire));
+		}
+		throw new NullPointerException("wire may not null");
+	}
+
+	static native int lxcGetSignalTypeOrdinal(long signal);
+	
+	public static int getSignalTypeOrdinal(Signal signal)
+	{
+		return lxcGetSignalTypeOrdinal(Signal.pointerFromSignal(signal));
+	}
+	
+	static native long lxcGetSignalByOrdinal(int ordinal);
+	
+	public static Signal getSignalByOrdinal(int ordinal)
+	{
+		return Signal.signalFromPointer(lxcGetSignalByOrdinal(ordinal));
+	}
 }

@@ -63,6 +63,7 @@ LxcValue lxc_create_system_event
 (
 	enum lxc_system_event_type type,
 	Signal signal,
+	int subtype,
 	int index,
 	const char* name
 )
@@ -78,6 +79,7 @@ LxcValue lxc_create_system_event
 
 	event->event_type = type;
 	event->signal = signal;
+	event->subtype = subtype;
 	event->index = index;
 	event->name = name;
 
@@ -88,8 +90,9 @@ void lxc_portb_republish_internal_value
 (
 	Gate gate,
 	Signal signal,
+	int subtype,
 	int index,
-	LxcValue* (access_internal_value)(Gate, int wire_abs)
+	LxcValue* (*access_internal_value)(Gate, int wire_abs)
 )
 {
 	int abs =	lxc_portb_get_absindex
@@ -97,6 +100,7 @@ void lxc_portb_republish_internal_value
 					((struct lxc_generic_portb_instance*)gate),
 					DIRECTION_OUT,
 					signal,
+					subtype,
 					index
 				);
 
@@ -105,7 +109,7 @@ void lxc_portb_republish_internal_value
 		return;
 	}
 
-	LxcValue* addr = access_internal_value((Gate) gate, abs);
+	LxcValue* addr = access_internal_value(gate, abs);
 	if(NULL == addr)
 	{
 		return;
@@ -118,6 +122,21 @@ void lxc_portb_republish_internal_value
 	}
 
 	lxc_drive_wire_value((Gate) gate, index, out->owner, *addr);
+}
+
+LxcValue lxc_get_value_from_tokenport_array
+(
+	Tokenport* tokenports,
+	int index
+)
+{
+	Tokenport w = tokenports[index];
+	if(NULL == w)
+	{
+		return NULL;
+	}
+
+	return lxc_get_token_value(w);
 }
 
 LxcValue lxc_get_value_safe_from_tokenport_array

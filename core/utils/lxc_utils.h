@@ -33,6 +33,7 @@ LxcValue lxc_create_system_event
 (
 	enum lxc_system_event_type type,
 	Signal signal,
+	int subtype,
 	int index,
 	const char* name
 );
@@ -41,8 +42,15 @@ void lxc_portb_republish_internal_value
 (
 	Gate gate,
 	Signal signal,
+	int subtype,
 	int index,
 	LxcValue* (access_internal_value)(Gate, int wire_abs)
+);
+
+LxcValue lxc_get_value_from_tokenport_array
+(
+	Tokenport* tokenports,
+	int index
 );
 
 LxcValue lxc_get_value_safe_from_tokenport_array

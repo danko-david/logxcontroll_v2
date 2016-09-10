@@ -47,7 +47,7 @@ public class JavaBridgeGate extends Gate
 		cbs.set(index, cb);
 	}
 	
-	public int addInputPort(Signal sig, String name, boolean sensitive, LogxControllCallback cb)
+	public int addInputPort(Signal sig, int subtype, String name, boolean sensitive, LogxControllCallback cb)
 	{
 		inputPorts.assertPortnameNotInUse(name);
 		//int prev = inputPorts.getMaxIndex(); 
@@ -58,7 +58,7 @@ public class JavaBridgeGate extends Gate
 		
 		PortManager.assertPortName(name);
 		Signal.assertValid(sig);
-		LogxControll.lxcPortUncheckedAddNewPort1(inputPorts.ptr, nn.getPointer(), sig.ptr);
+		LogxControll.lxcPortUncheckedAddNewPort1(inputPorts.ptr, nn.getPointer(), sig.ptr, subtype);
 		int index = inputPorts.assertSuccessfullyRegistered(name);
 		
 		
@@ -74,7 +74,7 @@ public class JavaBridgeGate extends Gate
 		return index;
 	}
 	
-	public int addOutputPort(Signal sig, String name)
+	public int addOutputPort(Signal sig, int subtype, String name)
 	{
 		PortManager.assertPortName(name);
 		Signal.assertValid(sig);
@@ -85,7 +85,7 @@ public class JavaBridgeGate extends Gate
 		
 		PortManager.assertPortName(name);
 		Signal.assertValid(sig);
-		LogxControll.lxcPortUncheckedAddNewPort1(outputPorts.ptr, nn.getPointer(), sig.ptr);
+		LogxControll.lxcPortUncheckedAddNewPort1(outputPorts.ptr, nn.getPointer(), sig.ptr, subtype);
 		int index = outputPorts.assertSuccessfullyRegistered(name);
 		
 		//int index = outputPorts.addNewPort(sig, name, false);
