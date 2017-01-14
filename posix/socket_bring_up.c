@@ -112,6 +112,9 @@ static int do_bring_up(struct lxc_posix_bring_up_instance* gate)
 {
 	int mode = gate->mode;
 
+	printf("do_bring_up: socket_fd: %p, remove: %p, local: %p\n", gate->socket_fd, gate->remote, gate->local);
+	fsync(1);
+
 	if(NULL == gate->socket_fd)
 	{
 		return LXC_ERROR_NOTHING_CHANGED;
@@ -258,23 +261,34 @@ static void bring_up_execute(Gate instance, Signal type, int subtype, LxcValue v
 		{
 			bring_again(gate);
 		}
+
+		return;
 	}
 
 	int abs = lxc_portb_get_absindex(&(gate->base), DIRECTION_IN, type, subtype, index);
+	setbuf(stdout, NULL);
+	printf("SOCKETR_BRING_UP_ABS_INDEX: %d\n", abs);
+	fsync(1);
 
 	bool again = false;
 
+	//TODO read and absorb
 	if(abs == IN_ABS_SOCKET_FD)
 	{
+		printf("IMPORT_FD: %p\n", value);
+		fsync(1);
 		again = lxc_import_new_value(value, &(gate->socket_fd));
 	}
 	else if(abs == IN_ABS_LOCAL)
 	{
+		printf("IMPORT_LOCAL: %p\n", value);
+		fsync(1);
 		again = lxc_import_new_value(value, &(gate->local));
 	}
 	else if(abs == IN_ABS_REMOTE)
 	{
-		printf("new value: %p\n", value);
+		printf("IMPORT_REMOTE: %p\n", value);
+		fsync(1);
 		again = lxc_import_new_value(value, &(gate->remote));
 	}
 

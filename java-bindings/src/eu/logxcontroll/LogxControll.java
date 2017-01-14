@@ -2,16 +2,29 @@ package eu.logxcontroll;
 
 import java.util.Arrays;
 
-import javax.security.auth.Subject;
-
+import eu.javaexperience.asserts.AssertArgument;
 import eu.javaexperience.gnu.GccTools;
 import eu.javaexperience.nativ.posix.Posix;
+import eu.javaexperience.semantic.references.MayNull;
 import eu.logxcontroll.java.LogxControllCallback;
+import eu.logxcontroll.java.LogxControllDebugCallback;
 
 public class LogxControll
 {
+
+/*********************** Initializing native envirnment ************************
+ * System initialized from java side on ClassLoading time.
+ * The loaded shared library symbols loaded globally (see: dlopen RTLD_GLOBAL)
+ * 	so loading different version of LXC in the same java process is currently
+ * 	not available (even if you use custom separated ClassLoaders) 
+ * 
+ * TODO
+ * 
+ * 
+ */
 	static
 	{
+		System.out.println("logxcontroll library: "+System.getProperty("eu.logxcontroll.lib"));
 		long ptr = Posix.dlopen(System.getProperty("eu.logxcontroll.lib"), Posix.RTLD_NOW | Posix.RTLD_GLOBAL);
 
 		if(0 == ptr)
@@ -49,8 +62,6 @@ public class LogxControll
 		NativeObject.class.toString();
 		
 		initNative();
-		
-		
 	}
 
 	protected static native void initNative();
@@ -76,7 +87,10 @@ public class LogxControll
 		return Arrays.copyOf(errors, maxindex);
 	}
 	
-
+	/**
+	 * Used to specify port direction (input/output) respectively to the native
+	 * lxc-core. 
+	 * */
 	public static final boolean DIRECTION_IN = true;
 	public static final boolean DIRECTION_OUT = false;
 	
@@ -160,7 +174,7 @@ public class LogxControll
 	}
 	
 	
-	/******************** Signal ASSOCIATED FACET FUNCTION ************************/
+/******************** Signal ASSOCIATED FACET FUNCTION ************************/
 	protected static native long lxcGetSignalByName(String name);
 	
 	public static Signal getSignalByName(String name)
@@ -173,7 +187,7 @@ public class LogxControll
 		return Signal.signalFromPointer(lxcGetSignalByName(name));
 	}
 	
-	/******************* Wire/Wiring ASSOCIATED FACET FUNCTION ********************/
+/******************* Wire/Wiring ASSOCIATED FACET FUNCTION ********************/
 
 	protected static native void lxcDriveWireValue(long instance, int outIndex, long wire, long value);
 	
@@ -231,7 +245,7 @@ public class LogxControll
 		return Wire.wireFromPointer(lxcCreateWire(Signal.pointerFromSignal(type)));
 	}
 
-	/*********************** Gate ASSOCIATED FACET FUNCTION ***********************/
+/*************************** Gate basic functions *****************************/
 
 	protected static native long lxcNewInstanceByName(String name);
 	
@@ -254,8 +268,25 @@ public class LogxControll
 		Gate.assertValid(gate);
 		return lxcGetGatename(gate.ptr);
 	}
-
-	//TODO a new type required for this, a type can manage specified types (signal and subtype)
+	
+	protected static native String lxcGetGateReferenceDesignator(long gate);
+	
+	protected static native void lxcSetGateReferenceDesignator(long gate, String name);
+	
+	public static String getGateReferenceDesignator(Gate gate)
+	{
+		Gate.assertValid(gate);
+		long ptr = Gate.pointerFromGate(gate);
+		return lxcGetGateReferenceDesignator(ptr);
+	}
+	
+	public static void setGateReferenceDesignator(Gate gate, @MayNull String name)
+	{
+		Gate.assertValid(gate);
+		long ptr = Gate.pointerFromGate(gate);
+		lxcSetGateReferenceDesignator(ptr, name);
+	}
+	
 	protected static native long[] lxcGetGateIOTypes(long gate, boolean direction);
 	
 	protected static FullSignalType[] getGateIOTypes(Gate g, boolean direction)
@@ -420,6 +451,25 @@ public class LogxControll
 		return Signal.signalFromPointer(lxcGetWireSignal(w.ptr));
 	}
 	
+	protected static native String lxcGetWireReferenceDesignator(long wire);
+	
+	public static String getWireReferenceDesignator(Wire wire)
+	{
+		Wire.assertValid(wire);
+		long ptr = Wire.pointerFromWire(wire);
+		return lxcGetWireReferenceDesignator(ptr);
+	}
+	
+	protected static native void lxcSetWireReferenceDesignator(long wire, String name);
+	
+	public static void setWireReferenceDesignator(Wire wire, @MayNull String name)
+	{
+		Wire.assertValid(wire);
+		long ptr = Wire.pointerFromWire(wire);
+		lxcSetWireReferenceDesignator(ptr, name);
+	}
+
+	
 	static final native boolean lxcCheckPortiInsance(long gate);
 	
 	static final native long lxcPortiGetPortManager(long porti_instance, boolean direction);
@@ -449,7 +499,7 @@ public class LogxControll
 	static native long lxcBehaviorNewInstance(long lxc_gate_behavior);
 	
 	
-	/*** JavaBridge functions ***/
+/**************************** JavaBridge functions ****************************/
 	
 	static final native LogxControllCallback jbCb(long gate, boolean set, int index, LogxControllCallback cb);
 	
@@ -512,4 +562,37 @@ public class LogxControll
 	{
 		return Signal.signalFromPointer(lxcGetSignalByOrdinal(ordinal));
 	}
+	
+	static native int wireDebugHook(long wire, LogxControllDebugCallback dbg);
+	
+	public static void wireSetDebugHook(Wire w, LogxControllDebugCallback dbg) throws LogxControllException
+	{
+		Wire.assertValid(w);
+		AssertArgument.assertNotNull(dbg, "dbg");
+		int ret = wireDebugHook(Wire.pointerFromWire(w), dbg);
+		if(0 != ret)
+		{
+			throw new LogxControllException(ret);
+		}
+	}
+	
+	public static void wireRemoveDebugHook(Wire w, LogxControllDebugCallback dbg) throws LogxControllException
+	{
+		Wire.assertValid(w);
+		AssertArgument.assertNotNull(dbg, "dbg");
+		int ret = wireDebugHook(Wire.pointerFromWire(w), null);
+		if(0 != ret)
+		{
+			throw new LogxControllException(ret);
+		}
+	}
+	
+	static native LogxControllDebugCallback wireGetDebugHook(long wire);
+	
+	public static LogxControllDebugCallback wireGetDebugHook(Wire w)
+	{
+		Wire.assertValid(w);
+		return wireGetDebugHook(Wire.pointerFromWire(w));
+	}
+	
 }

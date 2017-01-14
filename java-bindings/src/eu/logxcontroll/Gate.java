@@ -189,4 +189,14 @@ public class Gate extends NativeObject
 		printPorts(false);
 		printProps();
 	}
+	
+	public String getReferenceDesignator()
+	{
+		return LogxControll.getGateReferenceDesignator(this);
+	}
+	
+	public void setReferenceDesignator(String refDes)
+	{
+		LogxControll.setGateReferenceDesignator(this, refDes);
+	}
 }

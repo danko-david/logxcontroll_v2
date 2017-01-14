@@ -6,40 +6,11 @@
 
 cmake_minimum_required(VERSION 3.0)
 
-#include(${CMAKE_CURRENT_SOURCE_DIR}/../CMakeLists.txt)
+include_directories(${CMAKE_SOURCE_DIR}/../)
 
-include_directories(${CMAKE_SOURCE_DIR})
+file(GLOB_RECURSE CORE_SOURCES ${CMAKE_SOURCE_DIR} "*.c")
 
-#posix library
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLXC_EMBED_MODULE_POSIX")
-SET(CXXFLAGS "${CXXFLAGS} -DLXC_EMBED_MODULE_POSIX")
-add_definitions(-DLXC_EMBED_MODULE_POSIX)
-file(GLOB_RECURSE POSIX_SOURCES "" "posix/*.c")
-list(APPEND SOURCES ${POSIX_SOURCES})
-
-
-#arithmetic library
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLXC_EMBED_MODULE_ARITHMETIC")
-SET(CXXFLAGS "${CXXFLAGS} -DLXC_EMBED_MODULE_ARITHMETIC")
-add_definitions(-DLXC_EMBED_MODULE_ARITHMETIC)
-file(GLOB_RECURSE ARITHMETIC_SOURCES "" "arithmetic/*.c")
-list(APPEND SOURCES ${ARITHMETIC_SOURCES})
-
-
-#core library
-file(GLOB_RECURSE CORE_SOURCES "" "core/*.c")
-
-file(GLOB_RECURSE JUNKS ${CMAKE_SOURCE_DIR} "CMakeCCompilerId.c")
-
-foreach(JUNK ${JUNKS})
-	list(REMOVE_ITEM CORE_SOURCES ${JUNK})
-endforeach(JUNK)
-
-list(APPEND SOURCES ${CORE_SOURCES})
-
-#set(SOURCES ${CORE_SOURCES} ${POSIX_SOURCES})
-
-add_library(logxcontroll-core SHARED ${SOURCES})
+add_library(logxcontroll-artihmetic SHARED ${CORE_SOURCES})
 
 # Define headers for this library. PUBLIC headers are used for
 # compiling the library, and will be added to consumers' build

@@ -91,7 +91,7 @@ public class LibraryTree extends JPanel
 	{
 		String curPath =
 				//dir.getPath();
-				dir.nodeName;
+				dir.getNodeName();
 		if(null == curPath)
 		{
 			curPath = "LogxControll gate library"; 

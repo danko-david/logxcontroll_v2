@@ -64,4 +64,14 @@ public class Wire extends NativeObject
 	{
 		return LogxControll.getWireSubtype(this);
 	}
+
+	public String getReferenceDesignator()
+	{
+		return LogxControll.getWireReferenceDesignator(this);
+	}
+	
+	public void setReferenceDesignator(String refDes)
+	{
+		LogxControll.setWireReferenceDesignator(this, refDes);
+	}
 }

@@ -224,6 +224,36 @@ struct lxc_value
 
 #define LXC_GATE_MAX_IO_TYPE_COUNT 20
 
+
+enum lxc_wire_operation_phase
+{
+	lxc_before_wire_driven,
+
+	lxc_before_gate_notified,
+	lxc_after_gate_notified,
+
+	lxc_after_wire_driven,
+};
+
+struct lxc_wire_debug_hook_data
+{
+	int type;
+	const char* id;
+	/*MayNotNull*/ void (*wire_debug_hook)
+	(
+		struct lxc_wire_debug_hook_data* data,
+		enum lxc_wire_operation_phase,
+		Wire this_wire,
+		Gate subject_gate,
+		uint subject_port_index,
+		LxcValue value,
+		Signal type,
+		int subtype
+	);
+
+	//glue anything what you need.
+};
+
 /**
  * Represents a wire, connect gates together.
  * A wire has driver(s) and driven gates.
@@ -259,6 +289,10 @@ struct lxc_wire
 	int subtype;
 	//TODO queue and single token for tokenless mode
 	LxcValue current_value;
+
+	char* ref_des;
+
+	struct key_value** wire_debug_hooks;
 
 	Tokenport* drivers;
 	uint drivers_length;
@@ -302,6 +336,8 @@ enum lxc_errno
 	LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED = -16,
 
 	LXC_ERROR_TYPE_CONVERSION_NOT_EXISTS = -17,
+
+	LXC_ERROR_CORRUPTION = -18,
 
 	LXC_ERROR_ILLEGAL_NAME = -100,
 
@@ -365,14 +401,14 @@ struct lxc_gate_behavior
 
 	//returns the wire of the specified type and input. returns null if
 	//type not supported or port is not wired
-	Tokenport (*get_input_wire)(Gate instance, Signal type, int subtype,  uint index);
+	Tokenport (*get_input_wire)(Gate instance, Signal type, int subtype, uint index);
 
 	//\\tries to wire the input. Signal parameter is redundant, if wire is not null
 	//\\it will be silently ignored, if wire is null gate unwire the input specified
 	//\\by type and index.
 
 	//simply set the wire in the internal data structure specified by signal
-	int (*wire_input)(Gate instance, Tokenport port, Signal sig, int subtype, unsigned int index);
+	int (*wire_input)(Gate instance, Signal sig, int subtype, Tokenport port, uint index);
 
 	//here notified if an input value changed, you can decide do you want to
 	//care about (sensitivity), if you want to execute them without any
@@ -439,7 +475,7 @@ struct lxc_gate_behavior
 
 	int (*library_operation)(enum library_operation, const char** errors, int errors_max_length);
 
-	//array_pnt library paths path1, path2, NULL,
+	//array_pnt library paths: path1, path2, NULL,
 	const char*** paths;
 
 

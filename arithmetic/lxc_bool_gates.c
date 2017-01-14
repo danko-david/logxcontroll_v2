@@ -38,6 +38,7 @@ static int logx_bool_get_supported_types
 (
 	Gate instance,
 	Signal* arr,
+	int* subtype,
 	uint max_length
 )
 {
@@ -49,6 +50,7 @@ static int logx_bool_get_supported_types
 		return -1;
 
 	arr[0] = &lxc_signal_bool;
+	subtype[0] = 0;
 
 	if(max_length > 1)
 		arr[1] = NULL;
@@ -113,53 +115,75 @@ static const char* logx_bool_get_input_label
 (
 	Gate instance,
 	Signal signal,
+	int subtype,
 	uint index
 )
 {
 	UNUSED(instance);
-	if(&lxc_signal_bool != signal || index > 20)
+	if(&lxc_signal_bool != signal || index > 20 || 0 != subtype)
 		return NULL;
 
 	return INPUT_NAMES[index];
 }
 
-static const char* logx_bool_get_output_label(Gate instance, Signal signal,
-		uint index)
+static const char* logx_bool_get_output_label
+(
+	Gate instance,
+	Signal signal,
+	int subtype,
+	uint index
+)
 {
 	UNUSED(instance);
-	if(&lxc_signal_bool != signal || index > 20)
+	if(&lxc_signal_bool != signal || index > 20 || 0 != subtype)
 		return NULL;
 
 	return OUTPUT_NAMES[index];
 }
 
-static int return_20(Gate instance, Signal s)
+static int return_20(Gate instance, Signal s, int subtype)
 {
 	UNUSED(instance);
-	if(&lxc_signal_bool != s)
+	if(&lxc_signal_bool != s || 0 != subtype)
+	{
 			return -1;
+	}
 
 	return 20;
 }
 
-static int return_1(Gate instance, Signal s)
+static int return_1(Gate instance, Signal s, int subtype)
 {
 	UNUSED(instance);
-	if(&lxc_signal_bool != s)
+	if(&lxc_signal_bool != s || 0 != subtype)
+	{
 		return -1;
+	}
 
 	return 1;
 }
 
-static Wire logx_bool_get_input_wire(Gate instance, Signal signal, uint index)
+static Tokenport logx_bool_get_input_wire
+(
+	Gate instance,
+	Signal signal,
+	int subtype,
+	uint index
+)
 {
-	if(&lxc_signal_bool == signal || index > 20)
+	if(&lxc_signal_bool == signal || index > 20 || 0 != subtype)
 		return NULL;
 
 	return castGate(instance)->inputs[index];
 }
 
-static Wire logx_bool_get_output_wire(Gate instance, Signal signal, uint index)
+static Wire logx_bool_get_output_wire
+(
+	Gate instance,
+	Signal signal,
+	int subtype,
+	uint index
+)
 {
 	if(&lxc_signal_bool == signal || 0 != index )
 		return NULL;
@@ -167,7 +191,14 @@ static Wire logx_bool_get_output_wire(Gate instance, Signal signal, uint index)
 	return castGate(instance)->output;
 }
 
-static int logx_bool_wire_input(Gate instance, Signal signal, Tokenport wire, uint index)
+static int logx_bool_wire_input
+(
+	Gate instance,
+	Signal signal,
+	int subtype,
+	Tokenport wire,
+	uint index
+)
 {
 	UNUSED(instance);
 	UNUSED(signal);
@@ -175,16 +206,17 @@ static int logx_bool_wire_input(Gate instance, Signal signal, Tokenport wire, ui
 	return 0;
 }
 
-static int logx_bool_wire_output(Gate instance, Signal signal, Wire wire, uint index)
+static int logx_bool_wire_output(Gate instance, Signal signal, int subtype, Wire wire, uint index)
 {
 	UNUSED(instance);
 	UNUSED(signal);
 	UNUSED(index);
+	UNUSED(subtype);
 	castGate(instance)->output = wire;
 	return 0;
 }
 
-static void logx_bool_execute(Gate instance, Signal type, LxcValue value, uint index)
+static void logx_bool_execute(Gate instance, Signal type, int subtype, LxcValue value, uint index)
 {
 	UNUSED(instance);
 	UNUSED(type);
@@ -425,7 +457,14 @@ static struct lxc_bool_gate_behavior logic_dbg;
 /***************************** init functions *********************************/
 
 static char*** path_to_primitive_logic =
-	(char**[]){(char*[]){"Primitive", "Logic", NULL},NULL};
+	(char**[])
+	{
+		(char*[])
+		{
+			"Primitive", "Arithmetic", "Logic", NULL
+		},
+		NULL
+	};
 
 static void init_behavior
 (
@@ -439,7 +478,7 @@ static void init_behavior
 	//b->base.gate_name = gate_name;
 	b->logic_function = logic_function;
 
-	char**** path = &(b->base.paths);
+	char**** path = (char****) &(b->base.paths);
 	*path = path_to_primitive_logic;
 }
 
@@ -472,17 +511,15 @@ static int library_operation_function(enum library_operation op, const char** er
 =
 {
 	.library_operation = library_operation_function,
-	.gates = (struct lxc_gate_behavior*[])
+	.gates = (const struct lxc_gate_behavior*[])
 	{
-		&logic_nand,
-		&logic_nor,
-		&logic_and,
-		&logic_or,
+		(struct lxc_gate_behavior*)&logic_nand,
+		(struct lxc_gate_behavior*)&logic_nor,
+		(struct lxc_gate_behavior*)&logic_and,
+		(struct lxc_gate_behavior*)&logic_or,
 
-		&logic_dbg,
+		(struct lxc_gate_behavior*)&logic_dbg,
 
 		NULL,
-	},
-
-
+	}
 };

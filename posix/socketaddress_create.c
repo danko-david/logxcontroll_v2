@@ -107,7 +107,6 @@ static void socketaddress_create_execute
 		return;
 	}
 
-
 	if(NULL != gate->current_creator)
 	{
 		//is any output?
@@ -119,6 +118,7 @@ static void socketaddress_create_execute
 		}
 
 		LxcValue addr = gate->current_creator->create_socket(gate);
+
 		if(NULL != addr)
 		{
 			lxc_reference_value(addr);

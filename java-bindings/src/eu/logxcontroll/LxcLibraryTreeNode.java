@@ -44,8 +44,13 @@ public class LxcLibraryTreeNode extends NativeObject implements Iterable<LxcLibr
 	
 	protected ArrayList<LxcLibraryTreeNode> subNodes = new ArrayList<>();
 	
-	public final String nodeName;
+	protected final String nodeName;
 
+	public String getNodeName()
+	{
+		return nodeName;
+	}
+	
 	@Override
 	public Iterator<LxcLibraryTreeNode> iterator()
 	{

@@ -6,6 +6,9 @@ extern "C"
 	static jclass callbackClass;
 	static jmethodID callbackJavaMethod;
 
+	static jclass debugCallbackClass;
+	static jmethodID wireDebugJavaMethod;
+
 	static JavaVM *jvm;
 
 	static struct lxc_generic_porti_behavior java_bridge = {};
@@ -120,25 +123,50 @@ extern "C"
 			env->DeleteLocalRef(cS);
 		}
 
-		jclass cC = env->FindClass("eu/logxcontroll/java/LogxControllCallback");
-		if(NULL == cC)
 		{
-			env->FatalError("Can't find eu.logixcontroll.java.LogxControllCallback class");
-		}
-		else
-		{
-			callbackClass = (jclass) env->NewGlobalRef(cC);
-			env->DeleteLocalRef(cC);
+			jclass cC = env->FindClass("eu/logxcontroll/java/LogxControllCallback");
+			if(NULL == cC)
+			{
+				env->FatalError("Can't find eu.logixcontroll.java.LogxControllCallback class");
+			}
+			else
+			{
+				callbackClass = (jclass) env->NewGlobalRef(cC);
+				env->DeleteLocalRef(cC);
+			}
+
+			callbackJavaMethod = env->GetMethodID(callbackClass, "callback", "(JJIIJ)V");
+			if(NULL == callbackJavaMethod)
+			{
+				env->FatalError("Can't find LogxControllCallback's callback(JJIIJ)V function.");
+			}
+			else
+			{
+				//callbackJavaMethod = env->NewGlobalRef(callbackJavaMethod);
+			}
 		}
 
-		callbackJavaMethod = env->GetMethodID(callbackClass, "callback", "(JJIIJ)V");
-		if(NULL == callbackJavaMethod)
 		{
-			env->FatalError("Can't find LogxControllCallback's callback(JJIIJ)V function.");
-		}
-		else
-		{
-			//callbackJavaMethod = env->NewGlobalRef(callbackJavaMethod);
+			jclass cC = env->FindClass("eu/logxcontroll/java/LogxControllDebugCallback");
+			if(NULL == cC)
+			{
+				env->FatalError("Can't find eu.logixcontroll.java.LogxControllDebugCallback class");
+			}
+			else
+			{
+				debugCallbackClass = (jclass) env->NewGlobalRef(cC);
+				env->DeleteLocalRef(cC);
+			}
+
+			wireDebugJavaMethod = env->GetMethodID(debugCallbackClass, "callback", "(IJJIJJI)V");
+			if(NULL == callbackJavaMethod)
+			{
+				env->FatalError("Can't find LogxControllDebugCallback's callback(IJJIJJI)V function.");
+			}
+			else
+			{
+				//callbackJavaMethod = env->NewGlobalRef(wireDebugJavaMethod);
+			}
 		}
 	}
 
@@ -293,7 +321,33 @@ extern "C"
 		return env->NewStringUTF(name);
 	}
 
-	//TODO a new type required for this, a type can manage specified types (signal and subtype)
+	JNIEXPORT jstring JNICALL Java_eu_logxcontroll_LogxControll_lxcGetGateReferenceDesignator(JNIEnv * env, jobject obj, long gate)
+	{
+		Gate g = (Gate) gate;
+		if(NULL == g->ref_des)
+		{
+			return NULL;
+		}
+		return env->NewStringUTF(g->ref_des);
+	}
+
+	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxcSetGateReferenceDesignator(JNIEnv * env, jobject obj, long gate, jstring name)
+	{
+		Gate g = (Gate) gate;
+		if(NULL != g->ref_des)
+		{
+			free(g->ref_des);
+		}
+
+		if(NULL != name)
+		{
+			const char* n = env->GetStringUTFChars(name, NULL);
+			g->ref_des = copy_string(n);
+			env->ReleaseStringUTFChars(name, n);
+		}
+	}
+
+
 	JNIEXPORT jobject JNICALL Java_eu_logxcontroll_LogxControll_lxcGetGateIOTypes(JNIEnv * env, jobject obj, long gate, jboolean direction)
 	{
 		Signal sig[LXC_GATE_MAX_IO_TYPE_COUNT];
@@ -309,7 +363,7 @@ extern "C"
 
 		jlongArray ret = env->NewLongArray(len*2);
 		long* arr = (long*) env->GetPrimitiveArrayCritical(ret, NULL);
-		for(int i=0;i<len;i+=2)
+		for(int i=0;i<len;++i)
 		{
 			arr[i*2] = (long) sig[i];
 			arr[i*2+1] = (long) subs[i];
@@ -453,6 +507,32 @@ extern "C"
 		return (long) ((Wire) wire)->type;
 	}
 
+	JNIEXPORT jstring JNICALL Java_eu_logxcontroll_LogxControll_lxcGetWireReferenceDesignator(JNIEnv * env, jobject obj, long wire)
+	{
+		Wire w = (Wire) wire;
+		if(NULL == w->ref_des)
+		{
+			return NULL;
+		}
+		return env->NewStringUTF(w->ref_des);
+	}
+
+	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_lxcSetWireReferenceDesignator(JNIEnv * env, jobject obj, long wire, jstring name)
+	{
+		Wire w = (Wire) wire;
+		if(NULL != w->ref_des)
+		{
+			free(w->ref_des);
+		}
+
+		if(NULL != name)
+		{
+			const char* n = env->GetStringUTFChars(name, NULL);
+			w->ref_des = copy_string(n);
+			env->ReleaseStringUTFChars(name, n);
+		}
+	}
+
 	JNIEXPORT long JNICALL Java_eu_logxcontroll_LogxControll_lxcPortiGetPortManager(JNIEnv * env, jobject obj, long gate, bool direction)
 	{
 		struct lxc_generic_porti_instance* i = (struct lxc_generic_porti_instance*) gate;
@@ -532,8 +612,6 @@ extern "C"
 				);
 			}
 
-			fsync(1);
-
 			jobject old = g->callbacks[index];
 			if(NULL != old)
 			{
@@ -548,9 +626,6 @@ extern "C"
 		{
 			if(index < g->cb_length)
 			{
-				printf("get: %p\n", g->callbacks[index]);
-				fsync(1);
-
 				return g->callbacks[index];
 			}
 
@@ -696,4 +771,110 @@ extern "C"
 		return (long) lxc_get_signal_by_ordinal(ordinal);
 	}
 
+	struct java_wire_debug_hook
+	{
+		struct lxc_wire_debug_hook_data base;
+		jobject callback;
+	};
+
+	static const char* WIRE_DEBUG_ID = "JAVA_ENVIRONMENT_CALLBACK";
+
+	static void java_wire_debug_hook_function
+	(
+		struct lxc_wire_debug_hook_data* data,
+		enum lxc_wire_operation_phase phase,
+		Wire this_wire,
+		Gate subject_gate,
+		uint subject_port_index,
+		LxcValue value,
+		Signal type,
+		int subtype
+	)
+	{
+		struct java_wire_debug_hook* jd = (struct java_wire_debug_hook*) data;
+		JNIEnv *env;
+		jint rs = jvm->AttachCurrentThread((void**)&env, NULL);
+		if(JNI_OK == rs)
+		{
+			env->CallVoidMethod
+			(
+				jd->callback,
+				wireDebugJavaMethod,
+				phase,
+				(long) this_wire,
+				(long) subject_gate,
+				subject_port_index,
+				(long) value,
+				(long) type,
+				subtype
+			);
+		}
+	}
+
+
+
+	static struct java_wire_debug_hook* wrap_hook(JNIEnv * env, jobject callback)
+	{
+		struct java_wire_debug_hook* ret = (struct java_wire_debug_hook*)
+				malloc(sizeof(struct java_wire_debug_hook));
+
+		ret->base.type = -2459402;
+		ret->base.id = WIRE_DEBUG_ID;
+		ret->base.wire_debug_hook = java_wire_debug_hook_function;
+
+		ret->callback = env->NewGlobalRef(callback);
+
+		return ret;
+	}
+
+	static void release_hook(JNIEnv * env, struct java_wire_debug_hook* data)
+	{
+		env->DeleteGlobalRef(data->callback);
+		free(data);
+	}
+
+
+	JNIEXPORT int JNICALL Java_eu_logxcontroll_LogxControll_wireDebugHook(JNIEnv * env, jobject obj, long wire, /*LogxControllDebugCallback*/ jobject dbg)
+	{
+		if(0 == wire)
+		{
+			return LXC_ERROR_BAD_CALL;
+		}
+
+		if(NULL == dbg)
+		{
+			struct java_wire_debug_hook* elem = (struct java_wire_debug_hook*) lxc_wire_remove_debug_hook((Wire) wire, WIRE_DEBUG_ID);
+			if(NULL != elem)
+			{
+				release_hook(env, elem);
+				return 0;
+			}
+			return LXC_ERROR_ENTITY_NOT_FOUND;
+		}
+		else
+		{
+			struct java_wire_debug_hook* add = wrap_hook(env, dbg);
+			int ret = lxc_wire_add_debug_hook((Wire) wire, &add->base);
+
+			if(0 != ret)
+			{
+				release_hook(env, add);
+			}
+
+			return ret;
+		}
+	}
+
+	JNIEXPORT jobject JNICALL Java_eu_logxcontroll_LogxControll_wireGetDebugHook(JNIEnv * env, jobject obj, long wire)
+	{
+		struct java_wire_debug_hook* data = (struct java_wire_debug_hook*) lxc_wire_get_debug_hook((Wire) wire, WIRE_DEBUG_ID);
+		if(NULL == data)
+		{
+			return NULL;
+		}
+		else
+		{
+			return data->callback;
+		}
+	}
 }

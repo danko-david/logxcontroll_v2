@@ -15,6 +15,7 @@ import eu.logxcontroll.LxcValue;
 import eu.logxcontroll.Signal;
 import eu.logxcontroll.Wire;
 import eu.logxcontroll.java.LogxControllCallback;
+import eu.logxcontroll.java.LogxControllDebugCallback;
 
 public class Test
 {
@@ -105,6 +106,7 @@ public class Test
 
 				if(input == 0)
 				{
+					System.out.println("Vétel kezdete!");
 					FDIOStream s = FDIOStreamFactory.fromFD(val);
 					try {
 						IOTools.copyStream(s.getInputStream(), System.out);
@@ -115,14 +117,34 @@ public class Test
 			}
 		};
 		
+		LogxControllDebugCallback dbg = new LogxControllDebugCallback()
+		{
+			@Override
+			public void debug
+			(
+				LxcWireOperationPhase phase,
+				Wire wire,
+				Gate subjectGate,
+				int subjectPort,
+				LxcValue value,
+				Signal type,
+				int subtype
+			)
+			{
+				System.out.println("DRIVE: "+phase+" "+wire+" "+subjectGate+" "+subjectPort);
+			}
+		};
 		
 		JavaBridgeGate bridge = JavaBridgeGate.newInstance();
 		
 		Wire fd_connection = LogxControll.createWire(signal_int);
+		LogxControll.wireSetDebugHook(fd_connection, dbg);
 		
 		Wire remote = LogxControll.createWire(signal_sockaddr);
+		LogxControll.wireSetDebugHook(remote, dbg);
 		
 		Wire in_fd = LogxControll.createWire(signal_int);
+		LogxControll.wireSetDebugHook(in_fd, dbg);
 		
 		Gate socket_create = LogxControll.newInstanceByName("socket create");
 		
@@ -143,6 +165,10 @@ public class Test
 		Wire addr = LogxControll.createWire(signal_string);
 		Wire port = LogxControll.createWire(signal_int);
 		
+		LogxControll.wireSetDebugHook(addr, dbg);
+		LogxControll.wireSetDebugHook(port, dbg);
+		
+		System.out.println("JAVA_WIRE: "+addr.getType()+" "+addr.getSubtype());
 		socketaddress_create.wireInput(addr, 0);
 		socketaddress_create.wireInput(port, 0);
 		socketaddress_create.wireOutput(remote, 0);
@@ -151,9 +177,16 @@ public class Test
 		Wire sock = LogxControll.createWire(signal_int);
 		Wire pf = LogxControll.createWire(signal_int);
 		
+		LogxControll.wireSetDebugHook(af, dbg);
+		LogxControll.wireSetDebugHook(sock, dbg);
+		LogxControll.wireSetDebugHook(pf, dbg);
+		
 		socket_create.wireInput(af, 0);
 		socket_create.wireInput(sock, 1);
 		socket_create.wireInput(pf, 2);
+		
+		System.out.println("JAVA_WIRE: "+socket_create.getInputWire(pf.getType(), pf.getSubtype(), 2));
+		
 		socket_create.wireOutput(fd_connection, 0);
 		
 		socket_bring_up.wireInput(fd_connection, 0);
@@ -162,6 +195,9 @@ public class Test
 		
 		Wire error_bring = LogxControll.createWire(signal_int);
 		Wire error_cre = LogxControll.createWire(signal_int);
+		
+		LogxControll.wireSetDebugHook(error_bring, dbg);
+		LogxControll.wireSetDebugHook(error_cre, dbg);
 		
 		socket_bring_up.wireOutput(in_fd, 0);
 		socket_bring_up.wireOutput(error_bring, 1);
@@ -213,6 +249,8 @@ public class Test
 		
 
 		System.out.println("driven");
+		
+		socket_create.dbgPrintAll();
 		
 		Posix.pause();
 	}

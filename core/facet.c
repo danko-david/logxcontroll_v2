@@ -198,11 +198,15 @@ int private_generic_wiring
 	{
 		signal = wire->type;
 	}
-
 	//signal is not null. But if the wire not null it is use the same type?
 	else if(NULL != wire && signal != wire->type)
 	{
 		return LXC_ERROR_BAD_CALL;
+	}
+
+	if(NULL == signal)
+	{
+		return LXC_ERROR_CORRUPTION;
 	}
 
 	//Check signal is supported
@@ -227,8 +231,6 @@ int private_generic_wiring
 	return LXC_ERROR_TYPE_NOT_SUPPORTED;
 
 passed:
-
-
 	if(index < 0 || index > get_max_index(instance, signal, subtype))
 	{
 		return LXC_ERROR_ENTITY_OUT_OF_RANGE;
@@ -263,12 +265,21 @@ passed:
 			p->gate = instance;
 			p->owner = wire;
 			p->index = index;
-			wire_function(instance, signal, subtype, p, index);
+			int ret = wire_function(instance, signal, subtype, p, index);
+			if(0 != ret)
+			{
+				free(p);
+				return ret;
+			}
 			subject = p;
 		}
 		else
 		{
-			wire_function(instance, signal, subtype, wire, index);
+			int ret = wire_function(instance, signal, subtype, wire, index);
+			if(0 != ret)
+			{
+				return ret;
+			}
 			subject = wire;
 		}
 	}
@@ -321,7 +332,7 @@ void on_successfull_input_wiring(Signal type, int subtype, void* /*Tokenport*/ t
 	}
 }
 
-void on_successfull_output_wiring(Signal type,int subtype, void* /*Wire*/ w, Gate g, uint index)
+void on_successfull_output_wiring(Signal type, int subtype, void* /*Wire*/ w, Gate g, uint index)
 {
 	Wire wire = (Wire) w;
 	if(NULL != w)
@@ -407,21 +418,92 @@ int lxc_wire_gate_output(Signal type, int subtype, Wire wire, Gate g, uint index
 	);
 }
 
-
-static void drive_wire_task_execute(Task t)
+static void raise_wire_hook_calls
+(
+	enum lxc_wire_operation_phase phase,
+	Wire this_wire,
+	Gate subject_gate,
+	uint subject_port_index,
+	LxcValue value
+)
 {
+	struct key_value** wire_debug_hooks = this_wire->wire_debug_hooks;
+	if(NULL == wire_debug_hooks)
+	{
+		return;
+	}
+
+	int i;
+	for(i=0;NULL != wire_debug_hooks[i];++i)
+	{
+		struct lxc_wire_debug_hook_data* data =
+				(struct lxc_wire_debug_hook_data*) wire_debug_hooks[i]->value;
+
+		//TODO reference and unreference the values (value, gate etc) before invoke
+
+		data->wire_debug_hook
+		(
+			data,
+			phase,
+			this_wire,
+			subject_gate,
+			subject_port_index,
+			value,
+			this_wire->type,
+			this_wire->subtype
+		);
+	}
+
+}
+
+/**
+ * TODO for today: wire debugging hooks, and java callbacks for hooks
+ *
+ *
+ * */
+//TODO locks for wires
+void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue value)
+{
+	//TODO framework debugging mode, update wire value on change
+
+	if(NULL == wire)
+	{
+		return;
+	}
+
+	struct key_value** wire_debug_hooks = wire->wire_debug_hooks;
+
+	if(NULL != wire_debug_hooks)
+	{
+		raise_wire_hook_calls
+		(
+			lxc_before_wire_driven,
+			wire,
+			instance,
+			out_index,
+			value
+		);
+	}
+
+	lxc_import_new_value(value, &(wire->current_value));
+
+	/*Task t = malloc(sizeof(struct lxc_task));//TODO referenc the value beacuse it can change over the time, and can be finalized before another thread process it
+	t->instance = instance;
+	t->index = out_index;
+	t->wire = wire;
+	t->value = value;
+	//TODO lxc_submit_asyncron_task(drive_wire_task_execute, t);
+	//drive_wire_task_execute(t);
+
 	//Gate instance = t->instance;
 	//uint out_index = t->index;
-	Wire wire = t->wire;
-	LxcValue value = t->value;
-
 	free(t);
 
 	if(NULL != value)
 	{
 		lxc_unreference_value(value);
 	}
-
+*/
 	Tokenport* ports = wire->drivens;
 	Signal signal = wire->type;
 	int len = wire->drivens_length;
@@ -435,35 +517,126 @@ static void drive_wire_task_execute(Task t)
 
 		if(p->gate->enabled && NULL != p->gate->execution_behavior)
 		{
+			if(NULL != wire_debug_hooks)
+			{
+				raise_wire_hook_calls
+				(
+					lxc_before_gate_notified,
+					wire,
+					p->gate,
+					p->index,
+					value
+				);
+			}
+
 			p->gate->execution_behavior(p->gate, signal, wire->subtype, value, p->index);
+
+			if(NULL != wire_debug_hooks)
+			{
+				raise_wire_hook_calls
+				(
+					lxc_after_gate_notified,
+					wire,
+					p->gate,
+					p->index,
+					value
+				);
+			}
+		}
+
+		if(NULL != wire_debug_hooks)
+		{
+			raise_wire_hook_calls
+			(
+				lxc_after_gate_notified,
+				wire,
+				p->gate,
+				p->index,
+				value
+			);
+		}
+
+	}
+}
+
+int lxc_wire_add_debug_hook(Wire wire, struct lxc_wire_debug_hook_data* hook)
+{
+	if(NULL == wire || NULL == hook || NULL == hook->id || NULL == hook->wire_debug_hook)
+	{
+		return LXC_ERROR_BAD_CALL;
+	}
+
+	struct key_value** entries = (struct key_value**) wire->wire_debug_hooks;
+
+	if(NULL != wire->wire_debug_hooks)
+	{
+		int i;
+		for(i=0;NULL != entries[i];++i)
+		{
+			struct key_value* data = entries[i];
+			if(0 == strcmp(hook->id, (const char*) data->key))
+			{
+				return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
+			}
 		}
 	}
+
+	struct key_value* data = malloc_zero(sizeof(struct key_value));
+	data->key = (char*) hook->id;
+	data->value = hook;
+	array_pnt_append_element((void***)&wire->wire_debug_hooks, (void*) data);
+
+	return 0;
 }
 
-//TODO locks for wires
-void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue value)
+struct lxc_wire_debug_hook_data* lxc_wire_remove_debug_hook(Wire wire, const char* id)
 {
-	UNUSED(instance);
-	UNUSED(out_index);
-
-	//TODO framework debugging mode, update wire value on change
-
-	if(NULL == wire)
+	if(NULL == wire || NULL == id)
 	{
-		return;
+		return NULL;
 	}
 
-	lxc_import_new_value(value, &(wire->current_value));
+	struct key_value** entries = (struct key_value**) wire->wire_debug_hooks;
 
-	Task t = malloc(sizeof(struct lxc_task));//TODO referenc the value beacuse it can change over the time, and can be finalized before another thread process it
-	t->instance = instance;
-	t->index = out_index;
-	t->wire = wire;
-	t->value = value;
-	//TODO lxc_submit_asyncron_task(drive_wire_task_execute, t);
-	drive_wire_task_execute(t);
+	if(NULL != entries)
+	{
+		int i;
+		for(i=0;NULL != entries[i];++i)
+		{
+			struct key_value* data = entries[i];
+			if(0 == strcmp(id, data->key))
+			{
+				return (struct lxc_wire_debug_hook_data*)
+						array_pnt_pop_element((void***) &wire->wire_debug_hooks, i);
+			}
+		}
+
+		return NULL;
+	}
+	else
+	{
+		return NULL;
+	}
 }
 
+struct lxc_wire_debug_hook_data* lxc_wire_get_debug_hook(Wire wire, const char* id)
+{
+	struct key_value** entries = (struct key_value**) wire->wire_debug_hooks;
+	if(NULL != entries)
+	{
+		int i;
+		for(i=0;NULL != entries[i];++i)
+		{
+			struct key_value* data = entries[i];
+			if(0 == strcmp(id, data->key))
+			{
+				return (struct lxc_wire_debug_hook_data*) data->value;
+			}
+		}
+	}
+
+	return NULL;
+}
 
 int lxc_reference_value(LxcValue value)
 {

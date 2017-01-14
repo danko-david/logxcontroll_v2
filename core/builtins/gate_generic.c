@@ -54,7 +54,7 @@ int lxc_port_get_absindex
 	uint index
 )
 {
-	int tindex = -1;
+
 	struct lxc_full_signal_type* types = fact->managed_types;
 
 	if(NULL == types)
@@ -62,23 +62,23 @@ int lxc_port_get_absindex
 		return -1;
 	}
 
+	int tindex = -1;
 	int i=0;
-	if(NULL != types)
+	while(NULL != types[i].signal)
 	{
-		while(NULL != types[i].signal)
+		if(type == types[i].signal && subtype == types[i].subtype)
 		{
-			if(type == types[i].signal && subtype == types[i].subtype)
-			{
-				tindex = i;
-				break;
-			}
-
-			++i;
+			tindex = i;
+			break;
 		}
+
+		++i;
 	}
 
 	if(-1 == tindex)
+	{
 		return -1;
+	}
 
 	uint len = fact->to_abs_size[tindex];
 	if(index < len)
@@ -423,7 +423,6 @@ int lxc_port_get_absindex_by_name(struct lxc_port_manager* fact, const char* nam
 	const char** arr = fact->port_names;
 	while(NULL != arr)
 	{
-		//printf("%s\r\n", *arr);
 		if(strcmp(*arr, name) == 0)
 			return i;
 
@@ -456,6 +455,11 @@ int lxc_port_fill_types
 	struct lxc_full_signal_type* src = fact->managed_types;
 	uint popul = 0;
 
+	if(NULL == src)
+	{
+		return 0;
+	}
+
 	while(NULL != src[popul].signal)
 	{
 		++popul;
@@ -467,6 +471,7 @@ int lxc_port_fill_types
 	uint i;
 	for(i=0;i<popul;++i)
 	{
+		printf("SIG: %p, SUB: %d\n\n\n", src[i].signal, src[i].subtype);
 		dst_arr[i] = src[i].signal;
 		subtypes[i] = src[i].subtype;
 	}
@@ -646,7 +651,7 @@ static Tokenport lxc_generic_portb_get_input_wire(Gate instance, Signal type, in
 			);
 }
 
-static int lxc_generic_portb_wire_input(Gate instance, Tokenport tp, Signal type, int subtype, uint index)
+static int lxc_generic_portb_wire_input(Gate instance, Signal type, int subtype, Tokenport tp, uint index)
 {
 	return	lxc_port_wiring
 			(
@@ -870,7 +875,7 @@ static void force_index_available
 	}
 }
 
-static int lxc_generic_porti_wire_input(Gate instance, Tokenport wire, Signal type, int subtype, uint index)
+static int lxc_generic_porti_wire_input(Gate instance, Signal type, int subtype, Tokenport wire, uint index)
 {
 	struct lxc_generic_porti_instance* i = (struct lxc_generic_porti_instance*) instance;
 

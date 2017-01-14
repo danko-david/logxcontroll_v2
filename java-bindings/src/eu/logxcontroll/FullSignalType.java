@@ -13,7 +13,7 @@ public class FullSignalType
 	{
 		if(null == data || data.length == 0 || data.length % 2 != 0)
 		{
-			return  emptyFullSignalTypeArray;
+			return emptyFullSignalTypeArray;
 		}
 		
 		FullSignalType[] ret = new FullSignalType[data.length/2];
@@ -21,7 +21,7 @@ public class FullSignalType
 		{
 			FullSignalType fst = new FullSignalType();
 			fst.signal = Signal.signalFromPointer(data[i*2]);
-			fst.subtype = i*2+1;
+			fst.subtype = (int) data[i*2+1];
 			ret[i] = fst;
 		}
 		

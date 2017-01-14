@@ -45,6 +45,12 @@ Signal lxc_get_signal_by_name(const char*);
 
 void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue value);
 
+int lxc_wire_add_debug_hook(Wire wire, struct lxc_wire_debug_hook_data* hook);
+
+struct lxc_wire_debug_hook_data* lxc_wire_remove_debug_hook(Wire wire, const char* id);
+
+struct lxc_wire_debug_hook_data* lxc_wire_get_debug_hook(Wire wire, const char* id);
+
 int lxc_wire_gate_input(Signal type, int subtype, Wire wire, Gate g, uint index);
 
 int lxc_wire_gate_output(Signal type, int subtype, Wire wire, Gate g, uint index);
