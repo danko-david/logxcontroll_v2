@@ -45,7 +45,7 @@ static struct pool_thread* new_pool_thread()
 	struct pool_thread* ret =
 		(struct pool_thread*) malloc_zero(sizeof(struct pool_thread));
 
-	rrt_init_rerunnable_thread(&(ret->rerunnable));
+	rrt_init(&(ret->rerunnable));
 	ret->rerunnable.on_release_callback = on_release;
 	rrt_start(&(ret->rerunnable));
 	return ret;

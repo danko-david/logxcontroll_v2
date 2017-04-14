@@ -90,6 +90,16 @@ extern "C"
 
 	static jclass classString;
 
+/** this one is against code editors can't find jni.h and warns every method **/
+#ifndef JNIEXPORT
+	#define JNIEXPORT
+#endif
+
+#ifndef JNICALL
+	#define JNICALL
+#endif
+/******************************************************************************/
+
 	JNIEXPORT void JNICALL Java_eu_logxcontroll_LogxControll_initNative(JNIEnv * env,jobject obj)
 	{
 		jint rs = env->GetJavaVM(&jvm);

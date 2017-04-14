@@ -226,7 +226,8 @@ static int sockaddress_create_property_validator
 			)
 		)
 		{
-			safe_strcpy(ret, max_length, "Family can be modified only if no input port connected, disconnect them.");
+			safe_strcpy(ret, max_length, "Family can be modified only if no\
+ input port connected, disconnect them.");
 			return LXC_ERROR_PORT_IS_IN_USE;
 		}
 
@@ -295,7 +296,9 @@ static int socketaddress_create_libop
 			&(posix_socketaddress_create.properties),
 			"family",
 			"Family",
-			"Specifies, which kind of address will be created, like: INET for IPv4 adresses, INET6 for IPv6, UN for UNIX Doamin sockets, PACKET for low level communication, BLUETOOTH for bluetooth devices and so on.",
+			"Specifies, which kind of address will be created, like: INET\
+ for IPv4 adresses, INET6 for IPv6, UN for UNIX Doamin sockets, PACKET for low \
+level communication, BLUETOOTH for bluetooth devices and so on.",
 			"UNSPEC",
 			sockaddress_create_property_validator
 		);

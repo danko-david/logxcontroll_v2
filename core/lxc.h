@@ -16,8 +16,8 @@
  *
  *
  *	support multithread solutions:
- *		//TODO there is some alternatives for data propagation
- *		self execution must check for stack overflow before it's occurred.
+ *		//TODO there is some alternatives for data propagation like:
+ *		self execution, it must check for stack overflow before it's occurred.
  *			a ring oscillator can break the entire runtime.
  *
  *		different execution queue for different gates (as settings)
@@ -37,7 +37,10 @@
  *		to shared memory region or into a message.
  *
  *		I mean try to design LxcValues to use continuous memory segment, and
- *		relative pointer.
+ *		relative pointer. (Edit: likely unachievable with real life data
+ *			structure so better to take more care about serialization/cloning
+ *			(with a little bit reflection) to achieve the original goal:
+ *			can transfer data between processes)
  *
  *
  *
@@ -94,6 +97,29 @@
 #define LOGX_H_
 
 
+/******************************************************************************
+ ************************* Basic types required by LXC ************************
+ ******************************************************************************/
+
+/****** Primitive types ******/
+//
+// linked list: `reference counted chain link`
+//
+struct chain_link_refc
+{
+	int refcount;
+	struct chain_link_refc* next;
+	void* addr;
+};
+
+
+
+
+
+/*
+			Because of cross referencing inside types to each
+					other, used types are defined here
+*/
 struct lxc_gate_behavior;
 struct lxc_instance;
 
@@ -109,16 +135,28 @@ typedef const struct lxc_signal_type* Signal;
 typedef struct lxc_wire* Wire;
 typedef struct lxc_value* LxcValue;
 typedef struct lxc_tokenport* Tokenport;
+typedef struct circuit* IOCircuit;
+typedef struct circuit* Circuit;
 
+
+/******************************************************************************
+ ************************* LXC type related structure *************************
+ ******************************************************************************/
+
+//
+// Represents a type caster to a specified `type`. The source type specified
+// externally
+//
 struct lxc_cast_to
 {
 	Signal to;
 	LxcValue (*cast_function)(LxcValue);
 };
 
-/**
- * Contains the necessary data about the signal type and framework utility.
- * */
+//
+// Represents an LXC data type, contains the necessary datas about the signal
+//  type and for the framework utilities.
+//
 struct lxc_signal_type
 {
 	/*
@@ -128,7 +166,7 @@ struct lxc_signal_type
 
 	/*
 	 * Assigned by the framework at signal registering time
-	 * used for subtype supporting
+	 * used for subtype support
 	 */
 	int ordinal;
 
@@ -148,13 +186,6 @@ struct lxc_signal_type
 	 * Map<Signal, LxcValue (*cast_to)(LxcValue)>
 	 */
 	struct lxc_cast_to** cast_to;
-};
-
-struct chain_link_refc
-{
-	int refcount;
-	struct chain_link_refc* next;
-	void* addr;
 };
 
 struct lxc_tokenport
@@ -363,6 +394,43 @@ enum library_operation
 
 };
 
+enum gate_event_type
+{
+	custom_event,
+
+	gate_enabled_disabled,
+
+	input_wire_changed,
+	output_wire_changed,
+
+	input_portset_changed,
+	output_portset_changed,
+
+	attribute_changed,
+	attribute_set_changed,
+
+	gate_placed,
+	gate_removed,
+
+
+
+
+};
+
+struct gate_event
+{
+	Gate gate_of_event;
+
+	enum gate_event_type event_type;
+	int event_subtype;
+
+	int additional_data_identifier;
+	void* previous_additional_data;
+	void* additional_data;
+
+};
+
+struct event_listener;
 
 /**
  * Structure stores the basic functions of the logic gate.
@@ -479,11 +547,21 @@ struct lxc_gate_behavior
 	const char*** paths;
 
 
-
+	//this method should return the user utility descriptor's url.
+	//all other method responsible to manage, setup and make the gate functional.
+	//The graphical user interface is another huge task of a proper and - peasant
+	//to use - implementation of the project with full of external resources
+	//(gate appearance view, help article). i think, there's no place here for
+	//the GUI servant functions, the behavior essentially should be the
+	//functional part of a gate.
+	//
 	//source/doc
 	//graphical symbol
 	//gatectl / property utility
 	//
+	const char* (*get_user_utility_url)();
+
+
 
 };
 
@@ -499,6 +577,8 @@ struct lxc_instance
 
 	char* ref_des;
 
+	Circuit owner_circuit;
+
 	//in this method you can implement signal sensitivity.
 	//or in this method you can store the given LxcVale and execure later or
 	//other way than with the current control flow or thread.
@@ -511,7 +591,7 @@ struct lxc_instance
 	 * queue for execution (even if direct execution applied, asynchron task
 	 *  also should be enqueued)
 	 */
-
+	struct event_listener** event_listeners;
 
 	//atomic reference blocked_by (on token wire value overproducing)
 };
@@ -524,6 +604,9 @@ struct lxc_constant_value
 
 /************************ Framework system events *****************************/
 
+/**
+ * Events propagated to the gates
+ * */
 enum lxc_system_event_type
 {
 	//note: Never change enable and disable event position
@@ -565,16 +648,24 @@ struct lxc_system_event
 
 
 /************************ Subcircuit definitions ******************************/
-typedef struct circuit* Circuit;
-typedef struct iocircuit* IOCircuit;
 
 struct circuit
 {
-	uint gates_count;
 	Gate* gates;
-
-	uint wires_count;
 	Wire* wires;
+
+	Wire* inputs;
+	Wire* outputs;
+
+	/**
+	 * if this circuit is a circuit inside a gate, this event listener can
+	 * be specified to relay events to the circuit, owned this gate (aka circuit)
+	 * */
+	struct event_listener** listeners;
+
+	Circuit parent;
+	Circuit* childs;
+	char* name;
 };
 
 void lxc_destroy_simple_free(Gate instance);
@@ -584,20 +675,6 @@ Circuit lxc_create_circuit();
 int lxc_add_gate_to_circuit(Circuit, Gate);
 
 void lxc_destroy_circuit(Circuit);
-
-
-struct iocircuit
-{
-	struct circuit base;
-
-	uint inputs_count;
-	Wire* inputs;
-
-	uint outputs_count;
-	Wire* outputs;
-};
-
-IOCircuit lxc_create_iocircuit();
 
 
 /********************** LOADABLE LIBRARY DEFINITIONS **************************/
@@ -621,6 +698,36 @@ struct lxc_loadable_library
 
 
 };
+
+/********************* Event and listeners for the outside ********************/
+
+struct event_listener
+{
+	void* owner;
+
+	//gate_event_type mask
+	int listen_mask;
+
+	void (*event_listener)(struct gate_event*);
+};
+
+//bool can_propagate_event(struct gate_event_type);
+
+void propagate_event(Gate, struct gate_event*);
+
+void try_notify_gate_enabled_disabled(Gate);
+
+void try_notify_attriubte_change(Gate);
+
+
+
+
+
+
+
+
+
+
 
 
 

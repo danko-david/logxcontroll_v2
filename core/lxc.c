@@ -23,21 +23,20 @@ void lxc_destroy_simple_free(Gate instance)
 	free(instance);
 }
 
-Circuit lxc_create_circuit()
+IOCircuit lxc_create_circuit()
 {
-	Circuit ret = malloc(sizeof(struct circuit));
+	IOCircuit ret = malloc(sizeof(struct circuit));
 	memset(ret, 0, sizeof(struct circuit));
 	return ret;
 }
 
-int lxc_add_gate_to_circuit(Circuit circuit, Gate gate)
+int lxc_add_gate_to_circuit(IOCircuit circuit, Gate gate)
 {
 	if(NULL != circuit && NULL != gate)
 	{
-		array_nt_append_element
+		array_pnt_append_element
 		(
 			(void***) &(circuit->gates),
-			 &(circuit->gates_count),
 			(void*)gate
 		);
 		return 0;
@@ -45,15 +44,15 @@ int lxc_add_gate_to_circuit(Circuit circuit, Gate gate)
 	return 1;
 }
 
-void lxc_destroy_circuit(Circuit circuit)
+void lxc_destroy_circuit(IOCircuit circuit)
 {
 	free(circuit);
 }
 
-IOCircuit lxc_create_iocircuit()
+Circuit lxc_create_iocircuit()
 {
-	IOCircuit ret = malloc(sizeof(struct iocircuit));
-	memset(ret, 0, sizeof(struct iocircuit));
+	Circuit ret = malloc(sizeof(struct circuit));
+	memset(ret, 0, sizeof(struct circuit));
 	return ret;
 }
 

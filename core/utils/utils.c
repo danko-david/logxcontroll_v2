@@ -427,9 +427,11 @@ void array_pnt_init(void*** array_addr)
 
 int array_pnt_last_index(void** array_addr)
 {
-	//the array is not yet initalized or thefirst elemenet is the terminator
+	//the array is not yet initalized or the first elemenet is the terminator
 	if(NULL == array_addr || NULL == array_addr[0])
+	{
 		return -1;
+	}
 
 	uint i = 1;
 	for(;;)
@@ -440,7 +442,7 @@ int array_pnt_last_index(void** array_addr)
 		}
 		++i;
 	}
-	//here the process will die by segfault
+	//here the process will die by segfault (if array corrupted)
 	return -1;
 }
 
@@ -448,8 +450,10 @@ int array_pnt_last_index(void** array_addr)
 void* array_pnt_pop_element(void*** array_addr, uint index)
 {
 	int lst = array_pnt_last_index(*array_addr);
-	if(lst <= (int) index)
+	if(lst < (int) index)
+	{
 		return NULL;
+	}
 
 	void* ret = (*array_addr)[index];
 
@@ -459,13 +463,18 @@ void* array_pnt_pop_element(void*** array_addr, uint index)
 		(*array_addr)[i] = (*array_addr)[i+1];
 	}
 
-	(*array_addr) = realloc(array_addr, sizeof(void*)*(lst+1));
+	(*array_addr) = realloc(*array_addr, sizeof(void*)*(lst+2));
 
 	return ret;
 }
 
 int array_pnt_append_element(void*** array_addr, void* element)
 {
+	if(NULL == element)
+	{
+		return -1;
+	}
+
 	int lst = array_pnt_last_index(*array_addr);
 	if(lst < 0)
 		lst = 0;

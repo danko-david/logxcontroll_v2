@@ -82,6 +82,7 @@ bool rrt_try_rerun_if_free(struct rerunnable_thread* rrt, void (*function)(void*
 
 static void executor_function(struct rerunnable_thread* rrt)
 {
+	pthread_detach(pthread_self());
 	while(true)
 	{
 		wait_for_job(rrt);
@@ -95,9 +96,7 @@ static void executor_function(struct rerunnable_thread* rrt)
 
 		if(rrt_shutdown_requested == atomic_get_state(rrt))
 		{
-			atomic_update_state(rrt, rrt_exited);
-			notify_job(rrt);
-			return;
+			break;
 		}
 		else
 		{
@@ -107,9 +106,7 @@ static void executor_function(struct rerunnable_thread* rrt)
 		//after task done, if shutdown requested, we perform it.
 		if(rrt_shutdown_requested == atomic_get_state(rrt))
 		{
-			atomic_update_state(rrt, rrt_exited);
-			notify_job(rrt);
-			return;
+			break;
 		}
 
 		atomic_update_state(rrt, rrt_idle);
@@ -119,9 +116,13 @@ static void executor_function(struct rerunnable_thread* rrt)
 			re(rrt);
 		}
 	}
+
+	atomic_update_state(rrt, rrt_exited);
+	pthread_exit(NULL);
+	return;
 }
 
-void rrt_init_rerunnable_thread(struct rerunnable_thread* rrt)
+void rrt_init(struct rerunnable_thread* rrt)
 {
 	memset(rrt, 0, sizeof(struct rerunnable_thread));
 	pthread_mutex_init(&(rrt->mutex), NULL);
@@ -131,9 +132,9 @@ void rrt_init_rerunnable_thread(struct rerunnable_thread* rrt)
 	rrt->status = rrt_initalized;
 }
 
-bool rrt_start(struct rerunnable_thread* rrt)
+int rrt_start(struct rerunnable_thread* rrt)
 {
-	bool ret = false;
+	int ret = -1;
 	short_lock(rrt);
 	if(rrt_initalized == rrt->status)
 	{
@@ -141,7 +142,7 @@ bool rrt_start(struct rerunnable_thread* rrt)
 		//status to rrt_idle yet, under this time we fail to submit a task
 		//for this newly created thread, so i set this before thread start
 		rrt->status = rrt_idle;
-		int ex =	pthread_create
+		ret =	pthread_create
 					(
 						&(rrt->thread),
 						NULL,
@@ -151,7 +152,6 @@ bool rrt_start(struct rerunnable_thread* rrt)
 
 		//pthread_detach(&(rrt->thread));
 
-		ret = (ex == 0);
 	}
 	short_unlock(rrt);
 	return ret;
@@ -188,25 +188,23 @@ enum rerunnable_thread_state rrt_get_state(struct rerunnable_thread* rrt)
 	return atomic_get_state(rrt);
 }
 
-void rrt_wait_exit(struct rerunnable_thread* rrt)
+int rrt_destroy_thread(struct rerunnable_thread* rrt)
 {
-	void* ret = NULL;
-	pthread_join(rrt->thread, &ret);
-	/*
-	short_lock(rrt);
-	if(rrt_exited == rrt->status)
+	enum rerunnable_thread_state state = rrt_get_state(rrt);
+	if(rrt_exited != state && rrt_initalized != state)
 	{
-		short_unlock(rrt);
-		return;
+		return 1;
 	}
-	else
-	{
-		pthread_mutex_lock(&(rrt->mutex));
-		short_unlock(rrt);
 
-		pthread_cond_wait(&(rrt->has_job_condition), &(rrt->mutex));
-		pthread_mutex_unlock(&(rrt->mutex));
+	if(rrt_exited == state)
+	{
+		//pthread_detach(rrt->thread);
 	}
-	*/
+
+	pthread_mutex_destroy(&(rrt->mutex));
+	pthread_spin_destroy(&(rrt->short_lock));
+	pthread_cond_destroy(&(rrt->has_job_condition));
+
+	return 0;
 }
 

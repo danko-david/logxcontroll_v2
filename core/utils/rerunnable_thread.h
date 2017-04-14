@@ -41,9 +41,9 @@ struct rerunnable_thread
 };
 
 
-void rrt_init_rerunnable_thread(struct rerunnable_thread*);
+void rrt_init(struct rerunnable_thread*);
 
-bool rrt_start(struct rerunnable_thread*);
+int rrt_start(struct rerunnable_thread*);
 
 bool rrt_is_free(struct rerunnable_thread*);
 
@@ -52,7 +52,5 @@ bool rrt_try_rerun_if_free(struct rerunnable_thread*, void (*function)(void*), v
 void rrt_graceful_shutdown(struct rerunnable_thread*);
 
 enum rerunnable_thread_state rrt_get_state(struct rerunnable_thread*);
-
-void rrt_wait_exit(struct rerunnable_thread*);
 
 #endif /* RERUNNABLE_THREAD_H_ */

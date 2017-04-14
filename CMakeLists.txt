@@ -4,31 +4,87 @@
 
 #set(CMAKE_BUILD_TYPE Release)
 
-cmake_minimum_required(VERSION 3.0)
-
-#include(${CMAKE_CURRENT_SOURCE_DIR}/../CMakeLists.txt)
+cmake_minimum_required(VERSION 2.6)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
-#posix library
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLXC_EMBED_MODULE_POSIX")
-SET(CXXFLAGS "${CXXFLAGS} -DLXC_EMBED_MODULE_POSIX")
-add_definitions(-DLXC_EMBED_MODULE_POSIX)
-file(GLOB_RECURSE POSIX_SOURCES "" "posix/*.c")
-list(APPEND SOURCES ${POSIX_SOURCES})
+# sources and doc used to create functions:
+#	function: https://cmake.org/cmake/help/v3.0/command/function.html
+#	set(SOURCES ... PARENT_SCOPE): http://stackoverflow.com/questions/10031953/how-to-set-the-global-variable-in-a-function-for-cmake
+#	for debug: https://cmake.org/cmake/help/v3.0/command/message.html
+
+
+#http://stackoverflow.com/questions/33222569/best-way-to-portably-set-compiler-options-like-wall-and-pedantic-in-cmake
+
+include(CheckCXXCompilerFlag)
+
+function(enable_cxx_compiler_flag_if_supported flag)
+    string(FIND "${CMAKE_CXX_FLAGS}" "${flag}" flag_already_set)
+    if(flag_already_set EQUAL -1)
+        check_cxx_compiler_flag("${flag}" flag_supported)
+        if(flag_supported)
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}" PARENT_SCOPE)
+            set(CXX_FLAGS "${CXX_FLAGS} ${flag}" PARENT_SCOPE)
+        endif()
+    endif()
+endfunction()
+
+enable_cxx_compiler_flag_if_supported("-Wall")
+enable_cxx_compiler_flag_if_supported("-Wextra")
+enable_cxx_compiler_flag_if_supported("-pedantic")
+
+###### function for embedded library compilation ######
+function(lxc_build_add_embedded_library name)
+	string(TOUPPER ${name} LIB_NAME_UPPER)
+	string(TOLOWER ${name} LIB_NAME_LOWER)
+	SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLXC_EMBED_MODULE_${LIB_NAME_UPPER}")
+	SET(CXXFLAGS "${CXXFLAGS} -DLXC_EMBED_MODULE_${LIB_NAME_UPPER}")
+	add_definitions(-DLXC_EMBED_MODULE_${LIB_NAME_UPPER})
+	file(GLOB_RECURSE CRNT_SOURCES "" "${LIB_NAME_LOWER}/*.c")
+	set(SOURCES ${SOURCES} ${CRNT_SOURCES} PARENT_SCOPE)
+endfunction(lxc_build_add_embedded_library)
+
+###### function for embedded test modules ######
+function(lxc_build_add_embedded_test name)
+	string(TOLOWER ${name} LIB_NAME_LOWER)
+	file(GLOB_RECURSE CRNT_SOURCES "" "${LIB_NAME_LOWER}/*.c")
+	set(SOURCES ${SOURCES} ${CRNT_SOURCES} PARENT_SCOPE)
+endfunction(lxc_build_add_embedded_test)
+
+######  add novaprova to the target compilation ######
+# sources and docs: 
+#	novapropva: http://novaprova.readthedocs.io/en/latest/building.html
+#	pkg-config: http://stackoverflow.com/questions/32507252/how-to-include-pkg-config-cflags-libs-gtk-2-0-in-cxx-flags-of-cmake
+#	
+function(include_novaprova)
+	find_package(PkgConfig)
+	if (PKG_CONFIG_FOUND)
+		pkg_check_modules(NOVAPROVA "novaprova")
+		if (NOVAPROVA_FOUND)
+			set(LIBRARIES ${LIBRARIES} ${NOVAPROVA_LIBRARIES} PARENT_SCOPE)
+			add_definitions(${NOVAPROVA_CFLAGS} ${NOVAPROVA_CFLAGS_OTHER})
+			#set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
+			set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf")
+			list(APPEND CXXFLAGS "-g")
+			add_definitions(-g)
+		endif()
+	endif()
+endfunction(include_novaprova)
 
 
 #arithmetic library
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLXC_EMBED_MODULE_ARITHMETIC")
-SET(CXXFLAGS "${CXXFLAGS} -DLXC_EMBED_MODULE_ARITHMETIC")
-add_definitions(-DLXC_EMBED_MODULE_ARITHMETIC)
-file(GLOB_RECURSE ARITHMETIC_SOURCES "" "arithmetic/*.c")
-list(APPEND SOURCES ${ARITHMETIC_SOURCES})
+lxc_build_add_embedded_library(arithmetic)
+
+#posix library
+lxc_build_add_embedded_library(posix)
+
+#tests
+lxc_build_add_embedded_test(test-core)
+include_novaprova()
 
 
-#core library
+###### core library ######
 file(GLOB_RECURSE CORE_SOURCES "" "core/*.c")
-
 file(GLOB_RECURSE JUNKS ${CMAKE_SOURCE_DIR} "CMakeCCompilerId.c")
 
 foreach(JUNK ${JUNKS})
@@ -37,31 +93,38 @@ endforeach(JUNK)
 
 list(APPEND SOURCES ${CORE_SOURCES})
 
-#set(SOURCES ${CORE_SOURCES} ${POSIX_SOURCES})
+###### function for shared library ######
+function(output_shared)
+	set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+	add_library(logxcontroll-core SHARED ${SOURCES})
+endfunction(output_shared)
 
-add_library(logxcontroll-core SHARED ${SOURCES})
+function(output_executable)
+	add_executable(logxcontroll-core ${SOURCES})
+endfunction(output_executable)
 
-# Define headers for this library. PUBLIC headers are used for
-# compiling the library, and will be added to consumers' build
-# paths.
-#target_include_directories(lib PUBLIC
-#    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-#    $<INSTALL_INTERFACE:include>
-#    PRIVATE src)
+#output_shared()
+output_executable()
 
-# This makes the project importable from the install directory
-# Put config file in per-project dir (name MUST match), can also
-# just go into <prefix>/cmake.
-#install(EXPORT MyLibraryConfig DESTINATION share/MyLibrary/cmake)
+###### find and include external libraries
+#	sources and docs:
+#		http://stackoverflow.com/questions/1620918/cmake-and-libpthread
+#		http://stackoverflow.com/questions/33678965/need-to-link-cmake-project-to-dl-library		
+#
+find_package (Threads REQUIRED)
 
-# This makes the project importable from the build directory
-#export(TARGETS lib FILE MyLibraryConfig.cmake)
+list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
-# Every library has unit tests, of course # i obey of course
-#add_executable(testlib
-#    test/testlib.cpp)
+set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 
-#target_link_libraries(testlib
-#    lib)
+target_link_libraries (logxcontroll-core ${LIBRARIES})
 
-#add_test(testlib testlib)
+#
+# DEBUG info
+#
+
+
+message(STATUS "target_link_libraries: " "${LIBRARIES}")
+get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
+message(STATUS "Incluide dirs: " "${dirs}")
+#message(STATUS ":" "${}")
