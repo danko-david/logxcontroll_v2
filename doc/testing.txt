@@ -1,0 +1,54 @@
+LogxControll uses novaprova as test framework.
+
+Project homepage:	http://novaprova.org/
+Docs:				http://novaprova.org/docs.html
+
+In short:
+
+It's a testing framework, not messing with the source code, but the compiled
+binary. It's uses reflection to discover tester functions (functions, returns
+and "accept" only `void` type, and name starting with `test_`), the magis of
+reflection done with the DWARF debugging output format.
+(In the CMakeList.txt at the root directory, search for
+`function(include_novaprova)`, the `add_definitions(-g)` causes to produce this
+format, which is not a portable solution but now works... TODO)
+
+By default LogxControll compiled as a library without any `main` function.
+But if you make a build for testing, it's results an executable with novaprova
+embedded into, and testing is happens by running this executable.
+(MAINTAINER-TODO: how to build this version)
+
+Each compilation unit (a single *.c file) may have it's own `int set_up(void)`
+and `int tear_down(void)` method to setup and cleanup the fixture. Before and
+after every test case in compilation unit this methods called and this methods
+can breaks the test (used for environment initialization and cleanup) when non
+zero returning.
+
+It's uses valgrind (intergated into the novaprova) therefore test cases will be
+supervised with some extra aspect of failure like: leakage (memory, local
+reference, file descriptors), data abuse (unused variable, concurrent data
+races), etc.
+
+
+Sadly, novaprova by default recognises test result with any possibly memory
+leakage as a failed testcase. pthread did something tricky with allocated stack,
+even if pthread_detach(pthread_self()) called on the newly created thread or 
+pthread_join(&newthread) called on main thread, which in theory should release
+the thread's allocated stack, but... dunno what's happening.
+
+(The project is strongly relies on multithreading and therefore pthread library,
+and this combination results useless test results [thest using pthread always
+fails])
+
+Novaprova's doc said nothing about, but looking through valgrind's doc, there's
+a topic about supression files:
+https://wiki.wxwidgets.org/Valgrind_Suppression_File_Howto
+Sadly we can't pass extra CLI args for novaprova, but seems like valgrind inside
+behaves as same as a standalone valgrind instance, so creating a .valgrindrc
+beside to the test executible we can inject supression files.
+(test-core/pthread-leakage.supp listed into this file)
+So we can add supperssion by this way, without modifing novaprova.
+Note:	- if test executable and .valgrindrc and superssion file location are
+			modified supressions will not work (of course)
+		- with this method, all supression are global now.
+
