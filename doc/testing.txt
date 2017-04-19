@@ -52,3 +52,4 @@ Note:	- if test executable and .valgrindrc and superssion file location are
 			modified supressions will not work (of course)
 		- with this method, all supression are global now.
 
+#TODO: to disable valgrind: export NOVAPROVA_VALGRIND=no

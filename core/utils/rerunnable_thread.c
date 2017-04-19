@@ -80,6 +80,9 @@ bool rrt_try_rerun_if_free(struct rerunnable_thread* rrt, void (*function)(void*
 	return ret;
 }
 
+static void pointer_on_shutdown_request(void* param)
+{}
+
 static void executor_function(struct rerunnable_thread* rrt)
 {
 	pthread_detach(pthread_self());
@@ -96,20 +99,29 @@ static void executor_function(struct rerunnable_thread* rrt)
 
 		if(rrt_shutdown_requested == atomic_get_state(rrt))
 		{
-			break;
-		}
-		else
-		{
-			rrt->run((void*)rrt->parameter);
+			//we can notify about a job and right after request the shutdown
+			//that results that we miss the job because the flag is already
+			//setted to shutdown request.
+			if(pointer_on_shutdown_request == rrt->run)
+			{
+				break;
+			}
 		}
 
+		rrt->run((void*)rrt->parameter);
+
+		short_lock(rrt);
 		//after task done, if shutdown requested, we perform it.
-		if(rrt_shutdown_requested == atomic_get_state(rrt))
+		if(rrt_shutdown_requested == rrt->status)
 		{
+			short_unlock(rrt);
 			break;
 		}
 
-		atomic_update_state(rrt, rrt_idle);
+		rrt->run = NULL;
+		rrt->parameter = NULL;
+		rrt->status = rrt_idle;
+		short_unlock(rrt);
 		void (*volatile re)(struct rerunnable_thread*) = rrt->on_release_callback;
 		if(NULL != re)
 		{
@@ -149,9 +161,6 @@ int rrt_start(struct rerunnable_thread* rrt)
 						(void *(*) (void *)) executor_function,
 						(void*) rrt
 					);
-
-		//pthread_detach(&(rrt->thread));
-
 	}
 	short_unlock(rrt);
 	return ret;
@@ -167,19 +176,34 @@ bool rrt_is_free(struct rerunnable_thread* rrt)
 	return state == rrt_idle;
 }
 
-void rrt_graceful_shutdown(struct rerunnable_thread* rrt)
+enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread* rrt)
 {
+	enum rerunnable_thread_state state;
+
 	short_lock(rrt);
-	if(rrt_idle == rrt->status)
+	state = rrt->status;
+	if(rrt_idle == state)
 	{
 		rrt->status = rrt_shutdown_requested;
+		rrt->run = pointer_on_shutdown_request;
 		short_unlock(rrt);
 		notify_job(rrt);
+		return SUCCESS;
 	}
-	else if(rrt_busy == rrt->status)
+	else if(rrt_busy == state)
 	{
 		rrt->status = rrt_shutdown_requested;
 		short_unlock(rrt);
+		return SUCCESS;
+	}
+	else
+	{
+		short_unlock(rrt);
+	}
+
+	//if(rrt_initalized == state || rrt_exited == state) //in any other case
+	{
+		return LXC_ERROR_ILLEGAL_REQUEST;
 	}
 }
 

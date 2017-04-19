@@ -17,11 +17,12 @@ void thread_set_false(struct switch_holder* sw)
 	sw->value = false;
 }
 
-void wait_until_true(struct switch_holder* sw)
+void thread_wait_until_true(struct switch_holder* sw)
 {
 	while(!sw->value)
 	{
-		usleep(100);
+		printf("waiting for condition become true\n");
+		usleep(100000);
 	}
 }
 
@@ -49,6 +50,7 @@ int wait_thread_for_state
 		{
 			return times;
 		}
+		printf("waiting for state\n");
 		usleep(wait_unit_time_us);
 	}
 	while(++times < try_max_count);
@@ -58,10 +60,10 @@ int wait_thread_for_state
 
 void print_usual_wait(const char* info, int reach)
 {
-	printf("thread %s after %d number of 0.1 ms waiting\n", info, reach);
+	printf("thread %s after %d number of 0.1 s waiting\n", info, reach);
 }
 
-static void print_thread_state(struct rerunnable_thread* rrt)
+static void print_thread_state(struct rerunnable_thread* rrt, void (*func)(void), void*)
 {
 	enum rerunnable_thread_state state = rrt_get_state(rrt);
 	printf("Thread job done, state: %d\n", state);
@@ -74,13 +76,26 @@ static void assert_thread_reach_state
 	enum rerunnable_thread_state state
 )
 {
-	int reach = wait_thread_for_state(rrt, state, 100, 30);
+	int reach = wait_thread_for_state(rrt, state, 100000, 30);
 	//we shouldn't exceed the maximal waiting time. 30* 100 ms.
-	print_usual_wait(info, reach);
+	if(-1 == reach)
+	{
+		printf
+		(
+			"thread state isn't reached `%s`, state is now %d, desired state: %d\n",
+			info,
+			rrt_get_state(rrt),
+			state
+		);
+	}
+	else
+	{
+		print_usual_wait(info, reach);
+	}
 	NP_ASSERT_NOT_EQUAL(-1, reach);
 }
 
-static void test_rerunnable_thread_full_functionality(void)
+static struct rerunnable_thread* usual_test_start()
 {
 	struct rerunnable_thread* thread = malloc(sizeof(struct rerunnable_thread));
 	rrt_init(thread);
@@ -110,7 +125,33 @@ static void test_rerunnable_thread_full_functionality(void)
 	NP_ASSERT_NOT_EQUAL(0, rrt_start(thread));
 
 	assert_thread_reach_state("started and go idle", thread, rrt_idle);
+	return thread;
+}
 
+static void usual_thread_destroy(struct rerunnable_thread* thread)
+{
+	{
+		rrt_graceful_shutdown(thread);
+		assert_thread_reach_state
+		(
+			"thread exited",
+			thread,
+			rrt_exited
+		);
+	}
+
+	//can't start again (after destroyed)
+	NP_ASSERT_NOT_EQUAL(0, rrt_start(thread));
+
+	//then able to destroy
+	NP_ASSERT_EQUAL(0, rrt_destroy_thread(thread));
+
+	free(thread);
+}
+
+static void test_rerunnable_thread_full_functionality(void)
+{
+	struct rerunnable_thread* thread = usual_test_start();
 	//can't start again (after started)
 	NP_ASSERT_NOT_EQUAL(0, rrt_start(thread));
 
@@ -161,7 +202,7 @@ static void test_rerunnable_thread_full_functionality(void)
 			rrt_try_rerun_if_free
 			(
 				thread,
-				(void (*)(void*)) wait_until_true,
+				(void (*)(void*)) thread_wait_until_true,
 				&sw
 			)
 		);
@@ -180,7 +221,7 @@ static void test_rerunnable_thread_full_functionality(void)
 			rrt_try_rerun_if_free
 			(
 				thread,
-				(void (*)(void*)) wait_until_true,
+				(void (*)(void*)) thread_wait_until_true,
 				&sw
 			)
 		);
@@ -204,22 +245,56 @@ static void test_rerunnable_thread_full_functionality(void)
 		NP_ASSERT_NOT_EQUAL(0, rrt_destroy_thread(thread));
 	}
 
+	usual_thread_destroy(thread);
+}
 
-	{
-		rrt_graceful_shutdown(thread);
-		assert_thread_reach_state
+static void test_shutdown_request_beneath_running_task(void)
+{
+	struct rerunnable_thread* thread = usual_test_start();
+
+	struct switch_holder sw;
+	sw.value = false;
+
+	NP_ASSERT_EQUAL
+	(
+		true,
+		rrt_try_rerun_if_free
 		(
-			"thread exited",
 			thread,
-			rrt_exited
-		);
-	}
+			(void (*)(void*)) thread_wait_until_true,
+			&sw
+		)
+	);
 
-	//can't start again (after destroyed)
-	NP_ASSERT_NOT_EQUAL(0, rrt_start(thread));
+	assert_thread_reach_state
+	(
+		"get busy with task `thread_wait_until_true`",
+		thread,
+		rrt_busy
+	);
 
-	//then able to destroy
-	NP_ASSERT_EQUAL(0, rrt_destroy_thread(thread));
+	rrt_graceful_shutdown(thread);
 
-	free(thread);
+	assert_thread_reach_state
+	(
+		"shutdown request beneath running task",
+		thread,
+		rrt_shutdown_requested
+	);
+
+	sleep(1);
+
+	//should stay in shutdown_requested state
+	assert_thread_reach_state
+	(
+		"shutdown request after 2 sec ",
+		thread,
+		rrt_shutdown_requested
+	);
+
+	//let the task done
+	sw.value = true;
+
+	//destroy checking for `exited` state
+	usual_thread_destroy(thread);
 }

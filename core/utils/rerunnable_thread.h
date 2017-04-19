@@ -16,6 +16,8 @@ enum rerunnable_thread_state
 	rrt_initalized,
 	rrt_idle,
 	rrt_busy,
+
+	//shutdown requested, but task may at this time under execution.
 	rrt_shutdown_requested,
 	rrt_exited
 };
@@ -37,7 +39,7 @@ struct rerunnable_thread
 
 	volatile enum rerunnable_thread_state status;
 
-	void (*volatile on_release_callback)(struct rerunnable_thread*);
+	void (*volatile on_release_callback)(struct rerunnable_thread*, void (*funct)(void*), void*);
 };
 
 
@@ -49,7 +51,7 @@ bool rrt_is_free(struct rerunnable_thread*);
 
 bool rrt_try_rerun_if_free(struct rerunnable_thread*, void (*function)(void*), void* param);
 
-void rrt_graceful_shutdown(struct rerunnable_thread*);
+enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread*);
 
 enum rerunnable_thread_state rrt_get_state(struct rerunnable_thread*);
 
