@@ -8,17 +8,6 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-#define STATIC_ASSERT(COND,MSG) typedef char static_assertion_##MSG[(!!(COND))*2-1]
-
-// token pasting madness:
-#define COMPILE_TIME_ASSERT3(X,L) STATIC_ASSERT(X,static_assertion_at_line_##L)
-#define COMPILE_TIME_ASSERT2(X,L) COMPILE_TIME_ASSERT3(X,L)
-#define COMPILE_TIME_ASSERT(X)    COMPILE_TIME_ASSERT2(X,__LINE__)
-
-#ifndef UNUSED
-#define UNUSED(x) (void)(x)
-#endif
-
 void linux_print_heap_size();
 
 /**
@@ -55,13 +44,23 @@ void dbg_crash();
 
 /**
  * Array types:
- * 	- null terminated arrays.
- * 		array_nt_*
+ * 	array_nt_*
+ * 	- null terminated arrays: no intermediate NULL permitted,
+ *	 	the end of the array terminated with NULL value.
+ * 		TODO on intermedia element remove
  *
- *	- fix
- *		array_fix_*
+ *	array_fix_*
+ *		- length of the array tracked, intermediate null permitted, but
+ *			inserting null has no effect. Useful for variable arrays if you
+ *			don't want to the array get reallocate on every element
+ *			insert/remove.
+ *		- removing an intermediate element not shifts the array
  *
- *
+ *	array_pnt_*
+ *	- packed null terminated:
+ *		- array terminated with a NULL, no intermediate NULL value permitted.
+ *		- resized on every insert/remove. (removing intemedite element shifts
+ *			the arrays)
  *
  * */
 

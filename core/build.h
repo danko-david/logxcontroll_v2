@@ -30,8 +30,23 @@
 #include <string.h>
 #include <errno.h>
 
+#include "pthread.h"
 
-#include <dlfcn.h>//TODO POSIX supoports dlopen, windows has LoadLibrary function for this job
+#include <dlfcn.h>//TODO POSIX supports dlopen, windows has LoadLibrary function for this job
+
+
+#define STATIC_ASSERT(COND,MSG) typedef char static_assertion_##MSG[(!!(COND))*2-1]
+
+// token pasting madness:
+#define COMPILE_TIME_ASSERT3(X,L) STATIC_ASSERT(X,static_assertion_at_line_##L)
+#define COMPILE_TIME_ASSERT2(X,L) COMPILE_TIME_ASSERT3(X,L)
+#define COMPILE_TIME_ASSERT(X)    COMPILE_TIME_ASSERT2(X,__LINE__)
+
+#ifndef UNUSED
+#define UNUSED(x) (void)(x)
+#endif
+
+
 /*
  * Required types:
  * 	- atomic_pointer_t
@@ -41,6 +56,7 @@
  * 		short_lock_init(&short_lock);
  * 		short_lock_lock(&short_lock);
  * 		short_lock_unlock(&short_lock);
+ * 		short_lock_fetch_error(int, char*)
  * 	- long_lock_t
  *		-||-
  *
@@ -59,6 +75,21 @@ Available embeddable modules macro:
 #define LXC_EMBED_MODULE_ARITHMETIC
 #define LXC_EMBED_MODULE_POSIX
 */
+
+
+
+//TODO declare with system types
+
+#define short_lock_t pthread_spinlock_t
+#define long_lock_t pthread_mutex_t
+
+struct condition_wait_t
+{
+	pthread_mutex_t mutex;
+	pthread_cond_t condition;
+};
+
+
 
 #ifdef LXC_EMBED_MODULE_ARITHMETIC
 	#include "arithmetic/arithmetic.h"
@@ -109,4 +140,4 @@ Available embeddable modules macro:
 
 
 
-#endif /* PLATFORM_H_ */
+#endif

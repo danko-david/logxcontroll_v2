@@ -424,7 +424,7 @@ int lxc_load_shared_library(const char* so_file, const char** errors, int maxlen
 			maxlength,
 			dlerror()
 		);
-		return LXC_ERROR_LIBRARY_SO_CANT_OPEN;
+		return LXC_ERROR_LIBRARY_CANT_OPEN;
 	}
 
 	struct lxc_loadable_library* lib = dlsym(handle, "logxcontroll_loadable_library");
