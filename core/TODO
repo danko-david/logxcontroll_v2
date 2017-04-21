@@ -1,1 +1,0 @@
-Auto port expanding(lxc_generic_porti): ports expands when we set an input wire, but behind maybe we miss to check boundaries (provide a method to get internal wires)
