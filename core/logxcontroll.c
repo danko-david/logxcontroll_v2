@@ -20,7 +20,7 @@ void logxcontroll_init_environment()
 	/*** initialize generic library ***/
 	lxc_init_generic_library();
 
-	lxc_init_thread_pool();
+	//TODO lxc_init_thread_pool();
 
 
 	/*** Register built in Libraries ***/
