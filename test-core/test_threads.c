@@ -1,11 +1,5 @@
 
-#include "core/logxcontroll.h"
-#include "np.h"
-
-struct switch_holder
-{
-	volatile bool value;
-};
+#include "test-core/test_core.h"
 
 void thread_set_true(struct switch_holder* sw)
 {
@@ -58,18 +52,51 @@ int wait_thread_for_state
 	return -1;
 }
 
+int wait_switch_for_state
+(
+	struct switch_holder* sw,
+	bool state,
+	int wait_unit_time_us,
+	int try_max_count
+)
+{
+	int times = 0;
+	do
+	{
+		if(sw->value == state)
+		{
+			return times;
+		}
+		printf("waiting for switch state\n");
+		usleep(wait_unit_time_us);
+	}
+	while(++times < try_max_count);
+
+	return -1;
+}
+
 void print_usual_wait(const char* info, int reach)
 {
 	printf("thread %s after %d number of 0.1 s waiting\n", info, reach);
 }
 
-static void print_thread_state(struct rerunnable_thread* rrt, void (*func)(void), void*)
+void print_usual_switch_wait(const char* info, int reach)
+{
+	printf("switch %s after %d number of 0.1 s waiting\n", info, reach);
+}
+
+static void print_thread_state
+(
+	struct rerunnable_thread* rrt,
+	void (*func)(void*),
+	void* param
+)
 {
 	enum rerunnable_thread_state state = rrt_get_state(rrt);
 	printf("Thread job done, state: %d\n", state);
 }
 
-static void assert_thread_reach_state
+void assert_thread_reach_state
 (
 	const char* info,
 	struct rerunnable_thread* rrt,
@@ -91,6 +118,32 @@ static void assert_thread_reach_state
 	else
 	{
 		print_usual_wait(info, reach);
+	}
+	NP_ASSERT_NOT_EQUAL(-1, reach);
+}
+
+void assert_switch_reach_state
+(
+	const char* info,
+	struct switch_holder* sw,
+	bool state
+)
+{
+	int reach = wait_switch_for_state(sw, state, 100000, 30);
+	//we shouldn't exceed the maximal waiting time. 30* 100 ms.
+	if(-1 == reach)
+	{
+		printf
+		(
+			"switch state isn't reached `%s`, state is now %d, desired state: %d\n",
+			info,
+			sw->value,
+			state
+		);
+	}
+	else
+	{
+		print_usual_switch_wait(info, reach);
 	}
 	NP_ASSERT_NOT_EQUAL(-1, reach);
 }
@@ -298,3 +351,4 @@ static void test_shutdown_request_beneath_running_task(void)
 	//destroy checking for `exited` state
 	usual_thread_destroy(thread);
 }
+

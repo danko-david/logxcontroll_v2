@@ -9,7 +9,6 @@
 #define RERUNNABLE_THREAD_H_
 
 #include "core/logxcontroll.h"
-#include "pthread.h"
 
 enum rerunnable_thread_state
 {
@@ -28,10 +27,10 @@ struct rerunnable_thread
 {
 	pthread_t thread;
 
-	pthread_mutex_t mutex;
-
 	pthread_spinlock_t short_lock;
 
+	//TODO struct condition_wait_t notify_new_job;
+	pthread_mutex_t mutex;
 	pthread_cond_t has_job_condition;
 
 	void (*volatile run)(void*);
@@ -45,7 +44,7 @@ struct rerunnable_thread
 
 void rrt_init(struct rerunnable_thread*);
 
-int rrt_start(struct rerunnable_thread*);
+int rrt_start(struct rerunnable_thread*) __attribute__((warn_unused_result));
 
 bool rrt_is_free(struct rerunnable_thread*);
 

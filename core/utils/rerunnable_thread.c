@@ -122,10 +122,12 @@ static void executor_function(struct rerunnable_thread* rrt)
 		rrt->parameter = NULL;
 		rrt->status = rrt_idle;
 		short_unlock(rrt);
-		void (*volatile re)(struct rerunnable_thread*) = rrt->on_release_callback;
+		void (*volatile re)(struct rerunnable_thread*, void (*funct)(void*), void*)
+			= rrt->on_release_callback;
+
 		if(NULL != re)
 		{
-			re(rrt);
+			re(rrt, rrt->run, (void*) rrt->parameter);
 		}
 	}
 

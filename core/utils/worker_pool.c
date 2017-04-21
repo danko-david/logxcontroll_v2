@@ -7,37 +7,31 @@
 
 #include "core/logxcontroll.h"
 
-static pthread_spinlock_t queue_free_spin;
-struct queue_element* free_head = NULL;
-struct queue_element* free_tail = NULL;
-
-
-static pthread_spinlock_t queue_busy_spin;
-struct queue_element* busy_head = NULL;
-struct queue_element* busy_tail = NULL;
-
-static inline struct pool_thread* align_known_rrt(struct rerunnable_thread* rrt)
+static void on_release
+(
+	struct rerunnable_thread* rrt,
+	void (*func)(void*),
+	void* param
+)
 {
-	return (struct pool_thread*)(((char*)rrt)-(sizeof(struct queue_element)));
-}
-
-static void on_release(struct rerunnable_thread* rrt)
-{
-	struct pool_thread* pt = align_known_rrt(rrt);
-	pthread_spin_lock(&queue_busy_spin);
+	//UNUSED(rrt);
+	//UNUSED(func);
+	struct pool_thread* task  = (struct pool_thread*) param;
+	struct worker_pool* pool = task->pool;
+	pthread_spin_lock(&(pool->queue_busy_spin));
 
 	queue_pop_intermediate_element
 	(
-		&busy_head,
-		(struct queue_element*) pt,
-		&busy_tail
+		&pool->busy_head,
+		&task->elem,
+		&pool->busy_tail
 	);
 
-	pthread_spin_unlock(&queue_busy_spin);
+	pthread_spin_unlock(&pool->queue_busy_spin);
 
-	pthread_spin_lock(&queue_free_spin);
-	queue_add_element(&free_head, (struct queue_element*) pt, &free_tail);
-	pthread_spin_unlock(&queue_free_spin);
+	pthread_spin_lock(&pool->queue_free_spin);
+	queue_add_element(&pool->free_head, &task->elem, &pool->free_tail);
+	pthread_spin_unlock(&pool->queue_free_spin);
 }
 
 static struct pool_thread* new_pool_thread()
@@ -45,40 +39,65 @@ static struct pool_thread* new_pool_thread()
 	struct pool_thread* ret =
 		(struct pool_thread*) malloc_zero(sizeof(struct pool_thread));
 
-	rrt_init(&(ret->rerunnable));
-	ret->rerunnable.on_release_callback = on_release;
-	rrt_start(&(ret->rerunnable));
+	rrt_init(&(ret->thread));
+	ret->thread.on_release_callback = on_release;
+	if(0 != rrt_start(&(ret->thread)))
+	{
+		return NULL;
+	}
+
 	return ret;
 }
 
-void lxc_submit_asyncron_task(void (*funct)(void*), void* param)
+static void worker_pool_exec_function(struct pool_thread* task)
 {
-	pthread_spin_lock(&queue_free_spin);
+	task->executor(task->param);
+}
+//__attribute__((warn_unused_result));
+int wp_submit_task(struct worker_pool* wp, void (*func)(void*), void* param)
+{
+	pthread_spin_lock(&wp->queue_free_spin);
 
 	struct pool_thread* use =
-		(struct pool_thread*) queue_pop_tail_element(&free_head, &free_tail);
+		(struct pool_thread*) queue_pop_tail_element(&wp->free_head, &wp->free_tail);
 
-	pthread_spin_unlock(&queue_free_spin);
-
+	pthread_spin_unlock(&wp->queue_free_spin);
 
 	if(NULL == use)
 	{
 		use = new_pool_thread();
+		return LXC_ERROR_RESOURCE_BUSY;
 	}
 
+	pthread_spin_lock(&wp->queue_busy_spin);
+	queue_add_element(&wp->busy_head, &use->elem, &wp->busy_tail);
+	pthread_spin_unlock(&wp->queue_busy_spin);
 
-	pthread_spin_lock(&queue_busy_spin);
-	queue_add_element(&busy_head, &use->queue_element, &busy_tail);
-	pthread_spin_unlock(&queue_busy_spin);
-
-	rrt_try_rerun_if_free(&(use->rerunnable), funct, param);
+	use->executor = func;
+	use->param = param;
+	//it's must be free
+	rrt_try_rerun_if_free
+	(
+		&(use->thread),
+		(void (*)(void*)) worker_pool_exec_function,
+		(void*) use
+	);
 }
 
-void lxc_init_thread_pool()
+void wp_get_status(struct worker_pool* wp, int* busy, int* idle)
 {
-	pthread_spin_init(&queue_free_spin, 0);
-	pthread_spin_init(&queue_busy_spin, 0);
+
+
 }
+
+void wp_init(struct worker_pool* pool)
+{
+	memset(pool, 0, sizeof(struct worker_pool));
+	pthread_spin_init(&pool->queue_free_spin, 0);
+	pthread_spin_init(&pool->queue_busy_spin, 0);
+}
+
+//TODO shutdown
 
 void lxc_wait_thread_pool_shutdown()
 {
