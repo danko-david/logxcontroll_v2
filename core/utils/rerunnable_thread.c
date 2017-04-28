@@ -80,8 +80,20 @@ bool rrt_try_rerun_if_free(struct rerunnable_thread* rrt, void (*function)(void*
 	return ret;
 }
 
+//shutdown request poison reference
 static void pointer_on_shutdown_request(void* param)
 {}
+
+static void try_invoke_callback(struct rerunnable_thread* rrt)
+{
+	void (*volatile re)(struct rerunnable_thread*, void (*funct)(void*), void*)
+		= rrt->on_release_callback;
+
+	if(NULL != re)
+	{
+		re(rrt, rrt->run, (void*) rrt->parameter);
+	}
+}
 
 static void executor_function(struct rerunnable_thread* rrt)
 {
@@ -110,6 +122,8 @@ static void executor_function(struct rerunnable_thread* rrt)
 
 		rrt->run((void*)rrt->parameter);
 
+		try_invoke_callback(rrt);
+
 		short_lock(rrt);
 		//after task done, if shutdown requested, we perform it.
 		if(rrt_shutdown_requested == rrt->status)
@@ -118,17 +132,11 @@ static void executor_function(struct rerunnable_thread* rrt)
 			break;
 		}
 
-		rrt->run = NULL;
-		rrt->parameter = NULL;
 		rrt->status = rrt_idle;
 		short_unlock(rrt);
-		void (*volatile re)(struct rerunnable_thread*, void (*funct)(void*), void*)
-			= rrt->on_release_callback;
 
-		if(NULL != re)
-		{
-			re(rrt, rrt->run, (void*) rrt->parameter);
-		}
+		rrt->run = NULL;
+		rrt->parameter = NULL;
 	}
 
 	atomic_update_state(rrt, rrt_exited);

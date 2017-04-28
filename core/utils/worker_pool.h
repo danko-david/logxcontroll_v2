@@ -23,6 +23,14 @@ struct worker_pool
 	struct queue_element* busy_tail;
 };
 
+
+/**
+ * Contains all necessary elements to thread (inside this structure)
+ * can be used in the pool:
+ * - queue_element: to can be stored in the pool's busy/free list
+ * - the owner queue reference (to can push himself to free list when done.)
+ * - the thread and current task related stuffs.
+ * */
 struct pool_thread
 {
 	struct queue_element elem;

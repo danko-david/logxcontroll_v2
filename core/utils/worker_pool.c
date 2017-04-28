@@ -16,9 +16,10 @@ static void on_release
 {
 	//UNUSED(rrt);
 	//UNUSED(func);
+	//printf("on_release pool_thread ptr: %p\n", param);
 	struct pool_thread* task  = (struct pool_thread*) param;
 	struct worker_pool* pool = task->pool;
-	pthread_spin_lock(&(pool->queue_busy_spin));
+	pthread_spin_lock(&pool->queue_busy_spin);
 
 	queue_pop_intermediate_element
 	(
@@ -34,12 +35,13 @@ static void on_release
 	pthread_spin_unlock(&pool->queue_free_spin);
 }
 
-static struct pool_thread* new_pool_thread()
+static struct pool_thread* new_pool_thread(struct worker_pool* pool)
 {
 	struct pool_thread* ret =
 		(struct pool_thread*) malloc_zero(sizeof(struct pool_thread));
 
 	rrt_init(&(ret->thread));
+	ret->pool = pool;
 	ret->thread.on_release_callback = on_release;
 	if(0 != rrt_start(&(ret->thread)))
 	{
@@ -65,8 +67,11 @@ int wp_submit_task(struct worker_pool* wp, void (*func)(void*), void* param)
 
 	if(NULL == use)
 	{
-		use = new_pool_thread();
-		return LXC_ERROR_RESOURCE_BUSY;
+		use = new_pool_thread(wp);
+		if(NULL == use)
+		{
+			return LXC_ERROR_RESOURCE_BUSY;
+		}
 	}
 
 	pthread_spin_lock(&wp->queue_busy_spin);
@@ -75,13 +80,17 @@ int wp_submit_task(struct worker_pool* wp, void (*func)(void*), void* param)
 
 	use->executor = func;
 	use->param = param;
+
+	//printf("wp_submit_task, thread status: %d, pool_thread ptr: %p\n", rrt_get_state(&use->thread), use);
 	//it's must be free
-	rrt_try_rerun_if_free
+	bool ret = rrt_try_rerun_if_free
 	(
 		&(use->thread),
 		(void (*)(void*)) worker_pool_exec_function,
 		(void*) use
 	);
+
+	return ret?0:1;
 }
 
 void wp_get_status(struct worker_pool* wp, int* busy, int* idle)
