@@ -3,19 +3,11 @@
 
 void test_worker_pool(void)
 {
-	struct worker_pool wp;
-	wp_init(&wp);
-
+	struct worker_pool* wp = lxc_test_create_worker_pool();
 	struct switch_holder sw;
 	sw.value = false;
 
 	NP_ASSERT_EQUAL(0, wp_submit_task(&wp, thread_set_true, &sw));
-
-	{
-		int busy;
-		int idle;
-	//	wp_get_status(wp, &busy, &idle);
-	}
 
 	assert_switch_reach_state
 	(
@@ -23,6 +15,12 @@ void test_worker_pool(void)
 		&sw,
 		true
 	);
+
+
+	lxc_test_destroy_worker_pool(wp);
+	//can
+
+
 	//TODO if task running: 1 idle, 0 busy
 
 	//TODO test for leakage

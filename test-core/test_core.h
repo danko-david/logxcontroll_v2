@@ -52,4 +52,18 @@ void assert_switch_reach_state
 	bool state
 );
 
+struct worker_pool* lxc_test_create_worker_pool()
+{
+	struct worker_pool* pool = malloc_zero(sizeof(struct worker_pool));
+	wp_init(pool);
+	return pool;
+}
+
+void lxc_test_destroy_worker_pool(struct worker_pool* wp)
+{
+	NP_ASSERT_EQUAL(0, wp_shutdown(wp));
+	NP_ASSERT_EQUAL(0, wp_wait_exit(wp));
+	NP_ASSERT_EQUAL(0, wp_destroy(wp));
+}
+
 #endif /* TEST_CORE_H_ */
