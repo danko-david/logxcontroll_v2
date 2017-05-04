@@ -54,4 +54,8 @@ enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread*);
 
 enum rerunnable_thread_state rrt_get_state(struct rerunnable_thread*);
 
+int rrt_destroy_thread(struct rerunnable_thread* rrt);
+
+int rrt_poll_wait_exit(struct rerunnable_thread*);
+
 #endif /* RERUNNABLE_THREAD_H_ */

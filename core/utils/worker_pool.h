@@ -10,15 +10,21 @@
 
 #include "core/logxcontroll.h"
 
+enum worker_pool_status
+{
+	wp_available,
+	wp_shutting_down,
+	wp_exited,
+};
 
 struct worker_pool
 {
-	pthread_spinlock_t queue_free_spin;
+	long_lock_t pool_lock;
+	enum worker_pool_status status;
+
 	struct queue_element* free_head;
 	struct queue_element* free_tail;
 
-
-	pthread_spinlock_t queue_busy_spin;
 	struct queue_element* busy_head;
 	struct queue_element* busy_tail;
 };
@@ -39,6 +45,14 @@ struct pool_thread
 	void (*executor)(void*);
 	void* param;
 };
+
+int wp_init(struct worker_pool* pool);
+
+int wp_shutdown(struct worker_pool* pool);
+
+int wp_wait_exit(struct worker_pool* pool);
+
+int wp_destroy(struct worker_pool* pool);
 
 /*
 void lxc_init_thread_pool();

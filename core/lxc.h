@@ -379,12 +379,14 @@ enum lxc_errno
 	LXC_ERROR_LIBRARY_CANT_OPEN = -1025,
 	LXC_ERROR_LIBRARY_SYMBOL_NOT_FOUND = -1026,
 	LXC_ERROR_RESOURCE_BUSY = -1027,
-
+	LXC_ERROR_RESOURCE_UNDER_SHUTDOWN = -1028,
 
 
 
 
 };
+
+int lxc_fetch_error(int errno, char* dst, int len);
 
 enum library_operation
 {

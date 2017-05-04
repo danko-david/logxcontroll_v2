@@ -222,6 +222,32 @@ enum rerunnable_thread_state rrt_get_state(struct rerunnable_thread* rrt)
 	return atomic_get_state(rrt);
 }
 
+int rrt_poll_wait_exit(struct rerunnable_thread* rrt)
+{
+	enum rerunnable_thread_state state = rrt_get_state(rrt);
+	if(rrt_exited == state)
+	{
+		return 0;
+	}
+
+	if(rrt_shutdown_requested != state)
+	{
+		return LXC_ERROR_ILLEGAL_REQUEST;
+	}
+
+	do
+	{
+		if(rrt_get_state(rrt) == rrt_exited)
+		{
+			return 0;
+		}
+		usleep(100000); //100 ms
+	}
+	while(1);
+
+	return 0;//"clean" compile
+}
+
 int rrt_destroy_thread(struct rerunnable_thread* rrt)
 {
 	enum rerunnable_thread_state state = rrt_get_state(rrt);

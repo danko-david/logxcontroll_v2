@@ -148,7 +148,7 @@ void assert_switch_reach_state
 	NP_ASSERT_NOT_EQUAL(-1, reach);
 }
 
-static struct rerunnable_thread* usual_test_start()
+struct rerunnable_thread* lxc_test_create_idle_thread()
 {
 	struct rerunnable_thread* thread = malloc(sizeof(struct rerunnable_thread));
 	rrt_init(thread);
@@ -181,7 +181,19 @@ static struct rerunnable_thread* usual_test_start()
 	return thread;
 }
 
-static void usual_thread_destroy(struct rerunnable_thread* thread)
+void lxc_test_thread_execute_with_ensure
+(
+	struct rerunnable_thread* thread,
+	void (*func)(void*),
+	void* param
+)
+{
+	//the thread must be idle (pre check... not really necessary)
+	NP_ASSERT_EQUAL(rrt_idle, rrt_get_state(thread));
+	NP_ASSERT_EQUAL(true, rrt_try_rerun_if_free(thread, func, param));
+}
+
+void lxc_test_destroy_thread(struct rerunnable_thread* thread)
 {
 	{
 		rrt_graceful_shutdown(thread);
@@ -204,7 +216,7 @@ static void usual_thread_destroy(struct rerunnable_thread* thread)
 
 static void test_rerunnable_thread_full_functionality(void)
 {
-	struct rerunnable_thread* thread = usual_test_start();
+	struct rerunnable_thread* thread = lxc_test_create_idle_thread();
 	//can't start again (after started)
 	NP_ASSERT_NOT_EQUAL(0, rrt_start(thread));
 
@@ -298,12 +310,12 @@ static void test_rerunnable_thread_full_functionality(void)
 		NP_ASSERT_NOT_EQUAL(0, rrt_destroy_thread(thread));
 	}
 
-	usual_thread_destroy(thread);
+	lxc_test_destroy_thread(thread);
 }
 
 static void test_shutdown_request_beneath_running_task(void)
 {
-	struct rerunnable_thread* thread = usual_test_start();
+	struct rerunnable_thread* thread = lxc_test_create_idle_thread();
 
 	struct switch_holder sw;
 	sw.value = false;
@@ -349,6 +361,6 @@ static void test_shutdown_request_beneath_running_task(void)
 	sw.value = true;
 
 	//destroy checking for `exited` state
-	usual_thread_destroy(thread);
+	lxc_test_destroy_thread(thread);
 }
 

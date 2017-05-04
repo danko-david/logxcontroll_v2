@@ -19,7 +19,7 @@ static void on_release
 	//printf("on_release pool_thread ptr: %p\n", param);
 	struct pool_thread* task  = (struct pool_thread*) param;
 	struct worker_pool* pool = task->pool;
-	pthread_spin_lock(&pool->queue_busy_spin);
+	long_lock_lock(&pool->pool_lock);
 
 	queue_pop_intermediate_element
 	(
@@ -28,11 +28,14 @@ static void on_release
 		&pool->busy_tail
 	);
 
-	pthread_spin_unlock(&pool->queue_busy_spin);
+	queue_add_element
+	(
+		&pool->free_head,
+		&task->elem,
+		&pool->free_tail
+	);
 
-	pthread_spin_lock(&pool->queue_free_spin);
-	queue_add_element(&pool->free_head, &task->elem, &pool->free_tail);
-	pthread_spin_unlock(&pool->queue_free_spin);
+	long_lock_unlock(&pool->pool_lock);
 }
 
 static struct pool_thread* new_pool_thread(struct worker_pool* pool)
@@ -55,28 +58,34 @@ static void worker_pool_exec_function(struct pool_thread* task)
 {
 	task->executor(task->param);
 }
+
 //__attribute__((warn_unused_result));
 int wp_submit_task(struct worker_pool* wp, void (*func)(void*), void* param)
 {
-	pthread_spin_lock(&wp->queue_free_spin);
+	long_lock_lock(&wp->pool_lock);
+
+	{
+		if(wp_available != wp->status)
+		{
+			long_lock_unlock(&wp->pool_lock);
+			return LXC_ERROR_RESOURCE_UNDER_SHUTDOWN;
+		}
+	}
 
 	struct pool_thread* use =
 		(struct pool_thread*) queue_pop_tail_element(&wp->free_head, &wp->free_tail);
-
-	pthread_spin_unlock(&wp->queue_free_spin);
 
 	if(NULL == use)
 	{
 		use = new_pool_thread(wp);
 		if(NULL == use)
 		{
+			long_lock_unlock(&wp->pool_lock);
 			return LXC_ERROR_RESOURCE_BUSY;
 		}
 	}
 
-	pthread_spin_lock(&wp->queue_busy_spin);
 	queue_add_element(&wp->busy_head, &use->elem, &wp->busy_tail);
-	pthread_spin_unlock(&wp->queue_busy_spin);
 
 	use->executor = func;
 	use->param = param;
@@ -90,20 +99,143 @@ int wp_submit_task(struct worker_pool* wp, void (*func)(void*), void* param)
 		(void*) use
 	);
 
-	return ret?0:1;
+	long_lock_unlock(&wp->pool_lock);
+
+	return ret?0:LXC_ERROR_RESOURCE_BUSY;
 }
 
-void wp_get_status(struct worker_pool* wp, int* busy, int* idle)
+enum worker_pool_status wp_get_status(struct worker_pool* wp)
+{
+	enum worker_pool_status status;
+	long_lock_lock(&wp->pool_lock);
+	status = wp->status;
+	long_lock_unlock(&wp->pool_lock);
+	return status;
+}
+/*	enum worker_pool_status* status,
+	int* busy,
+	int* idle
+)
 {
 
 
+}*/
+
+static void shutdown_all(struct pool_thread* el)
+{
+	while(NULL != el)
+	{
+		rrt_graceful_shutdown(&el->thread);
+		el = (struct pool_thread*) el->elem.next;
+	}
 }
 
-void wp_init(struct worker_pool* pool)
+int wp_shutdown(struct worker_pool* pool)
+{
+	long_lock_lock(&pool->pool_lock);
+	if(pool->status == wp_available)
+	{
+		pool->status = wp_shutting_down;
+		shutdown_all((struct pool_thread*) pool->free_head);
+		shutdown_all((struct pool_thread*) pool->busy_head);
+
+		long_lock_unlock(&pool->pool_lock);
+		return 0;
+	}
+	else
+	{
+		long_lock_unlock(&pool->pool_lock);
+		return LXC_ERROR_ILLEGAL_REQUEST;
+	}
+}
+
+static bool is_all_exited(struct pool_thread* el)
+{
+	while(NULL != el)
+	{
+		if(rrt_exited != rrt_get_state(&el->thread))
+		{
+			return false;
+		}
+		el = (struct pool_thread*) el->elem.next;
+	}
+	return true;
+}
+
+int wp_wait_exit(struct worker_pool* pool)
+{
+	long_lock_lock(&pool->pool_lock);
+	if(pool->status != wp_shutting_down)
+	{
+		long_lock_unlock(&pool->pool_lock);
+		return LXC_ERROR_RESOURCE_BUSY;
+	}
+
+	pool->status = wp_exited;
+
+	//go through all the busy and free list, if we still have thread that not
+	//exited
+	//we have to unlock the pool to all exiting thread can access the lists
+	//then wait a while.
+	bool exited = false;
+	for(;;)
+	{
+		exited =
+			is_all_exited((struct pool_thread*) pool->busy_head)
+		&&
+			is_all_exited((struct pool_thread*) pool->free_head);
+
+		long_lock_unlock(&pool->pool_lock);
+
+		if(!exited)
+		{
+			usleep(100000);
+			long_lock_lock(&pool->pool_lock);
+		}
+		else
+		{
+			return 0;
+		}
+	}
+}
+
+static void free_all(struct pool_thread* el)
+{
+	struct pool_thread* prev;
+	while(NULL != el)
+	{
+		prev = el;
+		el = (struct pool_thread*) el->elem.next;
+		free(prev);
+	}
+}
+
+int wp_destroy(struct worker_pool* pool)
+{
+	long_lock_lock(&pool->pool_lock);
+
+	//fail if not exited
+	if(pool->status != wp_exited)
+	{
+		long_lock_unlock(&pool->pool_lock);
+		return LXC_ERROR_BAD_CALL;
+	}
+
+	free_all((struct pool_thread*) pool->busy_head);
+	free_all((struct pool_thread*) pool->free_head);
+
+	long_lock_unlock(&pool->pool_lock);
+	long_lock_destroy(&pool->pool_lock);
+	free(pool);
+
+	return 0;
+}
+
+int wp_init(struct worker_pool* pool)
 {
 	memset(pool, 0, sizeof(struct worker_pool));
-	pthread_spin_init(&pool->queue_free_spin, 0);
-	pthread_spin_init(&pool->queue_busy_spin, 0);
+	pool->status = wp_available;
+	return long_lock_init(&pool->pool_lock);
 }
 
 //TODO shutdown
