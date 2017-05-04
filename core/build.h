@@ -43,7 +43,7 @@
 #define COMPILE_TIME_ASSERT(X)    COMPILE_TIME_ASSERT2(X,__LINE__)
 
 #ifndef UNUSED
-#define UNUSED(x) (void)(x)
+	#define UNUSED(x) (void)(x)
 #endif
 
 
@@ -78,18 +78,7 @@ Available embeddable modules macro:
 
 
 
-//TODO declare with system types
-
-#define short_lock_t pthread_spinlock_t
-#define long_lock_t pthread_mutex_t
-
-struct condition_wait_t
-{
-	pthread_mutex_t mutex;
-	pthread_cond_t condition;
-};
-
-
+/*************************** Embedded modules *********************************/
 
 #ifdef LXC_EMBED_MODULE_ARITHMETIC
 	#include "arithmetic/arithmetic.h"
@@ -98,6 +87,9 @@ struct condition_wait_t
 #ifdef LXC_EMBED_MODULE_POSIX
 	#include "posix/liblxc_posix.h"
 #endif
+
+
+/********************** Support specific build entities ***********************/
 
 
 #if __STDC_VERSION__ >= 201101L
@@ -122,10 +114,14 @@ struct condition_wait_t
     #endif
 #elif __linux__
 
-	//bool compare_and_set(type );
+	#define short_lock_t pthread_spinlock_t
+	#define long_lock_t pthread_mutex_t
 
-
-
+	struct condition_wait_t
+	{
+		pthread_mutex_t mutex;
+		pthread_cond_t condition;
+	};
 
 
 #elif __unix__ // all unices not caught above
@@ -139,5 +135,41 @@ struct condition_wait_t
 
 
 
+/************************* Common build specific types ************************/
 
-#endif
+int short_lock_init(short_lock_t*);
+
+/**
+ * returns:
+ *	0: if successfully locked,
+ *	EBUSY: if a thread already holds the lock
+ *	other: use lxc_fetch_error
+ * */
+int short_lock_lock(short_lock_t*);
+
+/**
+ * returns:
+ *	0: if successfully locked,
+ *	EBUSY: if a thread already holds the lock
+ *	other: use lxc_fetch_error
+ * */
+int short_lock_trylock(short_lock_t*);
+int short_lock_unlock(short_lock_t*);
+int short_lock_destroy(short_lock_t*);
+
+
+
+int long_lock_init(long_lock_t*);
+int long_lock_lock(long_lock_t*);
+
+/**
+ * returns:
+ *	0: if successfully locked,
+ *	EBUSY: if a thread already holds the lock
+ *	other: use lxc_fetch_error
+ * */
+int long_lock_trylock(long_lock_t*);
+int long_lock_unlock(long_lock_t*);
+int long_lock_destroy(long_lock_t*);
+
+#endif /* BUILD_H_ */
