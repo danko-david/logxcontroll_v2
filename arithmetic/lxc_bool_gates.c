@@ -225,7 +225,7 @@ static void logx_bool_execute(Gate instance, Signal type, int subtype, LxcValue 
 	Wire out = castGate(instance)->output;
 	//if(NULL != out)
 	{
-		bool* re = castBGB(instance->behavior)->logic_function(instance);
+		const bool* re = castBGB(instance->behavior)->logic_function(instance);
 
 		if(NULL == re)
 		{
@@ -332,7 +332,7 @@ static const bool* PTR_TRUE = &TRUE;
  * returns true if least one input is false
  *
  * */
-static bool* logic_function_nand(Gate instance)
+static const bool* logic_function_nand(Gate instance)
 {
 	bool values[21];
 	int ep;
@@ -365,7 +365,7 @@ static struct lxc_bool_gate_behavior logic_nand;
 
 /************************** Logic Gate nor ************************************/
 
-static bool* logic_function_nor(Gate instance)
+static const bool* logic_function_nor(Gate instance)
 {
 	bool values[21];
 	int ep;
@@ -397,7 +397,7 @@ static struct lxc_bool_gate_behavior logic_nor;
 
 /************************** Logic Gate and ************************************/
 
-static bool* logic_function_and(Gate instance)
+static const bool* logic_function_and(Gate instance)
 {
 	bool values[21];
 	int ep;
@@ -429,7 +429,7 @@ static struct lxc_bool_gate_behavior logic_and;
 
 /************************** Logic Gate or *************************************/
 
-static bool* logic_function_or(Gate instance)
+static const bool* logic_function_or(Gate instance)
 {
 	bool values[21];
 	int ep;
@@ -462,7 +462,7 @@ static struct lxc_bool_gate_behavior logic_or;
 /************************** Logic Gate not ************************************/
 
 //TODO this is a demo implemantation
-static bool* logic_function_not(Gate instance)
+static const bool* logic_function_not(Gate instance)
 {
 	bool values[21];
 	int ep;
@@ -490,7 +490,7 @@ static struct lxc_bool_gate_behavior logic_not;
 /************************** Logic Gate not ************************************/
 
 //TODO this is a demo implemantation
-static bool* logic_function_xor(Gate instance)
+static const bool* logic_function_xor(Gate instance)
 {
 	bool values[21];
 	int ep;
@@ -523,7 +523,7 @@ static struct lxc_bool_gate_behavior logic_xor;
 
 /****************************** Only for debug ********************************/
 
-static bool logic_function_dbg(Gate instance)
+static const bool* logic_function_dbg(Gate instance)
 {
 	Tokenport* in = castGate(instance)->inputs;
 
@@ -543,8 +543,7 @@ static bool logic_function_dbg(Gate instance)
 		++i;
 	}
 
-
-	return false;
+	return PTR_FALSE;
 }
 
 static struct lxc_bool_gate_behavior logic_dbg;
@@ -565,7 +564,7 @@ static void init_behavior
 (
 	struct lxc_bool_gate_behavior* b,
 	const char* gate_name,
-	bool* (*logic_function)(Gate))
+	const bool* (*logic_function)(Gate))
 {
 	memcpy(b, &commons, sizeof(commons));
 	char** name = (char**)&(b->base.gate_name);

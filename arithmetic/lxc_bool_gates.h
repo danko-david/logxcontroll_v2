@@ -13,7 +13,7 @@
 struct lxc_bool_gate_behavior
 {
 	const struct lxc_gate_behavior base;
-	bool* (*logic_function)(Gate);
+	const bool* (*logic_function)(Gate);
 };
 
 struct lxc_bool_instance
