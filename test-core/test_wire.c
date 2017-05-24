@@ -5,7 +5,7 @@
 Wire lxc_test_create_wire(Signal sig)
 {
 	Wire w = lxc_create_wire(sig);
-	NP_ASSERT_NOT_EQUAL(NULL, w);
+	NP_ASSERT_NOT_NULL(w);
 	return w;
 }
 
@@ -32,6 +32,17 @@ void lxc_test_destroy_wire(Wire w)
 }
 
 /**
+ * Wire functionality:
+ *
+ *
+ *
+ *
+ *
+ * */
+
+
+
+/**
  * Testing with novaprova/valdrind, this test assures functionality and
  *	and test for memory leakage.
  * */
@@ -42,6 +53,8 @@ static void test_wire_create_destory(void)
 }
 
 //TODO tokenPort
+
+
 //
 //TODO available
 //TODO acquire_token Tokenport lxc_get_value_from_tokenport_array

@@ -277,6 +277,26 @@ static const struct lxc_bool_gate_behavior commons =
 static bool is_all_input_valid_and_copy(Gate instance, bool values[21], int* ep)
 {
 	Tokenport* in = castGate(instance)->inputs;
+
+	{
+		int i=0;
+		while(++i < 21)
+		{
+			Tokenport tp = in[i];
+			//that means: unwired port
+			if(NULL == tp)
+			{
+				continue;
+			}
+
+			if(!lxc_wire_token_available(tp))
+			{
+				return false;
+			}
+		}
+	}
+
+
 	int to_absorb[21];
 	int i = -1;
 	*ep = 0;
@@ -294,6 +314,13 @@ static bool is_all_input_valid_and_copy(Gate instance, bool values[21], int* ep)
 
 		if(NULL == val)
 		{
+			{
+				int r = -1;
+				while(++r < *ep)
+				{
+					lxc_wire_release_token(in[to_absorb[r]]);
+				}
+			}
 			return false;
 		}
 		else

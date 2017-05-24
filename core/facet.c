@@ -104,6 +104,156 @@
  *
  * */
 
+void raise_wire_hook_calls
+(
+	enum lxc_wire_operation_phase phase,
+	Wire this_wire,
+	Gate subject_gate,
+	uint subject_port_index,
+	LxcValue value
+)
+{
+	struct key_value** wire_debug_hooks = this_wire->wire_debug_hooks;
+	if(NULL == wire_debug_hooks)
+	{
+		return;
+	}
+
+	int i;
+	for(i=0;NULL != wire_debug_hooks[i];++i)
+	{
+		struct lxc_wire_debug_hook_data* data =
+				(struct lxc_wire_debug_hook_data*) wire_debug_hooks[i]->value;
+
+		//TODO reference and unreference the values (value, gate etc) before invoke
+
+		data->wire_debug_hook
+		(
+			data,
+			phase,
+			this_wire,
+			subject_gate,
+			subject_port_index,
+			value,
+			this_wire->type,
+			this_wire->subtype
+		);
+	}
+
+}
+
+static void wire_direct_propagate_wire_new_value(Gate instance, uint out_index, Wire wire, LxcValue value)
+{
+	struct key_value** wire_debug_hooks = wire->wire_debug_hooks;
+
+	if(NULL != wire_debug_hooks)
+	{
+		raise_wire_hook_calls
+		(
+			lxc_before_wire_driven,
+			wire,
+			instance,
+			out_index,
+			value
+		);
+	}
+
+	lxc_import_new_value(value, &(wire->current_value));
+
+	/*Task t = malloc(sizeof(struct lxc_task));//TODO referenc the value beacuse it can change over the time, and can be finalized before another thread process it
+	t->instance = instance;
+	t->index = out_index;
+	t->wire = wire;
+	t->value = value;
+	//TODO lxc_submit_asyncron_task(drive_wire_task_execute, t);
+	//drive_wire_task_execute(t);
+
+	//Gate instance = t->instance;
+	//uint out_index = t->index;
+	free(t);
+
+	if(NULL != value)
+	{
+		lxc_unreference_value(value);
+	}
+*/
+	Tokenport* ports = wire->drivens;
+	Signal signal = wire->type;
+	int len = wire->drivens_length;
+
+	int i;
+	for(i=0;i<len;++i)
+	{
+		Tokenport p = ports[i];
+		if(NULL == p)
+			return;
+
+		if(p->gate->enabled && NULL != p->gate->execution_behavior)
+		{
+			if(NULL != wire_debug_hooks)
+			{
+				raise_wire_hook_calls
+				(
+					lxc_before_gate_notified,
+					wire,
+					p->gate,
+					p->index,
+					value
+				);
+			}
+
+			p->gate->execution_behavior(p->gate, signal, wire->subtype, value, p->index);
+
+			if(NULL != wire_debug_hooks)
+			{
+				raise_wire_hook_calls
+				(
+					lxc_after_gate_notified,
+					wire,
+					p->gate,
+					p->index,
+					value
+				);
+			}
+		}
+
+		if(NULL != wire_debug_hooks)
+		{
+			raise_wire_hook_calls
+			(
+				lxc_after_gate_notified,
+				wire,
+				p->gate,
+				p->index,
+				value
+			);
+		}
+	}
+}
+
+
+static bool wire_direct_propagate_availabe(Tokenport p)
+{
+	return NULL != p->owner->current_value;
+}
+
+static void wire_direct_propagate_noop()
+{}
+
+static LxcValue wire_direct_propagate_get_value(Tokenport tp)
+{
+	return tp->owner->current_value;
+}
+
+struct wire_handler_logic DIRECT_PROPAGATE_VALUE =
+{
+	.write_new_value = wire_direct_propagate_wire_new_value,
+
+	.is_token_available = wire_direct_propagate_availabe,
+	.token_get_value = wire_direct_propagate_get_value,
+	.absorb_token = wire_direct_propagate_noop,
+	.release_token = wire_direct_propagate_noop,
+};
 
 Wire lxc_create_wire(Signal type)
 {
@@ -113,6 +263,7 @@ Wire lxc_create_wire(Signal type)
 	}
 
 	Wire ret = malloc_zero(sizeof(struct lxc_wire));
+	ret->handler = &DIRECT_PROPAGATE_VALUE;
 	ret->type = type;
 	ret->subtype = 0;
 	ret->current_value = NULL;
@@ -407,50 +558,11 @@ int lxc_wire_gate_output(Signal type, int subtype, Wire wire, Gate g, uint index
 	);
 }
 
-static void raise_wire_hook_calls
-(
-	enum lxc_wire_operation_phase phase,
-	Wire this_wire,
-	Gate subject_gate,
-	uint subject_port_index,
-	LxcValue value
-)
-{
-	struct key_value** wire_debug_hooks = this_wire->wire_debug_hooks;
-	if(NULL == wire_debug_hooks)
-	{
-		return;
-	}
-
-	int i;
-	for(i=0;NULL != wire_debug_hooks[i];++i)
-	{
-		struct lxc_wire_debug_hook_data* data =
-				(struct lxc_wire_debug_hook_data*) wire_debug_hooks[i]->value;
-
-		//TODO reference and unreference the values (value, gate etc) before invoke
-
-		data->wire_debug_hook
-		(
-			data,
-			phase,
-			this_wire,
-			subject_gate,
-			subject_port_index,
-			value,
-			this_wire->type,
-			this_wire->subtype
-		);
-	}
-
-}
-
 /**
  * TODO for today: wire debugging hooks, and java callbacks for hooks
  *
  *
  * */
-//TODO locks for wires
 void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue value)
 {
 	//TODO framework debugging mode, update wire value on change
@@ -460,92 +572,7 @@ void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue val
 		return;
 	}
 
-	struct key_value** wire_debug_hooks = wire->wire_debug_hooks;
-
-	if(NULL != wire_debug_hooks)
-	{
-		raise_wire_hook_calls
-		(
-			lxc_before_wire_driven,
-			wire,
-			instance,
-			out_index,
-			value
-		);
-	}
-
-	lxc_import_new_value(value, &(wire->current_value));
-
-	/*Task t = malloc(sizeof(struct lxc_task));//TODO referenc the value beacuse it can change over the time, and can be finalized before another thread process it
-	t->instance = instance;
-	t->index = out_index;
-	t->wire = wire;
-	t->value = value;
-	//TODO lxc_submit_asyncron_task(drive_wire_task_execute, t);
-	//drive_wire_task_execute(t);
-
-	//Gate instance = t->instance;
-	//uint out_index = t->index;
-	free(t);
-
-	if(NULL != value)
-	{
-		lxc_unreference_value(value);
-	}
-*/
-	Tokenport* ports = wire->drivens;
-	Signal signal = wire->type;
-	int len = wire->drivens_length;
-
-	int i;
-	for(i=0;i<len;++i)
-	{
-		Tokenport p = ports[i];
-		if(NULL == p)
-			return;
-
-		if(p->gate->enabled && NULL != p->gate->execution_behavior)
-		{
-			if(NULL != wire_debug_hooks)
-			{
-				raise_wire_hook_calls
-				(
-					lxc_before_gate_notified,
-					wire,
-					p->gate,
-					p->index,
-					value
-				);
-			}
-
-			p->gate->execution_behavior(p->gate, signal, wire->subtype, value, p->index);
-
-			if(NULL != wire_debug_hooks)
-			{
-				raise_wire_hook_calls
-				(
-					lxc_after_gate_notified,
-					wire,
-					p->gate,
-					p->index,
-					value
-				);
-			}
-		}
-
-		if(NULL != wire_debug_hooks)
-		{
-			raise_wire_hook_calls
-			(
-				lxc_after_gate_notified,
-				wire,
-				p->gate,
-				p->index,
-				value
-			);
-		}
-
-	}
+	wire->handler->write_new_value(instance, out_index, wire, value);
 }
 
 int lxc_wire_add_debug_hook(Wire wire, struct lxc_wire_debug_hook_data* hook)
@@ -693,28 +720,26 @@ LxcValue lxc_get_token_value(Tokenport tp)
 	{
 		return NULL;
 	}
-
-	return tp->owner->current_value;
-
-	//TODO atomic get
-	struct chain_link_refc* lnk = tp->current_value;
-	if(NULL == tp->current_value)
-	{
-		return NULL;
-	}
-
-	LxcValue val = (LxcValue) lnk->addr;
-	return val;
-
+	tp->owner->handler->token_get_value(tp);
 }
 
 //TODO
 void lxc_absorb_token(Tokenport tp)
 {
-
 	//TODO atomic update next chain link
 	//decremenet chainlink refcount
 	//register "notify again" if port can notify
+	tp->owner->handler->absorb_token(tp);
+}
+
+void lxc_wire_release_token(Tokenport tp)
+{
+	tp->owner->handler->release_token(tp);
+}
+
+void lxc_wire_token_available(Tokenport tp)
+{
+	tp->owner->handler->is_token_available(tp);
 }
 
 

@@ -33,7 +33,7 @@ struct obj_str_arr_pnt
 {
 	void* rtt_type;
 	refcount_t refcount;
-	void** array;
+	char** array;
 };
 
 int lxc_wire_set_refdes(Wire w, const char* name)
@@ -51,18 +51,20 @@ int lxc_wire_set_refdes(Wire w, const char* name)
 
 struct obj_str_arr_pnt*  lxc_circuit_get_all_wire_refdes(IOCircuit circ)
 {
-	struct obj_str_arr_pnt* ret = malloc(sizeof(struct obj_str_arr_pnt));
+	struct obj_str_arr_pnt* ret = malloc_zero(sizeof(struct obj_str_arr_pnt));
 	ret->refcount = 1;
-	array_pnt_init(&ret->array);
+	array_pnt_init((void***) &ret->array);
 
 	{
 		int i = 0;
 		while(NULL != circ->wires[i])
 		{
-			array_pnt_append_element(&ret->array, circ->wires[i]->ref_des);
+			array_pnt_append_element((void***)&ret->array, circ->wires[i]->ref_des);
 			++i;
 		}
 	}
+
+	return ret;
 }
 
 Wire lxc_circuit_get_wire_by_refdes(IOCircuit circ, const char* name)
@@ -189,11 +191,19 @@ void puppet_execute(Gate instance, Signal type, int subtype, LxcValue value, uin
 	 }
 }
 
+static bool unsafe_extract_boolean(LxcValue val)
+{
+	bool* ret = lxc_get_value(val);
+	return *ret;
+}
+
 static void puppet_add_value_array_pnt(Gate instance, Signal type, int subtype, LxcValue value, uint index)
 {
 	struct puppet_gate_instance* p = (struct puppet_gate_instance*) instance;
 	if(&lxc_signal_bool == type && 0 == subtype && NULL != value)
 	{
+		bool val = unsafe_extract_boolean(value);
+		printf("Gate(%p) bool input (%d.) notified: %s\n", instance, index, val?"true":"false");
 		array_pnt_append_element((void***)&p->user_data, value);
 	}
 }
@@ -678,12 +688,6 @@ static void test_gate_xor(void)
 }
 
 
-static bool unsafe_extract_boolean(LxcValue val)
-{
-	bool* ret = lxc_get_value(val);
-	return *ret;
-}
-
 static void assert_prelling_then_release_array(void*** array)
 {
 	LxcValue* vs = (LxcValue*) *array;
@@ -773,11 +777,63 @@ static void assert_not_prelling_then_release_array(void*** array)
 	LxcValue* vs = (LxcValue*) *array;
 
 	NP_ASSERT_EQUAL(1, array_pnt_population(*array));
-	NP_ASSERT_EQUAL(true, unsafe_extract_boolean(vs[1]));
+	NP_ASSERT_EQUAL(true, unsafe_extract_boolean(vs[0]));
 	free(*array);
 	*array = NULL;
 }
 
+static void wire_nonhazard_propagate_wire_new_value(Gate instance, uint out_index, Wire wire, LxcValue value)
+{
+	Tokenport* ports = wire->drivens;
+	Signal signal = wire->type;
+	int len = wire->drivens_length;
+
+	int i;
+	for(i=0;i<len;++i)
+	{
+		Tokenport p = ports[i];
+		if(NULL == p)
+		{
+			return;
+		}
+
+		lxc_import_new_value(value, (LxcValue*) &(p->current_value));
+
+		if(p->gate->enabled && NULL != p->gate->execution_behavior)
+		{
+			p->gate->execution_behavior(p->gate, signal, wire->subtype, value, p->index);
+		}
+	}
+}
+
+
+static bool wire_nonhazard_propagate_availabe(Tokenport p)
+{
+	return NULL != p->current_value;
+}
+
+static void wire_nonhazard_propagate_absorb(Tokenport tp)
+{
+	lxc_import_new_value(NULL, (LxcValue*) &(tp->current_value));
+}
+
+static void wire_nonhazard_propagate_noop(Tokenport tp)
+{}
+
+static LxcValue wire_nonhazard_propagate_get_value(Tokenport tp)
+{
+	return (LxcValue) tp->current_value;
+}
+
+struct wire_handler_logic NONHAZARD_PROPAGATE_VALUE =
+{
+	.write_new_value = wire_nonhazard_propagate_wire_new_value,
+
+	.is_token_available = wire_nonhazard_propagate_availabe,
+	.token_get_value = wire_nonhazard_propagate_get_value,
+	.absorb_token = wire_nonhazard_propagate_absorb,
+	.release_token = wire_nonhazard_propagate_noop,
+};
 
 static void test_scenario_bool_gate_circuit__without_hazard(void)
 {
@@ -791,6 +847,19 @@ static void test_scenario_bool_gate_circuit__without_hazard(void)
 			lxc_circuit_get_gate_by_refdes(circ, "network sniffer");
 
 	Wire input = lxc_circuit_get_wire_by_refdes(circ, "input");
+
+	{
+		struct obj_str_arr_pnt* a = lxc_circuit_get_all_wire_refdes(circ);
+		int i = -1;
+		while(NULL != a->array[++i])
+		{
+			Wire w = lxc_circuit_get_wire_by_refdes(circ, a->array[i]);
+			NP_ASSERT_NOT_NULL(w);
+			w->handler  = &NONHAZARD_PROPAGATE_VALUE;
+		}
+		free(a->array);
+		free(a);
+	}
 
 	circuit_enable_all_gate(circ);
 

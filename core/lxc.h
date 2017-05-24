@@ -285,6 +285,16 @@ struct lxc_wire_debug_hook_data
 	//glue anything what you need.
 };
 
+struct wire_handler_logic
+{
+	void (*write_new_value)(Gate, uint, Wire, LxcValue);
+
+	bool (*is_token_available)(Tokenport);
+	LxcValue (*token_get_value)(Tokenport);
+	void (*absorb_token)(Tokenport);
+	void (*release_token)(Tokenport);
+};
+
 /**
  * Represents a wire, connect gates together.
  * A wire has driver(s) and driven gates.
@@ -318,6 +328,7 @@ struct lxc_wire
 {
 	Signal type;
 	int subtype;
+
 	//TODO queue and single token for tokenless mode
 	LxcValue current_value;
 
@@ -330,6 +341,8 @@ struct lxc_wire
 
 	Tokenport* drivens;
 	uint drivens_length;
+
+	struct wire_handler_logic* handler;
 };
 
 
