@@ -43,28 +43,32 @@ void dbg_print_messages(char** msgs);
 void dbg_crash();
 
 /**
- * Array types:
+ * Array types: //TODO testcase for every statement
  * 	array_nt_*
- * 	- null terminated arrays: no intermediate NULL permitted,
- *	 	the end of the array terminated with NULL value.
- * 		TODO on intermedia element remove
+ * 	- null terminated arrays:
+ * 		- no intermediate NULL permitted,
+ * 		- inserting and appending null has no effect
+ *	 	- the end of the array terminated with NULL value.
+ * 		- intermediate element removal shifts the array.
+ *
  *
  *	array_fix_*
  *		- length of the array tracked, intermediate null permitted, but
- *			inserting null has no effect. Useful for variable arrays if you
- *			don't want to the array get reallocate on every element
- *			insert/remove.
+ *		- inserting null has no effect.
  *		- removing an intermediate element not shifts the array
+ *		=> Useful if you don't want to the array get reallocate on every
+ *			element insert/remove.
  *
  *	array_pnt_*
  *	- packed null terminated:
  *		- array terminated with a NULL, no intermediate NULL value permitted.
- *		- resized on every insert/remove. (removing intemedite element shifts
+ *		- resize on every insert/remove. (removing intemedite element shifts
  *			the arrays)
  *
  * */
 
 
+void array_nt_init(void*** init, uint *len);
 
 /*
  * pop the specified address from the array and shift the elements to the lower
@@ -77,7 +81,7 @@ void* array_nt_pop_element(void** array_addr, uint length, uint index);
  * array (if size != length).
  * expands the array if element can't added to.
  * */
-void array_nt_append_element(void*** array_addr, uint* length, void* element);
+int array_nt_append_element(void*** array_addr, uint* length, void* element);
 
 int array_nt_contains(void** array_addr, uint length, void* addr);
 

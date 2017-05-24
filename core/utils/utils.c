@@ -157,6 +157,13 @@ void dbg_crash()
 	*val = 0;
 }
 
+void array_nt_init(void*** init, uint *len)
+{
+	*init = malloc(sizeof(void*)*2);
+	memset(*init, 0, sizeof(void*)*2);
+	*len = 2;
+}
+
 /*
  * pop the specified address from the array and shift the elements to the lower
  * index (stay continuous)
@@ -195,13 +202,19 @@ void* array_nt_pop_element(void** array_addr, unsigned int len, unsigned int ind
  * array (if size != length).
  * expands the array if element can't added to.
  * */
-void array_nt_append_element(void*** array_addr, unsigned int* length, void* element)
+int array_nt_append_element(void*** array_addr, unsigned int* length, void* element)
 {
+	if(NULL == element)
+	{
+		return -1;
+	}
+
 	if(NULL == *array_addr)
 	{
 		*array_addr = malloc(sizeof(void*));
 		*length = 1;
 		(*array_addr)[0] = element;
+		return 0;
 	}
 	else
 	{
@@ -219,12 +232,12 @@ void array_nt_append_element(void*** array_addr, unsigned int* length, void* ele
 		}
 
 		if(-1 == ep)
-		//all slot are full (we increase the slot by 1)
 		{
-			//allocation one more bigger
-			*array_addr = realloc(*array_addr, len+sizeof(void*));
+			//all slot are full (we increase the slot by 1)
+			*array_addr = realloc(*array_addr, (len+1)*sizeof(void*));
 			*length = len + 1;
 			(*array_addr)[len] = element;
+			return len;
 		}
 		else
 		{
@@ -232,7 +245,10 @@ void array_nt_append_element(void*** array_addr, unsigned int* length, void* ele
 			(*array_addr)[ep] = element;
 			//and terminate if slot available after
 			if(ep+1 < len)
+			{
 				(*array_addr)[ep+1] = NULL;
+			}
+			return ep;
 		}
 	}
 }
