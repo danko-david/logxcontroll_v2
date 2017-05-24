@@ -171,7 +171,7 @@ static Tokenport logx_bool_get_input_wire
 	uint index
 )
 {
-	if(&lxc_signal_bool == signal || index > 20 || 0 != subtype)
+	if(&lxc_signal_bool != signal || index > 20 || 0 != subtype)
 		return NULL;
 
 	return castGate(instance)->inputs[index];
@@ -185,7 +185,7 @@ static Wire logx_bool_get_output_wire
 	uint index
 )
 {
-	if(&lxc_signal_bool == signal || 0 != index )
+	if(&lxc_signal_bool != signal || 0 != index )
 		return NULL;
 
 	return castGate(instance)->output;
@@ -225,7 +225,12 @@ static void logx_bool_execute(Gate instance, Signal type, int subtype, LxcValue 
 	Wire out = castGate(instance)->output;
 	//if(NULL != out)
 	{
-		bool re = castBGB(instance->behavior)->logic_function(instance);
+		bool* re = castBGB(instance->behavior)->logic_function(instance);
+
+		if(NULL == re)
+		{
+			return;
+		}
 
 		lxc_drive_wire_value
 		(
@@ -233,7 +238,7 @@ static void logx_bool_execute(Gate instance, Signal type, int subtype, LxcValue 
 			0,
 			out,
 			(LxcValue)
-				(re?
+				(*re?
 					lxc_bool_constant_value_true.value
 				:
 					lxc_bool_constant_value_false.value
@@ -310,6 +315,14 @@ static bool is_all_input_valid_and_copy(Gate instance, bool values[21], int* ep)
 	return true;
 }
 
+static const bool FALSE = false;
+static const bool TRUE = true;
+
+static const bool* PTR_FALSE = &FALSE;
+static const bool* PTR_TRUE = &TRUE;
+
+
+
 /************************** Logic Gate nand ***********************************/
 
 /**
@@ -319,14 +332,19 @@ static bool is_all_input_valid_and_copy(Gate instance, bool values[21], int* ep)
  * returns true if least one input is false
  *
  * */
-static bool logic_function_nand(Gate instance)
+static bool* logic_function_nand(Gate instance)
 {
 	bool values[21];
 	int ep;
 
 	if(!is_all_input_valid_and_copy(instance, values, &ep))
 	{
-		return false;
+		return NULL;
+	}
+
+	if(0 == ep)
+	{
+		return NULL;
 	}
 
 	int i = 0;
@@ -334,12 +352,12 @@ static bool logic_function_nand(Gate instance)
 	{
 		if(0 == values[i])
 		{
-			return true;
+			return PTR_TRUE;
 		}
 		++i;
 	}
 
-	return false;
+	return PTR_FALSE;
 }
 
 static struct lxc_bool_gate_behavior logic_nand;
@@ -347,14 +365,19 @@ static struct lxc_bool_gate_behavior logic_nand;
 
 /************************** Logic Gate nor ************************************/
 
-static bool logic_function_nor(Gate instance)
+static bool* logic_function_nor(Gate instance)
 {
 	bool values[21];
 	int ep;
 
 	if(!is_all_input_valid_and_copy(instance, values, &ep))
 	{
-		return false;
+		return NULL;
+	}
+
+	if(0 == ep)
+	{
+		return NULL;
 	}
 
 	int i = 0;
@@ -362,26 +385,31 @@ static bool logic_function_nor(Gate instance)
 	{
 		if(0 != values[i])
 		{
-			return false;
+			return PTR_FALSE;
 		}
 		++i;
 	}
 
-	return 0 == ep?false:true;
+	return 0 == ep?PTR_FALSE:PTR_TRUE;
 }
 
 static struct lxc_bool_gate_behavior logic_nor;
 
 /************************** Logic Gate and ************************************/
 
-static bool logic_function_and(Gate instance)
+static bool* logic_function_and(Gate instance)
 {
 	bool values[21];
 	int ep;
 
 	if(!is_all_input_valid_and_copy(instance, values, &ep))
 	{
-		return false;
+		return NULL;
+	}
+
+	if(0 == ep)
+	{
+		return NULL;
 	}
 
 	int i = 0;
@@ -389,26 +417,31 @@ static bool logic_function_and(Gate instance)
 	{
 		if(0 != values[i])
 		{
-			return false;
+			return PTR_FALSE;
 		}
 		++i;
 	}
 
-	return 0 == ep?false:true;
+	return 0 == ep?PTR_FALSE:PTR_TRUE;
 }
 
 static struct lxc_bool_gate_behavior logic_and;
 
 /************************** Logic Gate or *************************************/
 
-static bool logic_function_or(Gate instance)
+static bool* logic_function_or(Gate instance)
 {
 	bool values[21];
 	int ep;
 
 	if(!is_all_input_valid_and_copy(instance, values, &ep))
 	{
-		return false;
+		return NULL;
+	}
+
+	if(0 == ep)
+	{
+		return NULL;
 	}
 
 	int i = 0;
@@ -416,15 +449,77 @@ static bool logic_function_or(Gate instance)
 	{
 		if(0 != values[i])
 		{
-			return true;
+			return PTR_TRUE;
 		}
 		++i;
 	}
 
-	return false;
+	return PTR_FALSE;
 }
 
 static struct lxc_bool_gate_behavior logic_or;
+
+/************************** Logic Gate not ************************************/
+
+//TODO this is a demo implemantation
+static bool* logic_function_not(Gate instance)
+{
+	bool values[21];
+	int ep;
+
+	if(!is_all_input_valid_and_copy(instance, values, &ep))
+	{
+		return NULL;
+	}
+
+	if(0 == ep)
+	{
+		return NULL;
+	}
+
+	if(ep > 0)
+	{
+		return !values[0]?PTR_TRUE:PTR_FALSE;
+	}
+
+	return NULL;
+}
+
+static struct lxc_bool_gate_behavior logic_not;
+
+/************************** Logic Gate not ************************************/
+
+//TODO this is a demo implemantation
+static bool* logic_function_xor(Gate instance)
+{
+	bool values[21];
+	int ep;
+
+	if(!is_all_input_valid_and_copy(instance, values, &ep))
+	{
+		return NULL;
+	}
+
+	if(ep <= 1)
+	{
+		return NULL;
+	}
+
+	int i = 1;
+	while(i < ep)
+	{
+		if(values[i] == values[i-1])
+		{
+			return PTR_FALSE;
+		}
+		++i;
+	}
+
+
+	return PTR_TRUE;
+}
+
+static struct lxc_bool_gate_behavior logic_xor;
 
 /****************************** Only for debug ********************************/
 
@@ -470,7 +565,7 @@ static void init_behavior
 (
 	struct lxc_bool_gate_behavior* b,
 	const char* gate_name,
-	bool(*logic_function)(Gate))
+	bool* (*logic_function)(Gate))
 {
 	memcpy(b, &commons, sizeof(commons));
 	char** name = (char**)&(b->base.gate_name);
@@ -486,10 +581,14 @@ static int library_operation_function(enum library_operation op, const char** er
 {
 	if(library_before_load == op)
 	{
-		init_behavior(&logic_nand, "nand", logic_function_nand);
-		init_behavior(&logic_nor, "nor", logic_function_nor);
-		init_behavior(&logic_and, "and", logic_function_and);
-		init_behavior(&logic_or, "or", logic_function_or);
+		init_behavior(&logic_nand, "bool nand", logic_function_nand);
+		init_behavior(&logic_nor, "bool nor", logic_function_nor);
+		init_behavior(&logic_and, "bool and", logic_function_and);
+		init_behavior(&logic_or, "bool or", logic_function_or);
+
+		init_behavior(&logic_not, "bool not", logic_function_not);
+		init_behavior(&logic_xor, "bool xor", logic_function_xor);
+
 		init_behavior(&logic_dbg, "dbg", logic_function_dbg);
 		return 0;
 	}
@@ -517,6 +616,9 @@ static int library_operation_function(enum library_operation op, const char** er
 		(struct lxc_gate_behavior*)&logic_nor,
 		(struct lxc_gate_behavior*)&logic_and,
 		(struct lxc_gate_behavior*)&logic_or,
+
+		(struct lxc_gate_behavior*)&logic_not,
+		(struct lxc_gate_behavior*)&logic_xor,
 
 		(struct lxc_gate_behavior*)&logic_dbg,
 

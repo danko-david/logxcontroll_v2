@@ -127,7 +127,7 @@ Wire lxc_create_wire(Signal type)
 }
 
 //TODO synchronize
-int remove_port(Gate instance, uint index, Tokenport** ports, uint* length)
+bool remove_port(Gate instance, uint index, Tokenport* ports, int len)
 {
 	if(NULL == *ports)
 	{
@@ -135,39 +135,22 @@ int remove_port(Gate instance, uint index, Tokenport** ports, uint* length)
 	}
 	else
 	{
-		int len = *length;
 		int i = 0;
 		while(i < len)
 		{
-			Tokenport p = (*ports)[i];
+			Tokenport p = ports[i];
 			if(instance == p->gate && index == p->index)
 			{
-				//i found them
+				array_nt_pop_element((void**)ports, len, i);
+				//i found it
 				free(p);
-
-				//shifting the array if least one element on the upper index
-				--len;
-				//len is now lower, no extra len+1 needed in the next ops.
-				if(i < len)
-				{
-					while(i < len)
-					{
-						(*ports)[i] = (*ports)[i+1];
-						++i;
-					}
-				}
-
-				//set the last element NULL
-				//(no duplication at the end of the array)
-				(*ports)[len] = NULL;
-				return 1;
+				return true;
 			}
 
 			++i;
 		}
 
-
-		return 0;
+		return false;
 	}
 }
 
@@ -240,15 +223,43 @@ passed:
 
 	void* subject;
 
-	//now user tries to unwire with specified index
+	//now user tries to unwire with the specified index
 	if(NULL == wire)
 	{
+		//if already unwired
 		if(NULL == wired)
 		{
 			return LXC_ERROR_PORT_IS_ALREADY_FREE;
 		}
+
+		//TODO
+		//unwire the bound wire
+
 		//unwiring is independent from the subject (Wire/token)
 		wire_function(instance, signal, subtype, NULL, index);
+
+		Tokenport* remove_from;
+		uint remove_from_len;
+
+		if(is_subject_token)
+		{
+			remove_from = ((Tokenport)wired)->owner->drivens;
+			remove_from_len = ((Tokenport)wired)->owner->drivens_length;
+		}
+		else
+		{
+			remove_from = ((Wire)wired)->drivers;
+			remove_from_len = ((Wire)wired)->drivers_length;
+		}
+
+		bool result = remove_port(instance, index, remove_from, remove_from_len);
+		if(!result)
+		{
+			lxc_on_bug_found();
+			return LXC_ERROR_NOT_CONNECTED_UNWIRING;
+		}
+
+		subject = NULL;
 	}
 	//tie a new wire in.
 	else
@@ -284,22 +295,6 @@ passed:
 		}
 	}
 
-	//int ret = private_check_signal(g, &type, wire, g->behavior->get_input_types);
-
-	//mi van ha a vezetéken rajta van de ő azt mondja hogy nincs?
-	//vagy ha már a vezetéken rajta van de ő azt mondja nem?
-
-	//unwire gate
-	if(NULL == wire)
-	{
-		//unwire the input.
-		bool result = remove_port(instance, index, &(wire->drivens), &(wire->drivens_length));
-		if(!result)
-		{
-			return LXC_ERROR_NOT_CONNECTED_UNWIRING;
-		}
-	}
-
 	on_success(signal, subtype, subject, instance, index);
 	return 0;
 }
@@ -328,7 +323,10 @@ void on_successfull_input_wiring(Signal type, int subtype, void* /*Tokenport*/ t
 	else
 	{
 		//this case is clear, notify unwired input
-		g->execution_behavior(g, type, subtype, NULL, index);
+		if(lxc_gate_is_enabled(g))
+		{
+			g->execution_behavior(g, type, subtype, NULL, index);
+		}
 	}
 }
 
@@ -338,7 +336,7 @@ void on_successfull_output_wiring(Signal type, int subtype, void* /*Wire*/ w, Ga
 	if(NULL != w)
 	{
 		//new wire attached, notify the driver
-		Tokenport p = malloc(sizeof(struct lxc_tokenport));
+ 		Tokenport p = malloc(sizeof(struct lxc_tokenport));
 		p->gate = g;
 		p->index = index;
 		add_port(p, &(wire->drivers), &(wire->drivers_length));
@@ -360,24 +358,15 @@ void on_successfull_output_wiring(Signal type, int subtype, void* /*Wire*/ w, Ga
 	}
 	else
 	{
-		//notify driven gates, input is unwired
-		Tokenport* ps = wire->drivens;
-		int len = wire->drivens_length;
-		int i = 0;
-		while(i<len)
-		{
-			Tokenport p = ps[i];
-			if(NULL == p)
-			{
-				return;
-			}
 
-			Gate target = p->gate;
-			if(target->enabled)
-			{
-				target->execution_behavior(target, type, subtype, NULL, p->index);
-			}
+		//notify driven gates, input is unwired
+		/*
+		if(lxc_gate_is_enabled(g))
+		{
+			g->execution_behavior(g, type, subtype, NULL, index);
 		}
+
+		 */
 	}
 }
 

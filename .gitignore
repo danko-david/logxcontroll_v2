@@ -9,6 +9,7 @@ Debug
 **.dll
 Shared
 
+./logxcontroll-core
 logxcontroll-core
 CMakeCache.txt
 CMakeFiles

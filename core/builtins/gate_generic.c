@@ -380,7 +380,7 @@ bool lxc_port_is_any_wire_connected
 	return false;
 }
 
-void lxc_port_wipe_all(struct lxc_port_manager* fact)
+void lxc_port_manager_destroy(struct lxc_port_manager* fact)
 {
 	if(NULL == fact)
 	{
@@ -393,12 +393,7 @@ void lxc_port_wipe_all(struct lxc_port_manager* fact)
 
 	if(NULL != it)
 	{
-		while(NULL != it[ti_max++].signal);
-	}
-
-	if(ti_max <= 0)
-	{
-		return;
+		while(NULL != it[++ti_max].signal);
 	}
 
 	free(fact->managed_types);
@@ -410,10 +405,15 @@ void lxc_port_wipe_all(struct lxc_port_manager* fact)
 		free(fact->to_abs[i]);
 	}
 
+	free(fact->to_abs);
+
 	free(fact->to_abs_size);
+}
 
+void lxc_port_wipe_all(struct lxc_port_manager* fact)
+{
+	lxc_port_manager_destroy(fact);
 	memset(fact, 0, sizeof(struct lxc_port_manager));
-
 	lxc_port_init_port_manager_factory(fact);
 }
 
@@ -471,7 +471,6 @@ int lxc_port_fill_types
 	uint i;
 	for(i=0;i<popul;++i)
 	{
-		printf("SIG: %p, SUB: %d\n\n\n", src[i].signal, src[i].subtype);
 		dst_arr[i] = src[i].signal;
 		subtypes[i] = src[i].subtype;
 	}
@@ -804,10 +803,16 @@ static void lxc_generic_porti_gate_destroy(Gate instance)
 									->instance_destroy;
 
 	if(NULL != destroy)
+	{
 		destroy(ins);
+	}
+
+	lxc_port_manager_destroy(&ins->input_ports);
+	lxc_port_manager_destroy(&ins->output_ports);
 
 	free(ins->inputs);
 	free(ins->outputs);
+	free(ins);
 }
 
 static int lxc_generic_porti_get_input_types(Gate instance, Signal* arr, int* subtypes, uint max_length)

@@ -75,5 +75,9 @@ void lxc_test_destroy_worker_pool(struct worker_pool* wp);
 
 void assert_not_locked(void* LOCK, int (*trylock)(void*), int (*unlock)(void*));
 
+Wire lxc_test_create_wire(Signal);
+
+void lxc_test_destroy_wire(Wire);
+
 
 #endif /* TEST_CORE_H_ */

@@ -494,6 +494,7 @@ static int bring_up_libop
 			backlog_validation
 		);
 	}
+
 	return 0;
 }
 
