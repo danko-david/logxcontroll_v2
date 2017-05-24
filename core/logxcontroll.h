@@ -28,7 +28,9 @@
 
 #include <signal.h>
 
-void logxcontroll_init_environment();
+int logxcontroll_init_environment();
+
+int logxcontroll_destroy_environment();
 
 void logxcontroll_main();
 

@@ -10,11 +10,11 @@
 
 static bool logxcontroll_intialized = false;
 
-void logxcontroll_init_environment()
+int logxcontroll_init_environment()
 {
 	if(logxcontroll_intialized)
 	{
-		return;
+		return 0;
 	}
 
 	/*** initialize generic library ***/
@@ -36,7 +36,15 @@ void logxcontroll_init_environment()
 
 
 	logxcontroll_intialized = true;
+
+	return true;
 }
+
+int logxcontroll_destroy_environment()
+{
+	return 0;
+}
+
 
 void (*logxcontroll_after_bootstrapping)(void) = NULL;
 

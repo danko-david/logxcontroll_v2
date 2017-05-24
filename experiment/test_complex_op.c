@@ -85,6 +85,27 @@ Wire lxc_circuit_get_wire_by_refdes(IOCircuit circ, const char* name)
 	return NULL;
 }
 
+Gate lxc_circuit_get_gate_by_refdes(IOCircuit circ, const char* name)
+{
+	if(NULL == circ->gates)
+	{
+		return NULL;
+	}
+
+	int i = 0;
+	while(NULL != circ->gates[i])
+	{
+		if(0 == strcmp(name, circ->gates[i]->ref_des))
+		{
+			return circ->gates[i];
+		}
+		++i;
+	}
+
+	return NULL;
+}
+
+
 bool lxc_circuit_add_wire(IOCircuit circ, Wire w)
 {
 	NP_ASSERT_NOT_NULL(circ);
@@ -150,6 +171,60 @@ bool lxc_check_gate_exists(const char* name)
 
 /************************ PREVIOUS implentetion area **************************/
 
+struct lxc_generic_porti_behavior PUPPET_GATE;
+struct puppet_gate_instance
+{
+	struct lxc_generic_porti_instance base;
+	void (*execute)(Gate instance, Signal type, int subtype, LxcValue value, uint index);
+	void (*destroy_gate)(Gate);
+	void* user_data;
+};
+
+void puppet_execute(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+{
+	 struct puppet_gate_instance* gate = (struct puppet_gate_instance*) instance;
+	 if(NULL != gate->execute)
+	 {
+		 gate->execute(instance, type, subtype, value, index);
+	 }
+}
+
+static void puppet_add_value_array_pnt(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+{
+	struct puppet_gate_instance* p = (struct puppet_gate_instance*) instance;
+	if(&lxc_signal_bool == type && 0 == subtype && NULL != value)
+	{
+		array_pnt_append_element((void***)&p->user_data, value);
+	}
+}
+
+
+struct puppet_gate_instance* create_puppet_gate()
+{
+	if(NULL == PUPPET_GATE.base.gate_name)
+	{
+		lxc_init_from_prototype
+		(
+			&PUPPET_GATE,
+			sizeof(PUPPET_GATE),
+
+			(void*)&lxc_generic_porti_prototype,
+			sizeof(lxc_generic_porti_prototype)
+		);
+
+		char** name = (char**)&PUPPET_GATE.base.gate_name;
+		*name = "PUPPET GATE";
+
+
+		PUPPET_GATE.instance_memory_size = sizeof(struct puppet_gate_instance);
+		PUPPET_GATE.base.execute = puppet_execute;
+
+	}
+
+	struct puppet_gate_instance* ret = (struct puppet_gate_instance*) lxc_new_instance_by_behavior(&PUPPET_GATE.base);
+	return ret;
+}
+
 Wire add_new_primitive_wire_to_circuit
 (
 	IOCircuit circuit,
@@ -208,50 +283,6 @@ void circuit_enable_all_gate(IOCircuit circ)
 	}
 }
 
-struct lxc_generic_porti_behavior PUPPET_GATE;
-struct puppet_gate_instance
-{
-	struct lxc_generic_porti_instance base;
-	void (*execute)(Gate instance, Signal type, int subtype, LxcValue value, uint index);
-	void (*destroy_gate)(Gate);
-	void* user_data;
-};
-
-void puppet_execute(Gate instance, Signal type, int subtype, LxcValue value, uint index)
-{
-	 struct puppet_gate_instance* gate = (struct puppet_gate_instance*) instance;
-	 if(NULL != gate->execute)
-	 {
-		 gate->execute(instance, type, subtype, value, index);
-	 }
-}
-
-struct puppet_gate_instance* create_puppet_gate()
-{
-	if(NULL == PUPPET_GATE.base.gate_name)
-	{
-		lxc_init_from_prototype
-		(
-			&PUPPET_GATE,
-			sizeof(PUPPET_GATE),
-
-			(void*)&lxc_generic_porti_prototype,
-			sizeof(lxc_generic_porti_prototype)
-		);
-
-		char** name = (char**)&PUPPET_GATE.base.gate_name;
-		*name = "PUPPET GATE";
-
-
-		PUPPET_GATE.instance_memory_size = sizeof(struct puppet_gate_instance);
-		PUPPET_GATE.base.execute = puppet_execute;
-
-	}
-
-	struct puppet_gate_instance* ret = (struct puppet_gate_instance*) lxc_new_instance_by_behavior(&PUPPET_GATE.base);
-	return ret;
-}
-
 
 /**
  *
@@ -304,7 +335,42 @@ static IOCircuit create_multistage_bool_network()
 
 	//output
 	wiring_output(output, D, 0);
-	//TODO wire up gates but another TODO for types
+
+	struct puppet_gate_instance* driver = create_puppet_gate();
+
+	{
+		lxc_gate_set_refdes(&driver->base.base, "network driver");
+		lxc_port_unchecked_add_new_port
+		(
+			&driver->base.output_ports,
+			"output",
+			&lxc_signal_bool,
+			0,
+			NULL
+		);
+
+		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(sub, &driver->base.base));
+		wiring_output(input, &driver->base.base, 0);
+	}
+
+	struct puppet_gate_instance* receiver = create_puppet_gate();
+	{
+		lxc_gate_set_refdes(&receiver->base.base, "network sniffer");
+		receiver->execute = puppet_add_value_array_pnt;
+		lxc_port_unchecked_add_new_port
+		(
+			&receiver->base.input_ports,
+			"input",
+			&lxc_signal_bool,
+			0,
+			NULL
+		);
+
+		wiring_input(&receiver->base.base, 0, output);
+
+		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(sub, &receiver->base.base));
+	}
+
 	return sub;
 }
 
@@ -346,7 +412,7 @@ static void release_all_port(Gate gate)
 		gate,
 		gate->behavior->get_input_types,
 		gate->behavior->get_input_max_index,
-		gate->behavior->get_input_wire,
+		(void* (*)(Gate, Signal, int, uint)) gate->behavior->get_input_wire,
 		lxc_wire_gate_input
 	);
 
@@ -357,7 +423,7 @@ static void release_all_port(Gate gate)
 		gate,
 		gate->behavior->get_output_types,
 		gate->behavior->get_output_max_index,
-		gate->behavior->get_output_wire,
+		(void* (*)(Gate, Signal, int, uint)) gate->behavior->get_output_wire,
 		lxc_wire_gate_output
 	);
 }
@@ -523,7 +589,7 @@ static void generic_validate_truth_table(const char* name, bool use_secound_inpu
 		struct truth_table_entry* ent = truth_table[i];
 		lxc_drive_wire_value
 		(
-			driver,
+			&driver->base.base,
 			0,
 			I1,
 			ent->I1?
@@ -536,7 +602,7 @@ static void generic_validate_truth_table(const char* name, bool use_secound_inpu
 		{
 			lxc_drive_wire_value
 			(
-				driver,
+				&driver->base.base,
 				0,
 				I2,
 				ent->I2?
@@ -612,112 +678,156 @@ static void test_gate_xor(void)
 }
 
 
+static bool unsafe_extract_boolean(LxcValue val)
+{
+	bool* ret = lxc_get_value(val);
+	return *ret;
+}
+
+static void assert_prelling_then_release_array(void*** array)
+{
+	LxcValue* vs = (LxcValue*) *array;
+
+	NP_ASSERT_EQUAL(2, array_pnt_population(*array));
+	NP_ASSERT_EQUAL(false, unsafe_extract_boolean(vs[0]));
+	NP_ASSERT_EQUAL(true, unsafe_extract_boolean(vs[1]));
+	free(*array);
+	*array = NULL;
+}
+
+/**
+ * if wires don't uses tokens, just propagates the values and don't removes
+ * even after the gate feedbacks the "token absorption"
+ *
+ * this boolean network always produce true on the output
+ * I := input
+ * O := output
+ *
+ * O = !!I != !I
+ * O = I != !I
+ * true != !true => true != false => true
+ * false != !false => true
+ *
+ * when value propagated, for first time the output will produce the desired
+ * value.
+ *
+ * for the next input, the output will waggle between the true and false but
+ * finally reach the true state and the circuit becomes idle.
+ */
 static void test_scenario_bool_gate_circuit__with_hazard(void)
 {
 	logxcontroll_init_environment();
 	IOCircuit circ = create_multistage_bool_network();
 
+	struct puppet_gate_instance* driver = (struct puppet_gate_instance*)
+		lxc_circuit_get_gate_by_refdes(circ, "network driver");
 
-	struct puppet_gate_instance* driver = create_puppet_gate();
+	struct puppet_gate_instance* receiver = (struct puppet_gate_instance*)
+			lxc_circuit_get_gate_by_refdes(circ, "network sniffer");
+
 	Wire input = lxc_circuit_get_wire_by_refdes(circ, "input");
-
-	{
-		lxc_gate_set_refdes(&driver->base.base, "network driver");
-		lxc_port_unchecked_add_new_port
-		(
-			&driver->base.output_ports,
-			"output",
-			&lxc_signal_bool,
-			0,
-			NULL
-		);
-
-		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(circ, &driver->base.base));
-		wiring_output(input, &driver->base.base, 0);
-	}
-
-	struct puppet_gate_instance* receiver = create_puppet_gate();
-	{
-		lxc_gate_set_refdes(&receiver->base.base, "network sniffer");
-		receiver->execute = print_bool_value;
-		lxc_port_unchecked_add_new_port
-		(
-			&receiver->base.input_ports,
-			"input",
-			&lxc_signal_bool,
-			0,
-			NULL
-		);
-
-		Wire output = lxc_circuit_get_wire_by_refdes(circ, "output");
-		wiring_input(&receiver->base.base, 0, output);
-
-		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(circ, &receiver->base.base));
-	}
 
 	circuit_enable_all_gate(circ);
 
-	printf("writing new value\n");
-	lxc_drive_wire_value(driver, 0, input, lxc_bool_constant_value_false.value);
-	printf("writing new value\n");
-	lxc_drive_wire_value(driver, 0, input, lxc_bool_constant_value_true.value);
-	printf("writing new value\n");
-	lxc_drive_wire_value(driver, 0, input, lxc_bool_constant_value_false.value);
-	printf("writing new value\n");
-	lxc_drive_wire_value(driver, 0, input, lxc_bool_constant_value_true.value);
-	printf("=== END ===\n");
+	Gate drv = &driver->base.base;
 
-	/* TODO tester code:
-	 * if wires don't uses tokens, just propagates the values and don't removes
-	 * even after the gate feedbacks the "token absorption"
-	 *
-	 * this boolean network always produce true on the output
-	 * I := input
-	 * O := output
-	 *
-	 * O = !!I != !I
-	 * O = I != !I
-	 * true != !true => true != false => true
-	 * false != !false => true
-	 *
-	 * when value propagated, for first time the output will produce the desired
-	 * value.
-	 *
-	 * for the next input, the output will waggle between the true and false but
-	 * finally reach the true state and the circuit becomes idle.
-	 */
+	void*** result_array = (void***) &receiver->user_data;
+
+	{
+		array_pnt_init(result_array);
+		lxc_drive_wire_value(drv, 0, input, lxc_bool_constant_value_false.value);
+		//after first write: only one true value produced, because previously no
+		//value assigned to the wire for first time.
+		NP_ASSERT_EQUAL(1, array_pnt_population((void**)receiver->user_data));
+		NP_ASSERT_EQUAL(true, unsafe_extract_boolean(((LxcValue*)receiver->user_data)[0]));
+		free(*result_array);
+		*result_array = NULL;
+	}
+
+	{
+		array_pnt_init(result_array);
+		lxc_drive_wire_value(drv, 0, input, lxc_bool_constant_value_true.value);
+		//next time, because values already assigned to the wires, prelling occurs
+		assert_prelling_then_release_array(result_array);
+	}
+
+	{
+		array_pnt_init(result_array);
+		lxc_drive_wire_value(drv, 0, input, lxc_bool_constant_value_false.value);
+		assert_prelling_then_release_array(result_array);
+	}
+
+	{
+		array_pnt_init(result_array);
+		lxc_drive_wire_value(drv, 0, input, lxc_bool_constant_value_true.value);
+		assert_prelling_then_release_array(result_array);
+	}
 
 	destroy_circuit(circ);
 
-	//TODO destroy logxcontroll environment
-
+	logxcontroll_destroy_environment();
 }
 
-/*static void test_scenario_bool_gate_circuit__without_hazard(void)
+static void assert_not_prelling_then_release_array(void*** array)
+{
+	LxcValue* vs = (LxcValue*) *array;
+
+	NP_ASSERT_EQUAL(1, array_pnt_population(*array));
+	NP_ASSERT_EQUAL(true, unsafe_extract_boolean(vs[1]));
+	free(*array);
+	*array = NULL;
+}
+
+
+static void test_scenario_bool_gate_circuit__without_hazard(void)
 {
 	logxcontroll_init_environment();
 	IOCircuit circ = create_multistage_bool_network();
 
-	struct obj_str_arr_pnt* wire_refdes = lxc_circuit_get_all_wire_refdes(circ);
+	struct puppet_gate_instance* driver = (struct puppet_gate_instance*)
+		lxc_circuit_get_gate_by_refdes(circ, "network driver");
+
+	struct puppet_gate_instance* receiver = (struct puppet_gate_instance*)
+			lxc_circuit_get_gate_by_refdes(circ, "network sniffer");
+
+	Wire input = lxc_circuit_get_wire_by_refdes(circ, "input");
+
+	circuit_enable_all_gate(circ);
+
+	Gate drv = &driver->base.base;
+
+	void*** result_array = (void***) &receiver->user_data;
 
 	{
-		int i=0;
-		while(NULL != wire_refdes->array[i])
-		{
-			Wire w = lxc_circuit_get_wire_by_refdes(circ, wire_refdes->array[i]);
-
-			//TODO set wires to token mode
-			NP_ASSERT_NOT_NULL(w);
-		}
+		array_pnt_init(result_array);
+		lxc_drive_wire_value(drv, 0, input, lxc_bool_constant_value_false.value);
+		assert_not_prelling_then_release_array(result_array);
 	}
 
-	//TODO wire_refdes destruction
+	{
+		array_pnt_init(result_array);
+		lxc_drive_wire_value(drv, 0, input, lxc_bool_constant_value_true.value);
+		assert_not_prelling_then_release_array(result_array);
+	}
 
+	{
+		array_pnt_init(result_array);
+		lxc_drive_wire_value(drv, 0, input, lxc_bool_constant_value_false.value);
+		assert_not_prelling_then_release_array(result_array);
+	}
+
+	{
+		array_pnt_init(result_array);
+		lxc_drive_wire_value(drv, 0, input, lxc_bool_constant_value_true.value);
+		assert_not_prelling_then_release_array(result_array);
+	}
+
+	destroy_circuit(circ);
+
+	logxcontroll_destroy_environment();
 
 	//TODO we must not experience prelling
 	//TODO wait for circuit become idle
-
-
 }
-*/
+
 
