@@ -7,6 +7,13 @@
 
 #include "core/logxcontroll.h"
 
+//breakpoints
+void lxc_on_bug_found(void)
+{
+	printf("A runtime bug found! stack trace:");
+	gnu_libc_print_stack_trace();
+}
+
 void lxc_load_embedded_modules
 (
 	const char** errors,

@@ -46,6 +46,8 @@
 	#define UNUSED(x) (void)(x)
 #endif
 
+//
+void lxc_on_bug_found(void);
 
 /*
  * Required types:
