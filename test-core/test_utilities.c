@@ -13,7 +13,7 @@ static struct fake* elem4 = (struct fake*) 0xface;
 
 static void create_array_pnt_with_4_element(void*** array)
 {
-	array_pnt_init(&array);
+	array_pnt_init(array);
 	NP_ASSERT_EQUAL(0, array_pnt_append_element(array, elem1));
 	NP_ASSERT_EQUAL(1, array_pnt_append_element(array, elem2));
 	NP_ASSERT_EQUAL(2, array_pnt_append_element(array, elem3));
@@ -29,14 +29,14 @@ static void test_array_pnt_with_4_element(void)
 	/**************************************************************************/
 
 	//can't pop the NULL array terminator
-	NP_ASSERT_EQUAL(NULL, array[4]);
-	NP_ASSERT_EQUAL(NULL, array_pnt_pop_element(&array, 4));
-	NP_ASSERT_EQUAL(NULL, array[4]);
+	NP_ASSERT_PTR_EQUAL(NULL, array[4]);
+	NP_ASSERT_PTR_EQUAL(NULL, array_pnt_pop_element(&array, 4));
+	NP_ASSERT_PTR_EQUAL(NULL, array[4]);
 
 	//if we remove the element at the 0th position, all elements after that
 	//must be shifted backward
 
-	NP_ASSERT_EQUAL(elem1, array_pnt_pop_element(&array, 0));
+	NP_ASSERT_PTR_EQUAL(elem1, array_pnt_pop_element(&array, 0));
 
 	//not contains the first element anymore
 	NP_ASSERT_EQUAL(-1, array_pnt_contains(array, elem1));
@@ -47,15 +47,15 @@ static void test_array_pnt_with_4_element(void)
 	NP_ASSERT_EQUAL(2, array_pnt_contains(array, elem4));
 
 	//really at the position, not just sayin'?
-	NP_ASSERT_EQUAL(elem2 , array[0]);
-	NP_ASSERT_EQUAL(elem3 , array[1]);
-	NP_ASSERT_EQUAL(elem4 , array[2]);
+	NP_ASSERT_PTR_EQUAL(elem2 , array[0]);
+	NP_ASSERT_PTR_EQUAL(elem3 , array[1]);
+	NP_ASSERT_PTR_EQUAL(elem4 , array[2]);
 
 	//removing last element
-	NP_ASSERT_EQUAL(elem4, array_pnt_pop_element(&array, 2));
+	NP_ASSERT_PTR_EQUAL(elem4, array_pnt_pop_element(&array, 2));
 
-	NP_ASSERT_EQUAL(elem2 , array[0]);
-	NP_ASSERT_EQUAL(elem3 , array[1]);
+	NP_ASSERT_PTR_EQUAL(elem2 , array[0]);
+	NP_ASSERT_PTR_EQUAL(elem3 , array[1]);
 	//NP_ASSERT_EQUAL(NULL , array[2]);
 	free(array);
 }
@@ -71,7 +71,7 @@ static void test_array_pnt_first_element_added(void)
 
 
 	//after initialization, the first element is the array terminator NULL.
-	NP_ASSERT_EQUAL(array[0], NULL);
+	NP_ASSERT_PTR_EQUAL(array[0], NULL);
 
 
 	//and the size is zero
@@ -110,7 +110,7 @@ void test_array_fix(void)
 	{
 		array_fix_add_element(&array, &len, elem1);
 
-		NP_ASSERT_EQUAL(elem1, array[0]);
+		NP_ASSERT_PTR_EQUAL(elem1, array[0]);
 
 		NP_ASSERT_EQUAL(1, array_fix_population(array, len));
 		NP_ASSERT_EQUAL(1, len);
@@ -119,7 +119,7 @@ void test_array_fix(void)
 	{
 		//should have no effect, but may increases the length
 		array_fix_add_element(&array, &len, NULL);
-		NP_ASSERT_EQUAL(elem1, array[0]);
+		NP_ASSERT_PTR_EQUAL(elem1, array[0]);
 		NP_ASSERT_EQUAL(1, array_fix_population(array, len));
 
 		//adding NULL may increase the length of the array
@@ -133,10 +133,10 @@ void test_array_fix(void)
 		array_fix_add_element(&array, &len, elem4);
 
 		//really at the position, not just sayin'?
-		NP_ASSERT_EQUAL(elem1, array[0]);
-		NP_ASSERT_EQUAL(elem2, array[1]);
-		NP_ASSERT_EQUAL(elem3, array[2]);
-		NP_ASSERT_EQUAL(elem4, array[3]);
+		NP_ASSERT_PTR_EQUAL(elem1, array[0]);
+		NP_ASSERT_PTR_EQUAL(elem2, array[1]);
+		NP_ASSERT_PTR_EQUAL(elem3, array[2]);
+		NP_ASSERT_PTR_EQUAL(elem4, array[3]);
 
 
 	}
@@ -150,14 +150,14 @@ void test_array_fix(void)
 	}
 
 
-	NP_ASSERT_EQUAL(elem1, array_fix_remove_element(array, len, 0));
+	NP_ASSERT_PTR_EQUAL(elem1, array_fix_remove_element(array, len, 0));
 
 	{
 		//deleting just set the slot to NULL
-		NP_ASSERT_EQUAL(NULL, array[0]);
-		NP_ASSERT_EQUAL(elem2, array[1]);
-		NP_ASSERT_EQUAL(elem3, array[2]);
-		NP_ASSERT_EQUAL(elem4, array[3]);
+		NP_ASSERT_PTR_EQUAL(NULL, array[0]);
+		NP_ASSERT_PTR_EQUAL(elem2, array[1]);
+		NP_ASSERT_PTR_EQUAL(elem3, array[2]);
+		NP_ASSERT_PTR_EQUAL(elem4, array[3]);
 	}
 
 
