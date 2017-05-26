@@ -13,9 +13,8 @@
 struct lxc_task
 {
 	Gate instance;
-	Wire wire;
-	LxcValue value;
 	int index;
+	LxcValue value;
 };
 
 struct lxc_task;
@@ -24,6 +23,8 @@ typedef struct lxc_task* Task;
 Task lxc_create_task(Gate instance, LxcValue value, int index);
 
 void lxc_execute_task(Task task);
+
+void lxc_execute_then_release(Task t);
 
 void default_execution_behavior(Gate instance, Signal type, int subtype, LxcValue value, uint index);
 

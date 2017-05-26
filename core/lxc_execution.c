@@ -28,14 +28,22 @@ void lxc_execute_task(Task task)
 {
 	Gate g = task->instance;
 	LxcValue value = task->value;
-	g->behavior->execute
-	(
-		g,
-		NULL == value? NULL : value->type,
-		task->wire->subtype,
-		value,
-		task->index
-	);
-
+	if(lxc_gate_is_enabled(g))
+	{
+		g->behavior->execute
+		(
+			g,
+			NULL == value? NULL : value->type,
+			task->value->subtype_info,
+			value,
+			task->index
+		);
+	}
 	lxc_unreference_value(value);
+}
+
+void lxc_execute_then_release(Task t)
+{
+	lxc_execute_task(t);
+	free(t);
 }

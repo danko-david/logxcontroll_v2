@@ -13,6 +13,8 @@ void lxc_test_destroy_wire(Wire w)
 {
 	//TODO test wire busy (has wired gates tokenports in use), releaslues, etc.
 
+	lxc_import_new_value(NULL, &w->current_value);
+
 	if(NULL != w->ref_des)
 	{
 		free(w->ref_des);
@@ -53,6 +55,10 @@ static void test_wire_create_destory(void)
 }
 
 //TODO tokenPort
+
+
+
+
 
 
 //

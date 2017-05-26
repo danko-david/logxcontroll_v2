@@ -51,6 +51,7 @@ void test_worker_pool(void)
 
 
 	lxc_test_destroy_worker_pool(wp);
+	free(wp);
 	//can
 
 

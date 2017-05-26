@@ -17,6 +17,11 @@ int logxcontroll_init_environment()
 		return 0;
 	}
 
+	//print stack trace on memory violation and other abort cases
+	signal(SIGSEGV, gnu_libc_print_stack_trace);
+	signal(SIGABRT, gnu_libc_print_stack_trace);
+
+
 	/*** initialize generic library ***/
 	lxc_init_generic_library();
 

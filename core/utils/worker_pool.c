@@ -46,6 +46,8 @@ static struct pool_thread* new_pool_thread(struct worker_pool* pool)
 	rrt_init(&(ret->thread));
 	ret->pool = pool;
 	ret->thread.on_release_callback = on_release;
+	//TODO this may leak if thread can not be started, create a teastcase for
+	//this, novaprova can "replace" rrt_ start with mocking
 	if(0 != rrt_start(&(ret->thread)))
 	{
 		return NULL;
@@ -81,7 +83,7 @@ int wp_submit_task(struct worker_pool* wp, void (*func)(void*), void* param)
 		if(NULL == use)
 		{
 			long_lock_unlock(&wp->pool_lock);
-			return LXC_ERROR_RESOURCE_BUSY;
+			return EBUSY;
 		}
 	}
 
@@ -173,10 +175,9 @@ int wp_wait_exit(struct worker_pool* pool)
 
 	pool->status = wp_exited;
 
-	//go through all the busy and free list, if we still have thread that not
-	//exited
-	//we have to unlock the pool to all exiting thread can access the lists
-	//then wait a while.
+	//go through all the busy and free list, if we still have not exited threads
+	//we have to unlock the pool's lock to running threads can access these lists
+	//then wait for a while.
 	bool exited = false;
 	for(;;)
 	{
@@ -226,7 +227,6 @@ int wp_destroy(struct worker_pool* pool)
 
 	long_lock_unlock(&pool->pool_lock);
 	long_lock_destroy(&pool->pool_lock);
-	free(pool);
 
 	return 0;
 }

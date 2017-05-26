@@ -281,16 +281,56 @@ void wiring_output(Wire w, Gate gate, int index)
 	NP_ASSERT_PTR_EQUAL(w, win);
 }
 
-void circuit_enable_all_gate(IOCircuit circ)
+void circuit_set_gate_enable(IOCircuit circ, bool enable)
 {
 	{
 		int i = 0;
 		while(NULL != circ->gates[i])
 		{
-			lxc_gate_set_enabled(circ->gates[i], true);
+			lxc_gate_set_enabled(circ->gates[i], enable);
 			++i;
 		}
 	}
+}
+
+static IOCircuit create_basic_network_driver_sniffer_network()
+{
+	IOCircuit ret = lxc_create_circuit();
+
+	struct puppet_gate_instance* driver = create_puppet_gate();
+
+	{
+		lxc_gate_set_refdes(&driver->base.base, "network driver");
+		lxc_port_unchecked_add_new_port
+		(
+			&driver->base.output_ports,
+			"output",
+			&lxc_signal_bool,
+			0,
+			NULL
+		);
+
+		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(ret, &driver->base.base));
+
+	}
+
+	struct puppet_gate_instance* receiver = create_puppet_gate();
+	{
+		lxc_gate_set_refdes(&receiver->base.base, "network sniffer");
+		receiver->execute = puppet_add_value_array_pnt;
+		lxc_port_unchecked_add_new_port
+		(
+			&receiver->base.input_ports,
+			"input",
+			&lxc_signal_bool,
+			0,
+			NULL
+		);
+
+		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(ret, &receiver->base.base));
+	}
+
+	return ret;
 }
 
 
@@ -310,7 +350,7 @@ static IOCircuit create_multistage_bool_network()
 	NP_ASSERT_EQUAL(true, lxc_check_gate_exists("bool not"));
 	NP_ASSERT_EQUAL(true, lxc_check_gate_exists("bool xor"));
 
-	IOCircuit sub = lxc_create_circuit();
+	IOCircuit sub = create_basic_network_driver_sniffer_network();
 	lxc_circuit_set_name(sub, "multistage_bool_network");
 
 	Wire input = add_new_primitive_wire_to_circuit(sub, &lxc_signal_bool, "input");
@@ -346,40 +386,11 @@ static IOCircuit create_multistage_bool_network()
 	//output
 	wiring_output(output, D, 0);
 
-	struct puppet_gate_instance* driver = create_puppet_gate();
+	Gate driver = lxc_circuit_get_gate_by_refdes(sub, "network driver");
+	Gate sniffer = lxc_circuit_get_gate_by_refdes(sub, "network sniffer");
 
-	{
-		lxc_gate_set_refdes(&driver->base.base, "network driver");
-		lxc_port_unchecked_add_new_port
-		(
-			&driver->base.output_ports,
-			"output",
-			&lxc_signal_bool,
-			0,
-			NULL
-		);
-
-		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(sub, &driver->base.base));
-		wiring_output(input, &driver->base.base, 0);
-	}
-
-	struct puppet_gate_instance* receiver = create_puppet_gate();
-	{
-		lxc_gate_set_refdes(&receiver->base.base, "network sniffer");
-		receiver->execute = puppet_add_value_array_pnt;
-		lxc_port_unchecked_add_new_port
-		(
-			&receiver->base.input_ports,
-			"input",
-			&lxc_signal_bool,
-			0,
-			NULL
-		);
-
-		wiring_input(&receiver->base.base, 0, output);
-
-		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(sub, &receiver->base.base));
-	}
+	wiring_output(input, driver, 0);
+	wiring_input(sniffer, 0, output);
 
 	return sub;
 }
@@ -591,7 +602,7 @@ static void generic_validate_truth_table(const char* name, bool use_secound_inpu
 		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(circ, &receiver->base.base));
 	}
 
-	circuit_enable_all_gate(circ);
+	circuit_set_gate_enable(circ, true);
 
 	int i=0;
 	while(NULL != truth_table[i])
@@ -731,7 +742,7 @@ static void test_scenario_bool_gate_circuit__with_hazard(void)
 
 	Wire input = lxc_circuit_get_wire_by_refdes(circ, "input");
 
-	circuit_enable_all_gate(circ);
+	circuit_set_gate_enable(circ, true);
 
 	Gate drv = &driver->base.base;
 
@@ -861,7 +872,7 @@ static void test_scenario_bool_gate_circuit__without_hazard(void)
 		free(a);
 	}
 
-	circuit_enable_all_gate(circ);
+	circuit_set_gate_enable(circ, true);
 
 	Gate drv = &driver->base.base;
 
@@ -899,4 +910,102 @@ static void test_scenario_bool_gate_circuit__without_hazard(void)
 	//TODO wait for circuit become idle
 }
 
+
+static int RISING_EDGE_COUNT;
+static LxcValue RISING_EDGE_PREVIOUS_VALUE;
+
+static struct worker_pool worker_pool;
+
+void async_execution(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+{
+	Task t = lxc_create_task(instance, value, index);
+	NP_ASSERT_EQUAL(0, wp_submit_task(&worker_pool, lxc_execute_then_release, t));
+}
+
+void rising_edge_listener(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+{
+	if(&lxc_signal_bool != type || 0 != subtype)
+	{
+		return;
+	}
+
+	if(NULL == RISING_EDGE_PREVIOUS_VALUE)
+	{
+		RISING_EDGE_PREVIOUS_VALUE = value;
+		return;
+	}
+
+	bool prev = unsafe_extract_boolean(RISING_EDGE_PREVIOUS_VALUE);
+	bool crnt = unsafe_extract_boolean(value);
+	//printf("current value: %s\n", crnt ? "true":"false");
+	if(crnt && !prev)
+	{
+		++RISING_EDGE_COUNT;
+	}
+
+	RISING_EDGE_PREVIOUS_VALUE = value;
+}
+
+
+/**
+ * 			back	/---\    	output	   _   _   _
+ * 		+-----------| A |o--+----------> _| |_| |_|  .....
+ * 		|			\---/	|
+ * 		|					|
+ * 		|	/---\ w	/---\	|
+ * 		+--o| C |--o| B |---+
+ * 			\---/	\---/
+ *
+ *
+ * */
+static void test_scenario_bool_gate_oscillator(void)
+{
+	logxcontroll_init_environment();
+	IOCircuit circ = create_basic_network_driver_sniffer_network();
+
+	struct puppet_gate_instance* sniffer =
+		(struct puppet_gate_instance*) lxc_circuit_get_gate_by_refdes(circ, "network sniffer");
+
+	sniffer->execute = rising_edge_listener;
+
+	Wire back = add_new_primitive_wire_to_circuit(circ, &lxc_signal_bool, "back");
+	Wire output = add_new_primitive_wire_to_circuit(circ, &lxc_signal_bool, "output");
+	Wire w = add_new_primitive_wire_to_circuit(circ, &lxc_signal_bool, "w");
+
+	wiring_input(&sniffer->base.base, 0, output);
+	back->current_value = lxc_bool_constant_value_false.value;
+
+	Gate A = add_new_gate_to_circuit(circ, "bool not", "A");
+	Gate B = add_new_gate_to_circuit(circ, "bool not", "B");
+	Gate C = add_new_gate_to_circuit(circ, "bool not", "C");
+
+	wiring_output(output, A, 0);
+	wiring_input(B, 0, output);
+
+	wiring_output(w, B, 0);
+	wiring_input(C, 0, w);
+
+	wiring_output(back, C, 0);
+	wiring_input(A, 0 ,back);
+
+	wp_init(&worker_pool);
+
+	A->execution_behavior = async_execution;
+	//B->execution_behavior = async_execution;
+	//C->execution_behavior = async_execution;
+
+	circuit_set_gate_enable(circ, true);
+	sleep(3);
+	circuit_set_gate_enable(circ, false);
+
+
+	printf("ring oscillator produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
+	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
+
+
+	lxc_test_destroy_worker_pool(&worker_pool);
+
+	destroy_circuit(circ);
+	logxcontroll_destroy_environment();
+}
 
