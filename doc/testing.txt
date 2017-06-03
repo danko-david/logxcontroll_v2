@@ -52,4 +52,10 @@ Note:	- if test executable and .valgrindrc and superssion file location are
 			modified supressions will not work (of course)
 		- with this method, all supression are global now.
 
-#TODO: to disable valgrind: export NOVAPROVA_VALGRIND=no
+
+Beacuse valgrind strongly affect execution timing (from valgrind page:
+`program is then run on a synthetic CPU`
+http://valgrind.org/docs/manual/manual-core.html )
+and that's hides some concurrency problem. So it's recommended to disabling
+valgrind and executing all test. (if doing full test.)
+#to disable valgrind: export NOVAPROVA_VALGRIND=no
