@@ -631,6 +631,22 @@ void queue_add_element
 	if(NULL == *head)
 	{
 		*head = elem;
+		elem->prev = NULL;
+	}
+
+	elem->prev = *tail;
+	elem->next = NULL;
+	if(NULL != *tail)
+	{
+		(*tail)->next = elem;
+	}
+	*tail = elem;
+
+
+/*
+	if(NULL == *head)
+	{
+		*head = elem;
 		*tail = elem;
 		elem->next = NULL;
 		elem->prev = NULL;
@@ -644,6 +660,7 @@ void queue_add_element
 
 		*tail = elem;
 	}
+*/
 }
 
 struct queue_element* queue_pop_tail_element
@@ -662,10 +679,10 @@ struct queue_element* queue_pop_tail_element
 
 		if(NULL != ret->prev)
 		{
-			//set the tail with the previous one
+			//set the tail to the previous one
 			*tail = ret->prev;
 
-			//unbind returning element
+			//unbind the previous linked to this nod
 			ret->prev->next = NULL;
 
 			//unbind reference to the queue
@@ -676,7 +693,7 @@ struct queue_element* queue_pop_tail_element
 		{
 			*head = NULL;
 			*tail = NULL;
-			//and ret->next nad ret->prev in this case is NULL
+			//and ret->next and ret->prev in this case is NULL
 		}
 
 		//ret->next is always NULL!
@@ -693,48 +710,34 @@ void queue_pop_intermediate_element
 {
 	struct queue_element* op;
 
-	//first element of the queue
-	if(NULL == intermediate->prev)
+	if(NULL != intermediate->prev)
 	{
+		//really an intermedaite element
+		intermediate->prev->next = intermediate->next;
+	}
+	else
+	{
+		//it's the frist node in the dll
+		if(NULL != intermediate->next)
+		{
+			intermediate->next->prev = NULL;
+		}
 		*head = intermediate->next;
-		op = intermediate->next;
+	}
 
-		if(NULL == op)
-		//this is the only element, empty the queue
-		{
-			*tail = NULL;
-		}
-		else
-		{
-			op->prev = NULL;
-		}
+	if(NULL != intermediate->next)
+	{
+		//really an intermediate element
+		intermediate->next->prev = intermediate->prev;
 	}
 	else
-	//set the previous element's next
 	{
-		intermediate->prev = intermediate->next;
-	}
-
-	//last element of the queue
-	if(NULL == intermediate->next)
-	{
+		//it's the tail of the dll
+		if(NULL != intermediate->prev)
+		{
+			intermediate->prev->next = NULL;
+		}
 		*tail = intermediate->prev;
-		op = intermediate->prev;
-
-		if(NULL == op)
-		//this is the only element
-		{
-			*head = NULL;
-		}
-		else
-		{
-			op->next = NULL;
-		}
-	}
-	else
-	//set the next element's prev
-	{
-		intermediate->next = intermediate->prev;
 	}
 }
 

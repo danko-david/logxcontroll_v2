@@ -991,8 +991,8 @@ static void test_scenario_bool_gate_oscillator(void)
 	wp_init(&worker_pool);
 
 	A->execution_behavior = async_execution;
-	//B->execution_behavior = async_execution;
-	//C->execution_behavior = async_execution;
+	B->execution_behavior = async_execution;
+	C->execution_behavior = async_execution;
 
 	circuit_set_gate_enable(circ, true);
 	sleep(3);

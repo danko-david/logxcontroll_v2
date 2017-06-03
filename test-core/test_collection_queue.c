@@ -19,7 +19,9 @@ static void queue_free_all(struct queue_element** HEAD,struct queue_element** TA
 {
 	while(NULL != *TAIL)
 	{
+		struct queue_element* in = *TAIL;
 		queue_pop_intermediate_element(HEAD, *TAIL, TAIL);
+		free(in);
 	}
 }
 
