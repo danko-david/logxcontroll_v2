@@ -84,14 +84,20 @@ bool rrt_try_rerun_if_free(struct rerunnable_thread* rrt, void (*function)(void*
 static void pointer_on_shutdown_request(void* param)
 {}
 
-static void try_invoke_callback(struct rerunnable_thread* rrt)
+static void try_invoke_callback
+(
+	struct rerunnable_thread* rrt,
+	enum rrt_callback_point point,
+	void (*funct)(void*),
+	void* param
+)
 {
-	void (*volatile re)(struct rerunnable_thread*, void (*funct)(void*), void*)
+	void (*re)(struct rerunnable_thread*, enum rrt_callback_point, void (*funct)(void*), void*)
 		= rrt->on_release_callback;
 
 	if(NULL != re)
 	{
-		re(rrt, rrt->run, (void*) rrt->parameter);
+		re(rrt, point, funct, param);
 	}
 }
 
@@ -111,18 +117,25 @@ static void executor_function(struct rerunnable_thread* rrt)
 
 		if(rrt_shutdown_requested == atomic_get_state(rrt))
 		{
-			//we can notify about a job and right after request the shutdown
-			//that results that we miss the job because the flag is already
-			//setted to shutdown request.
-			if(pointer_on_shutdown_request == rrt->run)
-			{
-				break;
-			}
+			//we get notified because of shutdown.
+			break;
 		}
 
-		rrt->run((void*)rrt->parameter);
+		void (*funct)(void*) = rrt->run;
+		void* param = rrt->parameter;
 
-		try_invoke_callback(rrt);
+		funct(param);
+
+		try_invoke_callback
+		(
+			rrt,
+			rrt_right_after_executed,
+			funct,
+			param
+		);
+
+		rrt->run = NULL;
+		rrt->parameter = NULL;
 
 		short_lock(rrt);
 		//after task done, if shutdown requested, we perform it.
@@ -135,8 +148,13 @@ static void executor_function(struct rerunnable_thread* rrt)
 		rrt->status = rrt_idle;
 		short_unlock(rrt);
 
-		rrt->run = NULL;
-		rrt->parameter = NULL;
+		try_invoke_callback
+		(
+			rrt,
+			rrt_after_become_idle,
+			funct,
+			param
+		);
 	}
 
 	atomic_update_state(rrt, rrt_exited);

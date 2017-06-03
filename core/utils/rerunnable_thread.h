@@ -23,6 +23,12 @@ enum rerunnable_thread_state
 
 typedef volatile int pthread_spinlock_t;
 
+enum rrt_callback_point
+{
+	rrt_right_after_executed,
+	rrt_after_become_idle,
+};
+
 struct rerunnable_thread
 {
 	pthread_t thread;
@@ -34,11 +40,11 @@ struct rerunnable_thread
 	pthread_cond_t has_job_condition;
 
 	void (*volatile run)(void*);
-	volatile void* parameter;
+	void* parameter;
 
-	volatile enum rerunnable_thread_state status;
+	enum rerunnable_thread_state status;
 
-	void (*volatile on_release_callback)(struct rerunnable_thread*, void (*funct)(void*), void*);
+	void (*on_release_callback)(struct rerunnable_thread*, enum rrt_callback_point point, void (*funct)(void*), void*);
 };
 
 

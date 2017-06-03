@@ -10,32 +10,36 @@
 static void on_release
 (
 	struct rerunnable_thread* rrt,
+	enum rrt_callback_point point,
 	void (*func)(void*),
 	void* param
 )
 {
-	//UNUSED(rrt);
-	//UNUSED(func);
-	//printf("on_release pool_thread ptr: %p\n", param);
-	struct pool_thread* task  = (struct pool_thread*) param;
-	struct worker_pool* pool = task->pool;
-	long_lock_lock(&pool->pool_lock);
+	if(rrt_after_become_idle == point)
+	{
+		//UNUSED(rrt);
+		//UNUSED(func);
+		//printf("on_release pool_thread ptr: %p\n", param);
+		struct pool_thread* task  = (struct pool_thread*) param;
+		struct worker_pool* pool = task->pool;
+		long_lock_lock(&pool->pool_lock);
 
-	queue_pop_intermediate_element
-	(
-		&pool->busy_head,
-		&task->elem,
-		&pool->busy_tail
-	);
+		queue_pop_intermediate_element
+		(
+			&pool->busy_head,
+			&task->elem,
+			&pool->busy_tail
+		);
 
-	queue_add_element
-	(
-		&pool->free_head,
-		&task->elem,
-		&pool->free_tail
-	);
+		queue_add_element
+		(
+			&pool->free_head,
+			&task->elem,
+			&pool->free_tail
+		);
 
-	long_lock_unlock(&pool->pool_lock);
+		long_lock_unlock(&pool->pool_lock);
+	}
 }
 
 static struct pool_thread* new_pool_thread(struct worker_pool* pool)

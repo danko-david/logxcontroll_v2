@@ -243,12 +243,3 @@ static void test_array_nt_first_element_added(void)
 
 	free(array);
 }
-
-
-/*void test_queue(void)
-{
-	//TODO
-
-
-}
-*/

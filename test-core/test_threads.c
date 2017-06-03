@@ -88,12 +88,16 @@ void print_usual_switch_wait(const char* info, int reach)
 static void print_thread_state
 (
 	struct rerunnable_thread* rrt,
+	enum rrt_callback_point point,
 	void (*func)(void*),
 	void* param
 )
 {
-	enum rerunnable_thread_state state = rrt_get_state(rrt);
-	printf("Thread job done, state: %d\n", state);
+	if(rrt_after_become_idle == point)
+	{
+		enum rerunnable_thread_state state = rrt_get_state(rrt);
+		printf("Thread job done, state: %d\n", state);
+	}
 }
 
 void assert_thread_reach_state
