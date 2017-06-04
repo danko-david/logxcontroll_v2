@@ -32,9 +32,9 @@ function(enable_cxx_compiler_flag_if_supported flag)
     endif()
 endfunction()
 
-enable_cxx_compiler_flag_if_supported("-Wall")
-enable_cxx_compiler_flag_if_supported("-Wextra")
-enable_cxx_compiler_flag_if_supported("-pedantic")
+#enable_cxx_compiler_flag_if_supported("-Wall")
+#enable_cxx_compiler_flag_if_supported("-Wextra")
+#enable_cxx_compiler_flag_if_supported("-pedantic")
 
 ###### function for embedded library compilation ######
 function(lxc_build_add_embedded_library name)
@@ -66,10 +66,7 @@ function(include_novaprova)
 		if (NOVAPROVA_FOUND)
 			set(LIBRARIES ${LIBRARIES} ${NOVAPROVA_LIBRARIES} PARENT_SCOPE)
 			add_definitions(${NOVAPROVA_CFLAGS} ${NOVAPROVA_CFLAGS_OTHER})
-			#set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
-			set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf")
-			list(APPEND CXXFLAGS "-g")
-			add_definitions(-g)
+			add_definitions(-gdwarf)
 		endif()
 	endif()
 endfunction(include_novaprova)
@@ -79,10 +76,11 @@ endfunction(include_novaprova)
 lxc_build_add_embedded_library(arithmetic)
 
 #posix library
-lxc_build_add_embedded_library(posix)
+#lxc_build_add_embedded_library(posix)
 
 #tests
 lxc_build_add_embedded_test(test-core)
+lxc_build_add_embedded_library(experiment)
 include_novaprova()
 
 
@@ -121,6 +119,7 @@ list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 
 target_link_libraries (logxcontroll-core ${LIBRARIES})
+set_property(TARGET logxcontroll-core PROPERTY C_STANDARD 99)
 
 #
 # DEBUG info
