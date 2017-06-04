@@ -65,5 +65,33 @@ void test_worker_pool(void)
 	//TODO destroy
 }
 
+static void random_sleepers(void* asd)
+{
+	usleep(1000*(rand()%1000));
+}
+
+void test_worker_pool__high_thread_count(void)
+{
+	int i=-1;
+	while(++i <10)
+	{
+		struct worker_pool* wp = lxc_test_create_worker_pool();
+		NP_ASSERT_NOT_NULL(wp);
+
+		int n = -1;
+		while(++n < 150)
+		{
+			wp_submit_task(wp, random_sleepers, NULL);
+		}
+
+		//half sec
+		usleep(1000* 500);
+
+		lxc_test_destroy_worker_pool(wp);
+		free(wp);
+	}
+}
+
+
 //TODO shrink/spawn
 

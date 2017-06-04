@@ -53,9 +53,24 @@ Note:	- if test executable and .valgrindrc and superssion file location are
 		- with this method, all supression are global now.
 
 
-Beacuse valgrind strongly affect execution timing (from valgrind page:
+Beacuse valgrind strongly affects execution timing (from valgrind page:
 `program is then run on a synthetic CPU`
 http://valgrind.org/docs/manual/manual-core.html )
 and that's hides some concurrency problem. So it's recommended to disabling
 valgrind and executing all test. (if doing full test.)
 #to disable valgrind: export NOVAPROVA_VALGRIND=no
+
+
+About concurrency testing:
+Even in this case (disabling valgrind) we can't sure about everiting is
+working fine, concurrency problems highly depend on thread scheduling and
+occures only with propability. For now i run tests for multiple times to
+"ensure" (really only guess) "there's no" bug in the code.
+
+Another experience is that concurrency problems occurs with higher
+propability on an overloaded system. So sometimes under full testing i run
+`stress -c $n` to put a higher load to the CPU. ($n is 1.5 -2  time of the
+available CPUs)
+
+A better concurrency testing alternative: maze (http://kloobok.com/index.php)
+I didn't invested much time for that, but it can be a handy tool.

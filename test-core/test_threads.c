@@ -342,7 +342,7 @@ static void test_shutdown_request_beneath_running_task(void)
 		rrt_busy
 	);
 
-	rrt_graceful_shutdown(thread);
+	NP_ASSERT_EQUAL(0, rrt_graceful_shutdown(thread));
 
 	assert_thread_reach_state
 	(

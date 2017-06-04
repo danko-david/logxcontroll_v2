@@ -46,15 +46,20 @@ static void notify_job(struct rerunnable_thread* rrt)
 
 static void wait_for_job(struct rerunnable_thread* rrt)
 {
-	if(rrt_idle != atomic_get_state(rrt))
-		return;
-
 	pthread_mutex_lock(&(rrt->mutex));
-	pthread_cond_wait(&(rrt->has_job_condition), &(rrt->mutex));
+	if(rrt_idle == atomic_get_state(rrt))
+	{
+		pthread_cond_wait(&(rrt->has_job_condition), &(rrt->mutex));
+	}
 	pthread_mutex_unlock(&(rrt->mutex));
 }
 
-bool rrt_try_rerun_if_free(struct rerunnable_thread* rrt, void (*function)(void*), void* param)
+bool rrt_try_rerun_if_free
+(
+	struct rerunnable_thread* rrt,
+	void (*function)(void*),
+	void* param
+)
 {
 	bool ret = false;
 	short_lock(rrt);
@@ -63,12 +68,12 @@ bool rrt_try_rerun_if_free(struct rerunnable_thread* rrt, void (*function)(void*
 		ret = true;
 		rrt->status = rrt_busy;
 
-		//we preserved the thread, so we can unlock
-		short_unlock(rrt);
-
 		//we setup the function and parameter
 		rrt->run = function;
 		rrt->parameter = param;
+
+		//we preserved the thread, so we can unlock
+		short_unlock(rrt);
 
 		//then notify the thread, it can work now
 		notify_job(rrt);
@@ -92,7 +97,12 @@ static void try_invoke_callback
 	void* param
 )
 {
-	void (*re)(struct rerunnable_thread*, enum rrt_callback_point, void (*funct)(void*), void*)
+	void (*re)
+	(
+		struct rerunnable_thread*,
+		enum rrt_callback_point,
+		void (*funct)(void*), void*
+	)
 		= rrt->on_release_callback;
 
 	if(NULL != re)
@@ -115,15 +125,25 @@ static void executor_function(struct rerunnable_thread* rrt)
 		 * we are notified.
 		 */
 
-		if(rrt_shutdown_requested == atomic_get_state(rrt))
-		{
-			//we get notified because of shutdown.
-			break;
-		}
+		short_lock(rrt);
 
 		void (*funct)(void*) = rrt->run;
 		void* param = rrt->parameter;
 
+		if
+		(
+			rrt_shutdown_requested == rrt->status
+			&&
+			pointer_on_shutdown_request == funct
+		)
+		{
+			//we get notified because of shutdown.
+			short_unlock(rrt);
+			break;
+		}
+
+
+		short_unlock(rrt);
 		funct(param);
 
 		try_invoke_callback
@@ -183,12 +203,12 @@ int rrt_start(struct rerunnable_thread* rrt)
 		//for this newly created thread, so i set this before thread start
 		rrt->status = rrt_idle;
 		ret =	pthread_create
-					(
-						&(rrt->thread),
-						NULL,
-						(void *(*) (void *)) executor_function,
-						(void*) rrt
-					);
+				(
+					&(rrt->thread),
+					NULL,
+					(void *(*) (void *)) executor_function,
+					(void*) rrt
+				);
 	}
 	short_unlock(rrt);
 	return ret;
@@ -207,32 +227,46 @@ bool rrt_is_free(struct rerunnable_thread* rrt)
 enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread* rrt)
 {
 	enum rerunnable_thread_state state;
+	int i = 0;
+	while(++i < 150)
+	{
+		short_lock(rrt);
+		if(!long_lock_trylock(&rrt->mutex))
+		{
+			short_unlock(rrt);
+			continue;
+		}
 
-	short_lock(rrt);
-	state = rrt->status;
-	if(rrt_idle == state)
-	{
-		rrt->status = rrt_shutdown_requested;
-		rrt->run = pointer_on_shutdown_request;
-		short_unlock(rrt);
-		notify_job(rrt);
-		return SUCCESS;
-	}
-	else if(rrt_busy == state)
-	{
-		rrt->status = rrt_shutdown_requested;
-		short_unlock(rrt);
-		return SUCCESS;
-	}
-	else
-	{
-		short_unlock(rrt);
+		state = rrt->status;
+		if(rrt_idle == state)
+		{
+			rrt->status = rrt_shutdown_requested;
+			rrt->run = pointer_on_shutdown_request;
+			long_lock_unlock(&rrt->mutex);
+			short_unlock(rrt);
+			notify_job(rrt);
+			return SUCCESS;
+		}
+		else if(rrt_busy == state)
+		{
+			rrt->status = rrt_shutdown_requested;
+			long_lock_unlock(&rrt->mutex);
+			short_unlock(rrt);
+			return SUCCESS;
+		}
+		else
+		{
+			long_lock_unlock(&rrt->mutex);
+			short_unlock(rrt);
+		}
+
+		//if(rrt_initalized == state || rrt_exited == state) //in any other case
+		{
+			return LXC_ERROR_ILLEGAL_REQUEST;
+		}
 	}
 
-	//if(rrt_initalized == state || rrt_exited == state) //in any other case
-	{
-		return LXC_ERROR_ILLEGAL_REQUEST;
-	}
+	return LXC_ERROR_TOO_HIGH_CONCURRENCY;
 }
 
 enum rerunnable_thread_state rrt_get_state(struct rerunnable_thread* rrt)

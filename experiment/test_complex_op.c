@@ -922,6 +922,7 @@ void async_execution(Gate instance, Signal type, int subtype, LxcValue value, ui
 	NP_ASSERT_EQUAL(0, wp_submit_task(&worker_pool, lxc_execute_then_release, t));
 }
 
+
 void rising_edge_listener(Gate instance, Signal type, int subtype, LxcValue value, uint index)
 {
 	if(&lxc_signal_bool != type || 0 != subtype)
@@ -991,10 +992,11 @@ static void test_scenario_bool_gate_oscillator(void)
 	wp_init(&worker_pool);
 
 	A->execution_behavior = async_execution;
-	B->execution_behavior = async_execution;
-	C->execution_behavior = async_execution;
+	//B->execution_behavior = async_execution;
+	//C->execution_behavior = async_execution;
 
 	circuit_set_gate_enable(circ, true);
+	lxc_drive_wire_value(C, 0, back, lxc_bool_constant_value_true.value);
 	sleep(3);
 	circuit_set_gate_enable(circ, false);
 
