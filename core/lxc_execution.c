@@ -26,24 +26,27 @@ Task lxc_create_task(Gate instance, LxcValue value, int index)
 
 void lxc_execute_task(Task task)
 {
-	Gate g = task->instance;
-	LxcValue value = task->value;
+	lxc_do_execute(task->instance, task->value, task->index);
+}
+
+void lxc_do_execute(Gate g, LxcValue value, uint index)
+{
 	if(lxc_gate_is_enabled(g))
 	{
 		g->behavior->execute
 		(
 			g,
 			NULL == value? NULL : value->type,
-			task->value->subtype_info,
+			value->subtype_info,
 			value,
-			task->index
+			index
 		);
 	}
-	lxc_unreference_value(value);
 }
 
 void lxc_execute_then_release(Task t)
 {
 	lxc_execute_task(t);
+	lxc_unreference_value(t->value);
 	free(t);
 }

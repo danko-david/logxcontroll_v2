@@ -669,36 +669,29 @@ struct queue_element* queue_pop_tail_element
 	struct queue_element** tail
 )
 {
-	if(NULL == *tail)
+	//much simple alternative
+	struct queue_element* op = *tail;
+	if(NULL == op)
 	{
 		return NULL;
 	}
-	else
+	queue_pop_intermediate_element(head, *tail, tail);
+	return op;
+}
+
+struct queue_element* queue_pop_head_element
+(
+	struct queue_element** head,
+	struct queue_element** tail
+)
+{
+	struct queue_element* op = *head;
+	if(NULL == op)
 	{
-		struct queue_element* ret = *tail;
-
-		if(NULL != ret->prev)
-		{
-			//set the tail to the previous one
-			*tail = ret->prev;
-
-			//unbind the previous linked to this nod
-			ret->prev->next = NULL;
-
-			//unbind reference to the queue
-			ret->prev = NULL;
-		}
-		else
-		//this means only this element in the queue
-		{
-			*head = NULL;
-			*tail = NULL;
-			//and ret->next and ret->prev in this case is NULL
-		}
-
-		//ret->next is always NULL!
-		return ret;
+		return NULL;
 	}
+	queue_pop_intermediate_element(head, *head, tail);
+	return op;
 }
 
 void queue_pop_intermediate_element

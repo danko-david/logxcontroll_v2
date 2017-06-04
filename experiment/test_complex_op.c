@@ -959,9 +959,8 @@ void rising_edge_listener(Gate instance, Signal type, int subtype, LxcValue valu
  *
  *
  * */
-static void test_scenario_bool_gate_oscillator(void)
+static IOCircuit create_bool_oscillator(void)
 {
-	logxcontroll_init_environment();
 	IOCircuit circ = create_basic_network_driver_sniffer_network();
 
 	struct puppet_gate_instance* sniffer =
@@ -987,23 +986,147 @@ static void test_scenario_bool_gate_oscillator(void)
 	wiring_input(C, 0, w);
 
 	wiring_output(back, C, 0);
-	wiring_input(A, 0 ,back);
+	wiring_input(A, 0, back);
+
+	return circ;
+}
+
+
+static void test_scenario_bool_gate_oscillator_1_async(void)
+{
+	logxcontroll_init_environment();
 
 	wp_init(&worker_pool);
 
-	A->execution_behavior = async_execution;
-	//B->execution_behavior = async_execution;
-	//C->execution_behavior = async_execution;
+	IOCircuit circ = create_bool_oscillator();
+	lxc_circuit_get_gate_by_refdes(circ, "A")->execution_behavior = async_execution;
 
 	circuit_set_gate_enable(circ, true);
-	lxc_drive_wire_value(C, 0, back, lxc_bool_constant_value_true.value);
+	sleep(3);
+	circuit_set_gate_enable(circ, false);
+
+	printf("ring oscillator (1 async) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
+	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
+
+	lxc_test_destroy_worker_pool(&worker_pool);
+
+	destroy_circuit(circ);
+	logxcontroll_destroy_environment();
+}
+
+
+static void test_scenario_bool_gate_oscillator_3_async(void)
+{
+	logxcontroll_init_environment();
+
+	wp_init(&worker_pool);
+
+	IOCircuit circ = create_bool_oscillator();
+	lxc_circuit_get_gate_by_refdes(circ, "A")->execution_behavior = async_execution;
+	lxc_circuit_get_gate_by_refdes(circ, "B")->execution_behavior = async_execution;
+	lxc_circuit_get_gate_by_refdes(circ, "C")->execution_behavior = async_execution;
+
+	circuit_set_gate_enable(circ, true);
 	sleep(3);
 	circuit_set_gate_enable(circ, false);
 
 
-	printf("ring oscillator produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
+	printf("ring oscillator (3 async) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
 	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
 
+	lxc_test_destroy_worker_pool(&worker_pool);
+
+	destroy_circuit(circ);
+	logxcontroll_destroy_environment();
+}
+
+
+struct queue
+{
+	struct queue_element* head;
+	struct queue_element* tail;
+};
+
+struct qe_task
+{
+	struct queue_element qe;
+	Gate instance;
+	LxcValue value;
+	uint index;
+};
+
+static struct queue* LOOP_BREAKER = NULL;
+
+static struct qe_task* create_qe_task(Gate instance, LxcValue val, uint index)
+{
+	struct qe_task* ret = malloc_zero(sizeof(struct qe_task));
+	ret->instance = instance;
+	lxc_reference_value(val);
+	ret->value = val;
+	ret->index = index;
+	return ret;
+}
+
+static void qe_task_execute_then_destroy(struct qe_task* e)
+{
+	lxc_do_execute(e->instance, e->value, e->index);
+	lxc_unreference_value(e->value);
+	free(e);
+}
+
+void loopbreaker_execution(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+{
+	struct qe_task* task = create_qe_task(instance, value, index);
+	if(NULL == LOOP_BREAKER)
+	{
+		LOOP_BREAKER = malloc_zero(sizeof(struct queue));
+
+		struct qe_task* crnt = task;
+
+		while(NULL != crnt)
+		{
+			qe_task_execute_then_destroy(crnt);
+			crnt = (struct qe_task*) queue_pop_head_element(&LOOP_BREAKER->head, &LOOP_BREAKER->tail);
+		}
+
+		//done, wipe
+		free(LOOP_BREAKER);
+		LOOP_BREAKER = NULL;
+	}
+	else
+	{
+		queue_add_element
+		(
+			&LOOP_BREAKER->head,
+			&task->qe,
+			&LOOP_BREAKER->tail
+		);
+		return;
+	}
+}
+
+static void task_disable_circuit_after_3_sec(IOCircuit circ)
+{
+	sleep(3);
+	circuit_set_gate_enable(circ, false);
+}
+
+static void test_scenario_bool_gate_oscillator_lookbreaker(void)
+{
+	logxcontroll_init_environment();
+
+	wp_init(&worker_pool);
+
+	IOCircuit circ = create_bool_oscillator();
+	lxc_circuit_get_gate_by_refdes(circ, "A")->execution_behavior = loopbreaker_execution;
+	//lxc_circuit_get_gate_by_refdes(circ, "B")->execution_behavior = async_execution;
+	//lxc_circuit_get_gate_by_refdes(circ, "C")->execution_behavior = async_execution;
+
+	wp_submit_task(&worker_pool, task_disable_circuit_after_3_sec, circ);
+	circuit_set_gate_enable(circ, true);
+
+	printf("ring oscillator (3 async) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
+	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
 
 	lxc_test_destroy_worker_pool(&worker_pool);
 

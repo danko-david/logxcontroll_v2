@@ -167,6 +167,12 @@ struct queue_element* queue_pop_tail_element
 	struct queue_element** tail
 );
 
+struct queue_element* queue_pop_head_element
+(
+	struct queue_element** head,
+	struct queue_element** tail
+);
+
 void queue_pop_intermediate_element
 (
 	struct queue_element** head,
