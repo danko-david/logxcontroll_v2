@@ -1111,7 +1111,7 @@ static void task_disable_circuit_after_3_sec(IOCircuit circ)
 	circuit_set_gate_enable(circ, false);
 }
 
-static void test_scenario_bool_gate_oscillator_1_lookbreaker(void)
+static void test_scenario_bool_gate_oscillator_1_loopbreaker(void)
 {
 	logxcontroll_init_environment();
 
@@ -1125,7 +1125,7 @@ static void test_scenario_bool_gate_oscillator_1_lookbreaker(void)
 	wp_submit_task(&worker_pool, task_disable_circuit_after_3_sec, circ);
 	circuit_set_gate_enable(circ, true);
 
-	printf("ring oscillator (3 async) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
+	printf("ring oscillator (3 lookbreaker) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
 	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
 
 	lxc_test_destroy_worker_pool(&worker_pool);
@@ -1134,7 +1134,7 @@ static void test_scenario_bool_gate_oscillator_1_lookbreaker(void)
 	logxcontroll_destroy_environment();
 }
 
-static void test_scenario_bool_gate_oscillator_3_lookbreaker(void)
+static void test_scenario_bool_gate_oscillator_3_loopbreaker(void)
 {
 	logxcontroll_init_environment();
 
@@ -1148,7 +1148,7 @@ static void test_scenario_bool_gate_oscillator_3_lookbreaker(void)
 	wp_submit_task(&worker_pool, task_disable_circuit_after_3_sec, circ);
 	circuit_set_gate_enable(circ, true);
 
-	printf("ring oscillator (3 async) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
+	printf("ring oscillator (3 lookbreaker) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
 	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
 
 	lxc_test_destroy_worker_pool(&worker_pool);
