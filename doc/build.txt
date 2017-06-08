@@ -1,0 +1,44 @@
+Identify (on most Unix) system's exact version: `cat /etc/issue`
+#
+## MAINTAINER-TODO:
+#	- Verify build environment requirements with scratch system install.
+#	- Specify absolut minimal build software versions.
+#	- create different build target (cmake)
+#
+
+
+
+###############################################################################
+# Debian 8.0
+# Install required packages:
+#
+sudo apt-get install build-essential make cmake
+
+#
+# Novaprova requirements:
+## MAINTAINER-TODO verify:  sudo apt-get install libxml2-dev
+
+###############################################################################
+# Under OpenSuse (42.2):
+# Install required packages:
+#
+sudo zypper install --type pattern devel_basis
+
+#
+# Novaprova requirements:
+sudo zypper in libxml2-devel libxslt-devel valgrind-devel doxygen
+ 
+###############################################################################
+## All platform (yet)
+# building novaprova:
+git clone https://github.com/novaprova/novaprova.git
+cd novaprova
+automake -ac
+autoreconf -iv
+./configure
+make
+sudo make install
+# when np.h "missing" do this:
+sudo cp np.h /usr/include/
+#
+
