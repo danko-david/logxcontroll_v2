@@ -1,0 +1,18 @@
+Identify (on most Unix) system's exact version: `cat /etc/issue`
+#
+## MAINTAINER-TODO: Verify build environment requirements with scratch system install.
+#	Specify absolut minimal build software versions.
+
+
+#
+# Debian 8.0
+# Install required packages:
+#
+sudo apt-get install build-essential make cmake
+
+#
+# Under OpenSuse (42.2):
+# Install required packages:
+#
+sudo zypper install --type pattern devel_basis
+
