@@ -79,7 +79,7 @@ endfunction(include_novaprova)
 lxc_build_add_embedded_library(arithmetic)
 
 #posix library
-lxc_build_add_embedded_library(posix)
+#lxc_build_add_embedded_library(posix)
 
 #tests
 lxc_build_add_embedded_test(test-core)
