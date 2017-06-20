@@ -8,13 +8,6 @@
 #ifndef UTILS_H_
 #define UTILS_H_
 
-void linux_print_heap_size();
-
-/**
- * to fully utilize this function use -rdynamic linking option
- * */
-void gnu_libc_print_stack_trace();
-
 /*
 	Function for manage arrays used in lxc.
 	- Generally we initialize an empty structure
@@ -38,9 +31,6 @@ void* malloc_zero(size_t);
 
 void* realloc_zero(void* addr, size_t old_len, size_t new_length);
 
-void dbg_print_messages(char** msgs);
-
-void dbg_crash();
 
 /**
  * Array types: //TODO testcase for every statement
@@ -77,7 +67,7 @@ void array_nt_init(void*** init, uint *len);
 void* array_nt_pop_element(void** array_addr, uint length, uint index);
 
 /**
- * Add element to the and of the array (where NULL found) then terminates the
+ * Add element to the end of the array (where NULL found) then terminates the
  * array (if size != length).
  * expands the array if element can't added to.
  * */
@@ -107,6 +97,8 @@ int array_fix_population(void** array_address, uint length);
 
 int array_fix_first_free_slot(void** array_address, uint length);
 
+
+void* array_fix_try_get(void** arr, int length, int index);
 /**
  * packed null terminated array
  * an array where NULL not permitted as intermediate value,

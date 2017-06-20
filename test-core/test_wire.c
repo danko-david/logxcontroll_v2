@@ -4,33 +4,9 @@
 
 Wire lxc_test_create_wire(Signal sig)
 {
-	Wire w = lxc_create_wire(sig);
+	Wire w = lxc_wire_create(sig);
 	NP_ASSERT_NOT_NULL(w);
 	return w;
-}
-
-void lxc_test_destroy_wire(Wire w)
-{
-	//TODO test wire busy (has wired gates tokenports in use), releaslues, etc.
-
-	lxc_import_new_value(NULL, &w->current_value);
-
-	if(NULL != w->ref_des)
-	{
-		free(w->ref_des);
-	}
-
-	if(NULL != w->drivens)
-	{
-		free(w->drivens);
-	}
-
-	if(NULL != w->drivers)
-	{
-		free(w->drivers);
-	}
-
-	free(w);
 }
 
 /**
@@ -51,7 +27,7 @@ void lxc_test_destroy_wire(Wire w)
 static void test_wire_create_destory(void)
 {
 	Wire vint = lxc_test_create_wire(&lxc_signal_int);
-	lxc_test_destroy_wire(vint);
+	lxc_wire_destroy(vint);
 }
 
 //TODO tokenPort

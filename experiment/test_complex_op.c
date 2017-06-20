@@ -13,7 +13,7 @@
 
 Wire lxc_create_primitive_wire(Signal signal)
 {
-	return lxc_create_wire(signal);
+	return lxc_wire_create(signal);
 }
 
 Gate lxc_create_gate_by_name(const char* name)
@@ -36,19 +36,6 @@ struct obj_str_arr_pnt
 	char** array;
 };
 
-int lxc_wire_set_refdes(Wire w, const char* name)
-{
-	//TODO check renaming does'nt volatiles workspace's refdes uniqueness
-	//lock workspace for modifiaction
-	if(w->ref_des)
-	{
-		free(w->ref_des);
-	}
-	w->ref_des = copy_string(name);
-
-	return 0;
-}
-
 struct obj_str_arr_pnt*  lxc_circuit_get_all_wire_refdes(IOCircuit circ)
 {
 	struct obj_str_arr_pnt* ret = malloc_zero(sizeof(struct obj_str_arr_pnt));
@@ -65,105 +52,6 @@ struct obj_str_arr_pnt*  lxc_circuit_get_all_wire_refdes(IOCircuit circ)
 	}
 
 	return ret;
-}
-
-Wire lxc_circuit_get_wire_by_refdes(IOCircuit circ, const char* name)
-{
-	if(NULL == circ->wires)
-	{
-		return NULL;
-	}
-
-	int i = 0;
-	while(NULL != circ->wires[i])
-	{
-		if(0 == strcmp(name, circ->wires[i]->ref_des))
-		{
-			return circ->wires[i];
-		}
-		++i;
-	}
-
-	return NULL;
-}
-
-Gate lxc_circuit_get_gate_by_refdes(IOCircuit circ, const char* name)
-{
-	if(NULL == circ->gates)
-	{
-		return NULL;
-	}
-
-	int i = 0;
-	while(NULL != circ->gates[i])
-	{
-		if(0 == strcmp(name, circ->gates[i]->ref_des))
-		{
-			return circ->gates[i];
-		}
-		++i;
-	}
-
-	return NULL;
-}
-
-
-bool lxc_circuit_add_wire(IOCircuit circ, Wire w)
-{
-	NP_ASSERT_NOT_NULL(circ);
-	NP_ASSERT_NOT_NULL(w);
-	NP_ASSERT_NOT_NULL(w->ref_des);
-
-	if(NULL != lxc_circuit_get_wire_by_refdes(circ, w->ref_des))
-	{
-		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
-	}
-
-	return -1 != array_pnt_append_element
-	(
-		(void***) &circ->wires,
-		(void*) w
-	);
-}
-
-int lxc_gate_set_refdes(Gate gate, const char* name)
-{
-	//TODO check renaming does'nt volatiles workspace's refdes uniqueness
-	//lock workspace for modifiaction
-	if(gate->ref_des)
-	{
-		free(gate->ref_des);
-	}
-
-	gate->ref_des = copy_string(name);
-
-	return 0;
-}
-
-int lxc_circuit_add_gate(IOCircuit circ, Gate gate)
-{
-	if(NULL != lxc_circuit_get_wire_by_refdes(circ, gate->ref_des))
-	{
-		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
-	}
-
-	array_pnt_append_element
-	(
-		(void***) &circ->gates,
-		(void*) gate
-	);
-
-	return 0;
-}
-
-int lxc_circuit_set_name(IOCircuit circ, const char* name)
-{
-	if(NULL != circ->name)
-	{
-		free(circ->name);
-	}
-	circ->name = copy_string(name);
-	return 0;
 }
 
 bool lxc_check_gate_exists(const char* name)
@@ -281,18 +169,6 @@ void wiring_output(Wire w, Gate gate, int index)
 	NP_ASSERT_PTR_EQUAL(w, win);
 }
 
-void circuit_set_gate_enable(IOCircuit circ, bool enable)
-{
-	{
-		int i = 0;
-		while(NULL != circ->gates[i])
-		{
-			lxc_gate_set_enabled(circ->gates[i], enable);
-			++i;
-		}
-	}
-}
-
 static IOCircuit create_basic_network_driver_sniffer_network()
 {
 	IOCircuit ret = lxc_create_circuit();
@@ -393,105 +269,6 @@ static IOCircuit create_multistage_bool_network()
 	wiring_input(sniffer, 0, output);
 
 	return sub;
-}
-
-static void release_port_generic
-(
-	Gate gate,
-	int (*enumerate_types)(Gate, Signal*, int*, uint),
-	int (*max_of_type)(Gate, Signal, int),
-	void* (*get_wire)(Gate, Signal, int, uint),
-	int (*unwire)(Signal, int, Wire, Gate, uint)
-)
-{
-	Signal sigs[20];
-	int subs[20];
-	int max = enumerate_types(gate, sigs, subs, 20);
-	int i = 0;
-	while(i < max)
-	{
-		int max = max_of_type(gate, sigs[i], subs[i]);
-		int m = 0;
-		while(m<max)
-		{
-			void* in = get_wire(gate, sigs[i], subs[i],  m);
-			if(NULL != in)
-			{
-				//printf("unwiring: gate: %p, signal: %s, subtype: %d, index: %d\n", gate, sigs[i]->name, subs[i], m);
-				NP_ASSERT_EQUAL(0, unwire(sigs[i], subs[i], NULL, gate,  m));
-			}
-			++m;
-		}
-		++i;
-	}
-}
-
-static void release_all_port(Gate gate)
-{
-	release_port_generic
-	(
-		gate,
-		gate->behavior->get_input_types,
-		gate->behavior->get_input_max_index,
-		(void* (*)(Gate, Signal, int, uint)) gate->behavior->get_input_wire,
-		lxc_wire_gate_input
-	);
-
-
-
-	release_port_generic
-	(
-		gate,
-		gate->behavior->get_output_types,
-		gate->behavior->get_output_max_index,
-		(void* (*)(Gate, Signal, int, uint)) gate->behavior->get_output_wire,
-		lxc_wire_gate_output
-	);
-}
-
-
-static void destroy_circuit(IOCircuit circ)
-{
-	//minimal naive implementation
-
-	{//release gates
-		if(NULL != circ->gates)
-		{
-			int i = 0;
-			while(NULL != circ->gates[i])
-			{
-				release_all_port(circ->gates[i]);
-				++i;
-			}
-		}
-	}
-
-
-	{
-		int i = 0;
-		while(NULL != circ->wires[i])
-		{
-			lxc_test_destroy_wire(circ->wires[i]);
-			++i;
-		}
-		free(circ->wires);
-	}
-
-	{
-		int i = 0;
-		while(NULL != circ->gates[i])
-		{
-			free(circ->gates[i]->ref_des);
-
-			circ->gates[i]->behavior->destroy(circ->gates[i]);
-			++i;
-		}
-
-		free(circ->gates);
-	}
-
-	free(circ->name);
-	free(circ);
 }
 
 static void print_bool_value(Gate instance, Signal type, int subtype, LxcValue value, uint index)
@@ -602,7 +379,7 @@ static void generic_validate_truth_table(const char* name, bool use_secound_inpu
 		NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(circ, &receiver->base.base));
 	}
 
-	circuit_set_gate_enable(circ, true);
+	lxc_circuit_set_all_gate_enable(circ, true);
 
 	int i=0;
 	while(NULL != truth_table[i])
@@ -640,7 +417,7 @@ static void generic_validate_truth_table(const char* name, bool use_secound_inpu
 		++i;
 	}
 
-	destroy_circuit(circ);
+	lxc_destroy_circuit(circ);
 }
 
 static void test_gate_not(void)
@@ -742,7 +519,7 @@ static void test_scenario_bool_gate_circuit__with_hazard(void)
 
 	Wire input = lxc_circuit_get_wire_by_refdes(circ, "input");
 
-	circuit_set_gate_enable(circ, true);
+	lxc_circuit_set_all_gate_enable(circ, true);
 
 	Gate drv = &driver->base.base;
 
@@ -778,7 +555,7 @@ static void test_scenario_bool_gate_circuit__with_hazard(void)
 		assert_prelling_then_release_array(result_array);
 	}
 
-	destroy_circuit(circ);
+	lxc_destroy_circuit(circ);
 
 	logxcontroll_destroy_environment();
 }
@@ -872,7 +649,7 @@ static void test_scenario_bool_gate_circuit__without_hazard(void)
 		free(a);
 	}
 
-	circuit_set_gate_enable(circ, true);
+	lxc_circuit_set_all_gate_enable(circ, true);
 
 	Gate drv = &driver->base.base;
 
@@ -902,7 +679,7 @@ static void test_scenario_bool_gate_circuit__without_hazard(void)
 		assert_not_prelling_then_release_array(result_array);
 	}
 
-	destroy_circuit(circ);
+	lxc_destroy_circuit(circ);
 
 	logxcontroll_destroy_environment();
 
@@ -1001,16 +778,16 @@ static void test_scenario_bool_gate_oscillator_1_async(void)
 	IOCircuit circ = create_bool_oscillator();
 	lxc_circuit_get_gate_by_refdes(circ, "A")->execution_behavior = async_execution;
 
-	circuit_set_gate_enable(circ, true);
+	lxc_circuit_set_all_gate_enable(circ, true);
 	sleep(3);
-	circuit_set_gate_enable(circ, false);
+	lxc_circuit_set_all_gate_enable(circ, false);
 
 	printf("ring oscillator (1 async) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
 	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
 
 	lxc_test_destroy_worker_pool(&worker_pool);
 
-	destroy_circuit(circ);
+	lxc_destroy_circuit(circ);
 	logxcontroll_destroy_environment();
 }
 
@@ -1026,9 +803,9 @@ static void test_scenario_bool_gate_oscillator_3_async(void)
 	lxc_circuit_get_gate_by_refdes(circ, "B")->execution_behavior = async_execution;
 	lxc_circuit_get_gate_by_refdes(circ, "C")->execution_behavior = async_execution;
 
-	circuit_set_gate_enable(circ, true);
+	lxc_circuit_set_all_gate_enable(circ, true);
 	sleep(3);
-	circuit_set_gate_enable(circ, false);
+	lxc_circuit_set_all_gate_enable(circ, false);
 
 
 	printf("ring oscillator (3 async) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
@@ -1036,7 +813,7 @@ static void test_scenario_bool_gate_oscillator_3_async(void)
 
 	lxc_test_destroy_worker_pool(&worker_pool);
 
-	destroy_circuit(circ);
+	lxc_destroy_circuit(circ);
 	logxcontroll_destroy_environment();
 }
 
@@ -1108,7 +885,7 @@ void loopbreaker_execution(Gate instance, Signal type, int subtype, LxcValue val
 static void task_disable_circuit_after_3_sec(IOCircuit circ)
 {
 	sleep(3);
-	circuit_set_gate_enable(circ, false);
+	lxc_circuit_set_all_gate_enable(circ, false);
 }
 
 static void test_scenario_bool_gate_oscillator_1_loopbreaker(void)
@@ -1123,14 +900,14 @@ static void test_scenario_bool_gate_oscillator_1_loopbreaker(void)
 	//lxc_circuit_get_gate_by_refdes(circ, "C")->execution_behavior = async_execution;
 
 	wp_submit_task(&worker_pool, task_disable_circuit_after_3_sec, circ);
-	circuit_set_gate_enable(circ, true);
+	lxc_circuit_set_all_gate_enable(circ, true);
 
 	printf("ring oscillator (3 loopbreaker) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
 	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
 
 	lxc_test_destroy_worker_pool(&worker_pool);
 
-	destroy_circuit(circ);
+	lxc_destroy_circuit(circ);
 	logxcontroll_destroy_environment();
 }
 
@@ -1146,13 +923,13 @@ static void test_scenario_bool_gate_oscillator_3_loopbreaker(void)
 	lxc_circuit_get_gate_by_refdes(circ, "C")->execution_behavior = loopbreaker_execution;
 
 	wp_submit_task(&worker_pool, task_disable_circuit_after_3_sec, circ);
-	circuit_set_gate_enable(circ, true);
+	lxc_circuit_set_all_gate_enable(circ, true);
 
 	printf("ring oscillator (3 loopbreaker) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
 	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
 
 	lxc_test_destroy_worker_pool(&worker_pool);
 
-	destroy_circuit(circ);
+	lxc_destroy_circuit(circ);
 	logxcontroll_destroy_environment();
 }

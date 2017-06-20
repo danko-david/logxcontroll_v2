@@ -41,6 +41,8 @@ LxcValue lxc_get_constant_by_name(const char* name);
 
 Signal lxc_get_signal_by_name(const char*);
 
+Signal lxc_get_signal_by_ordinal(int);
+
 /******************* Wire/Wiring ASSOCIATED FACET FUNCTION ********************/
 
 void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue value);
@@ -55,7 +57,9 @@ int lxc_wire_gate_input(Signal type, int subtype, Wire wire, Gate g, uint index)
 
 int lxc_wire_gate_output(Signal type, int subtype, Wire wire, Gate g, uint index);
 
-Wire lxc_create_wire(Signal type);
+int lxc_wire_set_refdes(Wire, const char*);
+
+Wire lxc_wire_create(Signal type);
 
 /*********************** Gate ASSOCIATED FACET FUNCTION ***********************/
 
@@ -63,45 +67,61 @@ Gate lxc_new_instance_by_behavior(const struct lxc_gate_behavior*);
 
 Gate lxc_new_instance_by_name(const char* name);
 
-const char* lxc_get_gate_name(Gate);
+const char* lxc_gate_get_name(Gate);
 
 bool lxc_gate_is_enabled(Gate);
 
 void lxc_gate_set_enabled(Gate, bool);
 
-int lxc_get_gate_input_types(Gate, Signal*, int*, int max_length);
+int lxc_gate_get_input_types(Gate, Signal*, int*, int max_length);
 
-int lxc_get_gate_output_types(Gate, Signal*, int*, int max_length);
-
-
-int lxc_get_gate_input_max_index(Gate, Signal, int);
-
-int lxc_get_gate_output_max_index(Gate, Signal, int);
-
-const char* lxc_get_input_label(Gate gate, Signal type, int, uint index);
-
-const char* lxc_get_output_label(Gate gate, Signal type, int, uint index);
+int lxc_gate_get_output_types(Gate, Signal*, int*, int max_length);
 
 
-Tokenport lxc_get_input_wire(Gate, Signal, int, uint);
+int lxc_gate_get_input_max_index(Gate, Signal, int);
 
-int lxc_get_input_labels(Gate, const char**, int max_length);
+int lxc_gate_get_output_max_index(Gate, Signal, int);
 
-int lxc_get_output_labels(Gate, const char**, int max_length);
+const char* lxc_gate_get_input_label(Gate gate, Signal type, int, uint index);
 
-Wire lxc_get_output_wire(Gate, Signal, int, uint);
+const char* lxc_gate_get_output_label(Gate gate, Signal type, int, uint index);
 
-int lxc_enumerate_properties(Gate, const char**, int max_length);
 
-const char* lxc_get_property_description(Gate gate, const char* property);
+Tokenport lxc_gate_get_input_port(Gate, Signal, int, uint);
 
-const char* lxc_get_property_label(Gate, const char*);
+int lxc_gate_get_input_labels(Gate, const char**, int max_length);
 
-int lxc_get_property_value(Gate, const char*, char*,int);
+int lxc_gate_get_output_labels(Gate, const char**, int max_length);
 
-int lxc_set_property_value(Gate, const char*, const char*, char*, uint);
+Wire lxc_gate_get_output_wire(Gate, Signal, int, uint);
 
-Signal lxc_get_signal_by_ordinal(int ordinal);
+int lxc_gate_enumerate_properties(Gate, const char**, int max_length);
+
+const char* lxc_gate_get_property_description(Gate gate, const char* property);
+
+const char* lxc_gate_get_property_label(Gate, const char*);
+
+int lxc_gate_get_property_value(Gate, const char*, char*,int);
+
+int lxc_gate_set_property_value(Gate, const char*, const char*, char*, uint);
+
+int lxc_gate_set_refdes(Gate, const char*);
+
+/************************* Circuit ASSOCIATED FACET FUNCTION ******************/
+
+int lxc_circuit_set_name(IOCircuit, const char*);
+
+int lxc_circuit_add_gate(IOCircuit, Gate);
+
+bool lxc_circuit_add_wire(IOCircuit, Wire);
+
+Gate lxc_circuit_get_gate_by_refdes(IOCircuit, const char*);
+
+Wire lxc_circuit_get_wire_by_refdes(IOCircuit, const char*);
+
+int lxc_wire_set_refdes(Wire, const char*);
+
+void lxc_circuit_set_all_gate_enable(IOCircuit, bool);
 
 /*********************** .......... ASSOCIATED FACET FUNCTION *****************/
 

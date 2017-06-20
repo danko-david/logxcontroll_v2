@@ -7,70 +7,9 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 #include "string.h"
 
 #include "core/logxcontroll.h"
-
-
-void linux_print_heap_size()
-{
-	char data[2048];
-	int fd = open("/proc/self/maps", O_RDONLY);
-
-	read(fd, data, sizeof(data));
-
-	data[sizeof(data)-1] = '0';
-
-	close(fd);
-
-	char* off = strstr(data, "[heap]");
-
-	if(NULL == off)
-	{
-		printf("no heap initiated\n");
-		return;
-	}
-
-	while(*off != '\n')
-		--off;
-
-	char* sign = strstr(off, "-");
-
-	long low = strtoul(off+1, NULL, 16);
-
-	long high = strtoul(sign+1, NULL, 16);
-
-	long diff = high - low;
-
-	printf("Heap size: %ld Mb, %ld Kb, %ld bytes\n", diff/(1024*1024), diff/1024, diff);
-}
-
-#include <execinfo.h>
-
-/**
- *
- * https://www.gnu.org/software/libc/manual/html_node/Backtraces.html
- * */
-void gnu_libc_print_stack_trace()
-{
-	void *array[10];
-	size_t size;
-	char **strings;
-	size_t i;
-
-	size = backtrace(array, 10);
-	strings = backtrace_symbols(array, size);
-
-	printf ("Obtained %zd stack frames.\n", size);
-
-	for (i = 0; i < size; i++)
-	{
-		printf ("%s\n", strings[i]);
-	}
-
-	free (strings);
-}
 
 char* render_string(int maxlen, char* fmt, void* argptr)
 {
@@ -137,24 +76,6 @@ void* realloc_zero(void* addr, size_t old_len, size_t new_length)
 	}
 
 	return addr;
-}
-
-void dbg_print_messages(char** msgs)
-{
-	if(NULL == msgs)
-		return;
-
-	int i;
-	for(i=0;NULL != msgs[i];++i)
-	{
-		printf("%s\n", msgs[i]);
-	}
-}
-
-void dbg_crash()
-{
-	int* val = NULL;
-	*val = 0;
 }
 
 void array_nt_init(void*** init, uint *len)
@@ -429,6 +350,15 @@ int array_fix_first_free_slot(void** array_address, uint length)
 	return -1;
 }
 
+void* array_fix_try_get(void** arr, int length, int index)
+{
+	if(NULL == arr || index >= length)
+	{
+		return NULL;
+	}
+
+	return arr[index];
+}
 
 /**************************** packed null terminated **************************/
 
@@ -587,6 +517,8 @@ void gnu_libc_print_backtraced_symbol(void* addr)
 	gnu_libc_backtrace_symbol(addr, sym, sizeof(sym));
 	printf("%s\n",sym);
 }
+
+#include <execinfo.h>
 
 int gnu_libc_backtrace_symbol(void* addr, char* ret_str, size_t max_length)
 {

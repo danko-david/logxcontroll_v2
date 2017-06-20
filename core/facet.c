@@ -255,7 +255,7 @@ struct wire_handler_logic DIRECT_PROPAGATE_VALUE =
 	.release_token = wire_direct_propagate_noop,
 };
 
-Wire lxc_create_wire(Signal type)
+Wire lxc_wire_create(Signal type)
 {
 	if(NULL == type)
 	{
@@ -489,6 +489,7 @@ void on_successfull_output_wiring(Signal type, int subtype, void* /*Wire*/ w, Ga
 		//new wire attached, notify the driver
  		Tokenport p = malloc(sizeof(struct lxc_tokenport));
 		p->gate = g;
+		p->owner = w;
 		p->index = index;
 		add_port(p, &(wire->drivers), &(wire->drivers_length));
 
@@ -567,7 +568,7 @@ void lxc_drive_wire_value(Gate instance, uint out_index, Wire wire, LxcValue val
 {
 	//TODO framework debugging mode, update wire value on change
 
-	if(NULL == wire)
+	if(NULL == wire || NULL == value)
 	{
 		return;
 	}
@@ -720,7 +721,8 @@ LxcValue lxc_get_token_value(Tokenport tp)
 	{
 		return NULL;
 	}
-	tp->owner->handler->token_get_value(tp);
+
+	return tp->owner->handler->token_get_value(tp);
 }
 
 //TODO
@@ -734,12 +736,19 @@ void lxc_absorb_token(Tokenport tp)
 
 void lxc_wire_release_token(Tokenport tp)
 {
-	tp->owner->handler->release_token(tp);
+	if(NULL != tp)
+	{
+		tp->owner->handler->release_token(tp);
+	}
 }
 
-void lxc_wire_token_available(Tokenport tp)
+bool lxc_wire_token_available(Tokenport tp)
 {
-	tp->owner->handler->is_token_available(tp);
+	if(NULL == tp)
+	{
+		return false;
+	}
+	return tp->owner->handler->is_token_available(tp);
 }
 
 
@@ -752,7 +761,7 @@ void* lxc_get_value(LxcValue v)
 }
 
 
-const char* lxc_get_gate_name(Gate gate)
+const char* lxc_gate_get_name(Gate gate)
 {
 	if(NULL == gate)
 	{
@@ -818,7 +827,7 @@ void lxc_gate_set_enabled(Gate gate,bool enabled)
 	lxc_unreference_value(notify);
 }
 
-int lxc_get_gate_input_types(Gate gate, Signal* sig, int* sub, int max_length)
+int lxc_gate_get_input_types(Gate gate, Signal* sig, int* sub, int max_length)
 {
 	if(NULL == gate)
 	{
@@ -837,7 +846,7 @@ int lxc_get_gate_input_types(Gate gate, Signal* sig, int* sub, int max_length)
 }
 
 
-int lxc_get_gate_output_types(Gate gate, Signal* sig, int* sub, int max_length)
+int lxc_gate_get_output_types(Gate gate, Signal* sig, int* sub, int max_length)
 {
 	if(NULL == gate)
 	{
@@ -877,12 +886,12 @@ static int get_io_min_max(bool direction, Gate gate, Signal s, int subtype)
 }
 
 
-int lxc_get_gate_input_max_index(Gate gate, Signal s, int subtype)
+int lxc_gate_get_input_max_index(Gate gate, Signal s, int subtype)
 {
 	return get_io_min_max(DIRECTION_IN, gate, s, subtype);
 }
 
-int lxc_get_gate_output_max_index(Gate gate, Signal s, int subtype)
+int lxc_gate_get_output_max_index(Gate gate, Signal s, int subtype)
 {
 	return get_io_min_max(DIRECTION_OUT, gate, s, subtype);
 }
@@ -997,7 +1006,7 @@ static int get_labels
 }
 
 
-int lxc_get_input_labels(Gate gate, const char** arr, int max_length)
+int lxc_gate_get_input_labels(Gate gate, const char** arr, int max_length)
 {
 	if(NULL == gate)
 	{
@@ -1016,7 +1025,7 @@ int lxc_get_input_labels(Gate gate, const char** arr, int max_length)
 }
 
 
-int lxc_get_output_labels(Gate gate, const char** arr, int max_length)
+int lxc_gate_get_output_labels(Gate gate, const char** arr, int max_length)
 {
 	if(NULL == gate)
 	{
@@ -1052,7 +1061,7 @@ static const char* get_io_label
 }
 
 
-const char* lxc_get_input_label(Gate gate, Signal type, int subtype, uint index)
+const char* lxc_gate_get_input_label(Gate gate, Signal type, int subtype, uint index)
 {
 	if(NULL == gate)
 	{
@@ -1069,7 +1078,7 @@ const char* lxc_get_input_label(Gate gate, Signal type, int subtype, uint index)
 			);
 }
 
-const char* lxc_get_output_label(Gate gate, Signal type, int subtype, uint index)
+const char* lxc_gate_get_output_label(Gate gate, Signal type, int subtype, uint index)
 {
 	if(NULL == gate)
 	{
@@ -1086,7 +1095,7 @@ const char* lxc_get_output_label(Gate gate, Signal type, int subtype, uint index
 			);
 }
 
-const char* lxc_get_property_description(Gate gate, const char* property)
+const char* lxc_gate_get_property_description(Gate gate, const char* property)
 {
 	if(NULL == gate || NULL == property)
 	{
@@ -1102,7 +1111,7 @@ const char* lxc_get_property_description(Gate gate, const char* property)
 }
 
 
-int lxc_enumerate_properties(Gate gate, const char** arr, int max_length)
+int lxc_gate_enumerate_properties(Gate gate, const char** arr, int max_length)
 {
 	if(NULL == gate)
 	{
@@ -1122,7 +1131,7 @@ int lxc_enumerate_properties(Gate gate, const char** arr, int max_length)
 	}
 }
 
-int lxc_set_property_value
+int lxc_gate_set_property_value
 (
 	Gate gate,
 	const char* property,
@@ -1173,7 +1182,7 @@ error:
 	return -1;
 }
 
-const char* lxc_get_property_label(Gate gate, const char* prop)
+const char* lxc_gate_get_property_label(Gate gate, const char* prop)
 {
 	if(NULL == gate)
 	{
@@ -1191,7 +1200,7 @@ const char* lxc_get_property_label(Gate gate, const char* prop)
 	return pl(gate, prop);
 }
 
-int lxc_get_property_value(Gate gate, const char* prop, char* ret, int max)
+int lxc_gate_get_property_value(Gate gate, const char* prop, char* ret, int max)
 {
 	if(NULL == gate)
 	{
@@ -1265,7 +1274,7 @@ Signal lxc_get_signal_by_name(const char* str)
 }
 
 
-Tokenport lxc_get_input_wire(Gate gate, Signal signal, int subtype, uint index)
+Tokenport lxc_gate_get_input_port(Gate gate, Signal signal, int subtype, uint index)
 {
 	if(NULL == gate)
 	{
@@ -1276,7 +1285,7 @@ Tokenport lxc_get_input_wire(Gate gate, Signal signal, int subtype, uint index)
 }
 
 
-Wire lxc_get_output_wire(Gate gate, Signal signal, int subtype, uint index)
+Wire lxc_gate_get_output_wire(Gate gate, Signal signal, int subtype, uint index)
 {
 	if(NULL == gate)
 	{
@@ -1302,4 +1311,135 @@ Signal lxc_get_signal_by_ordinal(int ordinal)
 	return REGISTERED_SIGNALS[ordinal];
 
 }
+
+int lxc_wire_set_refdes(Wire w, const char* name)
+{
+	//TODO check renaming does'nt volatiles workspace's refdes uniqueness
+	//lock workspace for modifiaction
+	if(w->ref_des)
+	{
+		free(w->ref_des);
+	}
+	w->ref_des = copy_string(name);
+
+	return 0;
+}
+
+
+
+
+Wire lxc_circuit_get_wire_by_refdes(IOCircuit circ, const char* name)
+{
+	if(NULL == circ->wires)
+	{
+		return NULL;
+	}
+
+	int i = 0;
+	while(NULL != circ->wires[i])
+	{
+		if(0 == strcmp(name, circ->wires[i]->ref_des))
+		{
+			return circ->wires[i];
+		}
+		++i;
+	}
+
+	return NULL;
+}
+
+Gate lxc_circuit_get_gate_by_refdes(IOCircuit circ, const char* name)
+{
+	if(NULL == circ->gates)
+	{
+		return NULL;
+	}
+
+	int i = 0;
+	while(NULL != circ->gates[i])
+	{
+		if(0 == strcmp(name, circ->gates[i]->ref_des))
+		{
+			return circ->gates[i];
+		}
+		++i;
+	}
+
+	return NULL;
+}
+
+
+bool lxc_circuit_add_wire(IOCircuit circ, Wire w)
+{
+	if(NULL == circ || NULL == w || NULL == w->ref_des)
+	{
+		return LXC_ERROR_BAD_CALL;
+	}
+
+	if(NULL != lxc_circuit_get_wire_by_refdes(circ, w->ref_des))
+	{
+		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
+	}
+
+	return -1 != array_pnt_append_element
+	(
+		(void***) &circ->wires,
+		(void*) w
+	);
+}
+
+int lxc_gate_set_refdes(Gate gate, const char* name)
+{
+	//TODO check renaming does'nt volatiles workspace's refdes uniqueness
+	//lock workspace for modifiaction
+	if(gate->ref_des)
+	{
+		free(gate->ref_des);
+	}
+
+	gate->ref_des = copy_string(name);
+
+	return 0;
+}
+
+int lxc_circuit_add_gate(IOCircuit circ, Gate gate)
+{
+	if(NULL != lxc_circuit_get_gate_by_refdes(circ, gate->ref_des))
+	{
+		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
+	}
+
+	array_pnt_append_element
+	(
+		(void***) &circ->gates,
+		(void*) gate
+	);
+
+	return 0;
+}
+
+int lxc_circuit_set_name(IOCircuit circ, const char* name)
+{
+	if(NULL != circ->name)
+	{
+		free(circ->name);
+	}
+	circ->name = copy_string(name);
+	return 0;
+}
+
+void lxc_circuit_set_all_gate_enable(IOCircuit circ, bool enable)
+{
+	if(NULL == circ || NULL == circ->gates)
+	{
+		return;
+	}
+
+	int i = -1;
+	while(NULL != circ->gates[++i])
+	{
+		lxc_gate_set_enabled(circ->gates[i], enable);
+	}
+}
+
 

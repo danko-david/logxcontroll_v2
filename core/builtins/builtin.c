@@ -12,7 +12,9 @@ LxcValue lxc_create_primitive_value(Signal type)
 {
 	struct lxc_primitive_value* ret = malloc(sizeof(struct lxc_primitive_value));
 	ret->base.type = type;
-	ret->refcount = 0;
+	ret->refcount = 1;
+	ret->base.subtype_info = 0;
+	ret->base.operations =   &primitive_variable_value_operations;
 	return (LxcValue) ret;
 }
 

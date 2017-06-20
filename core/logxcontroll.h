@@ -26,6 +26,8 @@
 #include "core/utils/worker_pool.h"
 #include "core/debug.h"
 
+#include "external/github/petewarden/c_hashmap/hashmap.h"
+
 #include <signal.h>
 
 int logxcontroll_init_environment();

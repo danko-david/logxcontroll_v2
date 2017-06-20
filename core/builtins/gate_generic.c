@@ -1270,7 +1270,7 @@ static void setup_default_properties
 	int i;
 	for(i=0;NULL != arr[i];++i)
 	{
-		lxc_set_property_value(gate, arr[i]->name, arr[i]->default_value, error, sizeof(error));
+		lxc_gate_set_property_value(gate, arr[i]->name, arr[i]->default_value, error, sizeof(error));
 	}
 }
 
