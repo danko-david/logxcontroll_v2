@@ -21,6 +21,8 @@ void lxc_dbg_print_dot_graph(IOCircuit circ);
 
 void lxc_dbg_print_library_tree(bool leafs);
 
+void lxc_dbg_on_oom();
+
 void linux_print_heap_size();
 
 /**

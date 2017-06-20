@@ -666,10 +666,12 @@ struct lxc_system_event
 
 /************************ Subcircuit definitions ******************************/
 
+typedef void* map_t;
+
 struct circuit
 {
-	Gate* gates;
-	Wire* wires;
+	map_t gates;
+	map_t wires;
 
 	Wire* inputs;
 	Wire* outputs;
@@ -685,14 +687,8 @@ struct circuit
 	char* name;
 };
 
-void lxc_destroy_simple_free(Gate instance);
+void lxc_gate_destroy_simple_free(Gate instance);
 void lxc_init_instance(Gate instance, const struct lxc_gate_behavior* behavior);
-
-Circuit lxc_create_circuit();
-int lxc_add_gate_to_circuit(Circuit, Gate);
-
-void lxc_destroy_circuit(Circuit);
-
 
 /********************** LOADABLE LIBRARY DEFINITIONS **************************/
 struct lxc_loadable_library;

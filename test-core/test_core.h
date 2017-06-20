@@ -77,7 +77,7 @@ void assert_not_locked(void* LOCK, int (*trylock)(void*), int (*unlock)(void*));
 
 Wire lxc_test_create_wire(Signal);
 
-void lxc_wire_destroy(Wire);
+int lxc_wire_destroy(Wire);
 
 
 #endif /* TEST_CORE_H_ */

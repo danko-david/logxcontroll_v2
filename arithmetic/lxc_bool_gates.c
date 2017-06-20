@@ -253,7 +253,7 @@ static void logx_bool_execute(Gate instance, Signal type, int subtype, LxcValue 
 static const struct lxc_bool_gate_behavior commons =
 {
 	.base.create = logx_bool_create,
-	.base.destroy = lxc_destroy_simple_free,
+	.base.destroy = lxc_gate_destroy_simple_free,
 	.base.get_input_types = logx_bool_get_supported_types,
 	.base.get_input_label = logx_bool_get_input_label,
 	.base.get_input_max_index = return_20,

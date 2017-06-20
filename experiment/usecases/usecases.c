@@ -501,7 +501,7 @@ static Gate spec_comparator_create()
 
 		//wiring create/destroy, in/out, exec
 		g->base.create = spec_create;
-		g->base.destroy = lxc_destroy_simple_free;
+		g->base.destroy = lxc_gate_destroy_simple_free;
 
 		g->base.wire_input = spec_wire_input;
 		g->base.get_input_wire = spec_get_input_wire;
@@ -578,7 +578,7 @@ IOCircuit create_computerphile_sort_network(Gate (*creator)(), int elem)
 
 	Signal t_int = &lxc_signal_int;
 
-	IOCircuit circ = lxc_create_circuit();
+	IOCircuit circ = lxc_create_iocircuit();
 
 	char name[20];
 
@@ -726,7 +726,7 @@ Heap size: 13 Mb, 13824 Kb, 14155776 bytes
 */
 void computerphile_sort()
 {
-	int len = 100;
+	int len = 1000;
 
 	IOCircuit circ = create_computerphile_sort_network
 	(
@@ -778,8 +778,8 @@ void computerphile_sort()
 		}
 	}
 
-	printf("Number of gates: %d\n", array_pnt_population((void**) circ->gates));
-	printf("Number of wires: %d\n", array_pnt_population((void**) circ->wires));
+	printf("Number of gates: %d\n", hashmap_length(circ->gates));
+	printf("Number of wires: %d\n", hashmap_length(circ->wires));
 
 	linux_print_heap_size();
 
@@ -852,3 +852,4 @@ int main(int argc, char **argv)
 	}
 	return 0;
 }
+

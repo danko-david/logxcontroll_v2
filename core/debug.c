@@ -199,168 +199,127 @@ static void print_wired_ref(Tokenport tp, bool direction, char* def)
 	);
 }
 
+static int print_dot_wire(Wire w)
+{
+	Tokenport driver = NULL;
+
+	if(NULL != w->drivers)
+	{
+		driver = w->drivers[0];
+	}
+
+	int d = 0;
+	if(0 == w->drivens_length)
+	{
+		printf("\t");
+		print_wired_ref(driver, false, w->ref_des);
+		printf(" -> ");
+		print_wired_ref(NULL, true, w->ref_des);
+		printf("\n");
+	}
+	else
+	{
+		while(d < w->drivens_length)
+		{
+			printf("\t");
+			print_wired_ref(driver, false, w->ref_des);
+			printf(" -> ");
+			print_wired_ref(w->drivens[d], true, w->ref_des);
+			printf("\n");
+			++d;
+		}
+	}
+
+	return 0;
+}
+
+static int print_dot_gate(Gate g)
+{
+	printf
+	(
+		"\t\"%s\" [shape=record,label=\"",
+		g->ref_des
+	);
+
+	char** i_names = NULL;
+	char** o_names = NULL;
+
+	lxc_gate_enumerate_input_labels_into(&i_names, g);
+	lxc_gate_enumerate_output_labels_into(&o_names, g);
+
+	int i_size = array_pnt_population((void**)i_names);
+	int o_size = array_pnt_population((void**)o_names);
+
+	int max;
+
+	if(i_size > o_size)
+	{
+		max = i_size;
+	}
+	else
+	{
+		max = o_size;
+	}
+
+	if(max < 1)
+	{
+		max = 1;
+	}
+
+	//"G 4" [shape=record,label="{<I0>I0|sort_box|<O0>O0}|{<I1>I1|<O1>O1}|{<I2>I2|<O2>O2}|{|O3}"];
+
+	int i = -1;
+	while(++i < max)
+	{
+		if(0 != i)
+		{
+			printf("|");
+		}
+
+		printf("{");
+
+		if(i < i_size)
+		{
+			char* n = i_names[i];
+			printf("<%s> %s", n, n);
+		}
+
+		if(0 == i)
+		{
+			printf("| %s [%s]", g->behavior->gate_name, g->ref_des);
+		}
+
+		if(i < o_size)
+		{
+			char* n = o_names[i];
+			printf("|<%s> %s", n, n);
+		}
+		else
+		{
+			printf("|");
+		}
+
+		printf("}");
+	}
+
+	printf("\"];\n");
+
+	free(i_names);
+	free(o_names);
+
+}
+
+
 void lxc_dbg_print_dot_graph(IOCircuit circ)
 {
 	printf("digraph structs {\n");
 	printf("	node [shape=record];\n");
 
-	{
-		int i=-1;
-		while(NULL != circ->gates[++i])
-		{
-			Gate g = circ->gates[i];
-			printf
-			(
-				"\t\"%s\" [shape=record,label=\"",
-				g->ref_des
-			);
+	hashmap_iterate(circ->gates, print_dot_gate, NULL);
 
-			char** i_names = NULL;
-			char** o_names = NULL;
+	printf("\n");
 
-			{
-				Signal sig[20];
-				int sub[20];
-
-				{
-					array_pnt_init((void***) &i_names);
-					int size = lxc_gate_get_input_types(g, sig, sub, 20);
-					int i=-1;
-					while(++i < size)
-					{
-						int tmax = lxc_gate_get_input_max_index(g, sig[i], sub[i]);
-						int t = -1;
-						while(++t < tmax)
-						{
-							array_pnt_append_element
-							(
-								(void***) &i_names,
-								(void*) lxc_gate_get_input_label(g, sig[i], sub[i], t)
-							);
-						}
-					}
-				}
-
-				{
-					array_pnt_init((void***) &o_names);
-					int size = lxc_gate_get_output_types(g, sig, sub, 20);
-					int i=-1;
-					while(++i < size)
-					{
-						int tmax = lxc_gate_get_output_max_index(g, sig[i], sub[i]);
-						int t = -1;
-						while(++t < tmax)
-						{
-							array_pnt_append_element
-							(
-								(void***) &o_names,
-								(void*) lxc_gate_get_output_label(g, sig[i], sub[i], t)
-							);
-						}
-					}
-				}
-
-			}
-
-			int i_size = array_pnt_population((void**)i_names);
-			int o_size = array_pnt_population((void**)o_names);
-
-			int max;
-
-			if(i_size > o_size)
-			{
-				max = i_size;
-			}
-			else
-			{
-				max = o_size;
-			}
-
-			if(max < 1)
-			{
-				max = 1;
-			}
-
-			//"G 4" [shape=record,label="{<I0>I0|sort_box|<O0>O0}|{<I1>I1|<O1>O1}|{<I2>I2|<O2>O2}|{|O3}"];
-
-			int i = -1;
-			while(++i < max)
-			{
-				if(0 != i)
-				{
-					printf("|");
-				}
-
-				printf("{");
-
-				if(i < i_size)
-				{
-					char* n = i_names[i];
-					printf("<%s> %s", n, n);
-				}
-
-				if(0 == i)
-				{
-					printf("| %s [%s]", g->behavior->gate_name, g->ref_des);
-				}
-
-				if(i < o_size)
-				{
-					char* n = o_names[i];
-					printf("|<%s> %s", n, n);
-				}
-				else
-				{
-					printf("|");
-				}
-
-				printf("}");
-			}
-
-			printf("\"];\n");
-
-			free(i_names);
-			free(o_names);
-		}
-
-		printf("\n");
-
-		{
-			int i = -1;
-			while(NULL != circ->wires[++i])
-			{
-				Wire w = circ->wires[i];
-				Tokenport driver = NULL;
-
-				if(NULL != w->drivers)
-				{
-					driver = w->drivers[0];
-				}
-
-				int d = 0;
-				if(0 == w->drivens_length)
-				{
-					printf("\t");
-					print_wired_ref(driver, false, w->ref_des);
-					printf(" -> ");
-					print_wired_ref(NULL, true, w->ref_des);
-					printf("\n");
-				}
-				else
-				{
-					while(d < w->drivens_length)
-					{
-						printf("\t");
-						print_wired_ref(driver, false, w->ref_des);
-						printf(" -> ");
-						print_wired_ref(w->drivens[d], true, w->ref_des);
-						printf("\n");
-						++d;
-					}
-				}
-			}
-		}
-	}
+	hashmap_iterate(circ->wires, print_dot_wire, NULL);
 
 	printf("}\n");
 
@@ -449,4 +408,10 @@ void dbg_crash()
 {
 	int* val = NULL;
 	*val = 0;
+}
+
+void lxc_dbg_on_oom()
+{
+	printf("Out of memory ocurred.");
+	gnu_libc_print_stack_trace_then_terminalte();
 }

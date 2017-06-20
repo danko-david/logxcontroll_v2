@@ -1325,27 +1325,70 @@ int lxc_wire_set_refdes(Wire w, const char* name)
 	return 0;
 }
 
+static void enumerate_io_names
+(
+	void*** dst,
+	int (*enumerate_types)(Gate gate, Signal* sig, int* sub, uint max_length),
+	int (*max)(Gate gate, Signal s, int subtype),
+	const char* (*label)(Gate gate, Signal type, int subtype, uint index),
+	Gate g
+)
+{
+	Signal sig[20];
+	int sub[20];
+	array_pnt_init((void***) &dst);
+	int size = enumerate_types(g, sig, sub, 20);
+	int i=-1;
+	while(++i < size)
+	{
+		int tmax = max(g, sig[i], sub[i]);
+		int t = -1;
+		while(++t < tmax)
+		{
+			array_pnt_append_element
+			(
+				(void***) &dst,
+				(void*) label(g, sig[i], sub[i], t)
+			);
+		}
+	}
+}
 
+void lxc_gate_enumerate_input_labels_into(const char*** dst, Gate gate)
+{
+	enumerate_io_names
+	(
+		(void***)dst,
+		gate->behavior->get_input_types,
+		gate->behavior->get_input_max_index,
+		gate->behavior->get_input_label,
+		gate
+	);
+}
+
+void lxc_gate_enumerate_output_labels_into(const char*** dst, Gate gate)
+{
+	enumerate_io_names
+	(
+		(void***)dst,
+		gate->behavior->get_output_types,
+		gate->behavior->get_output_max_index,
+		gate->behavior->get_output_label,
+		gate
+	);
+}
 
 
 Wire lxc_circuit_get_wire_by_refdes(IOCircuit circ, const char* name)
 {
-	if(NULL == circ->wires)
+	if(NULL == name)
 	{
 		return NULL;
 	}
 
-	int i = 0;
-	while(NULL != circ->wires[i])
-	{
-		if(0 == strcmp(name, circ->wires[i]->ref_des))
-		{
-			return circ->wires[i];
-		}
-		++i;
-	}
-
-	return NULL;
+	Wire ret;
+	hashmap_get(circ->wires, name, (any_t*) &ret);
+	return ret;
 }
 
 Gate lxc_circuit_get_gate_by_refdes(IOCircuit circ, const char* name)
@@ -1355,17 +1398,9 @@ Gate lxc_circuit_get_gate_by_refdes(IOCircuit circ, const char* name)
 		return NULL;
 	}
 
-	int i = 0;
-	while(NULL != circ->gates[i])
-	{
-		if(0 == strcmp(name, circ->gates[i]->ref_des))
-		{
-			return circ->gates[i];
-		}
-		++i;
-	}
-
-	return NULL;
+	Gate ret;
+	hashmap_get(circ->gates, name, (any_t*) &ret);
+	return ret;
 }
 
 
@@ -1381,11 +1416,12 @@ bool lxc_circuit_add_wire(IOCircuit circ, Wire w)
 		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
 	}
 
-	return -1 != array_pnt_append_element
+	return MAP_OK == hashmap_put(circ->wires, w->ref_des, w);
+/*	return -1 != array_pnt_append_element
 	(
 		(void***) &circ->wires,
 		(void*) w
-	);
+	);*/
 }
 
 int lxc_gate_set_refdes(Gate gate, const char* name)
@@ -1409,11 +1445,7 @@ int lxc_circuit_add_gate(IOCircuit circ, Gate gate)
 		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
 	}
 
-	array_pnt_append_element
-	(
-		(void***) &circ->gates,
-		(void*) gate
-	);
+	hashmap_put(circ->gates, gate->ref_des, gate);
 
 	return 0;
 }
@@ -1428,18 +1460,144 @@ int lxc_circuit_set_name(IOCircuit circ, const char* name)
 	return 0;
 }
 
+static int iterator_set_gate_enable(Gate g, bool en)
+{
+	lxc_gate_set_enabled(g, en);
+	return 0;
+}
+
 void lxc_circuit_set_all_gate_enable(IOCircuit circ, bool enable)
 {
-	if(NULL == circ || NULL == circ->gates)
+	if(NULL == circ)
 	{
 		return;
 	}
 
-	int i = -1;
-	while(NULL != circ->gates[++i])
+	hashmap_iterate(circ->gates, iterator_set_gate_enable, (void*) enable);
+}
+
+int lxc_wire_destroy(Wire w)
+{
+	//TODO test wire busy (has wired gates tokenports in use), releaslues, etc.
+
+	lxc_import_new_value(NULL, &w->current_value);
+
+	if(NULL != w->ref_des)
 	{
-		lxc_gate_set_enabled(circ->gates[i], enable);
+		free(w->ref_des);
+	}
+
+	if(NULL != w->drivens)
+	{
+		free(w->drivens);
+	}
+
+	if(NULL != w->drivers)
+	{
+		free(w->drivers);
+	}
+
+	free(w);
+
+	return 0;
+}
+
+static void release_port_generic
+(
+	Gate gate,
+	int (*enumerate_types)(Gate, Signal*, int*, uint),
+	int (*max_of_type)(Gate, Signal, int),
+	void* (*get_wire)(Gate, Signal, int, uint),
+	int (*unwire)(Signal, int, Wire, Gate, uint)
+)
+{
+	Signal sigs[20];
+	int subs[20];
+	int max = enumerate_types(gate, sigs, subs, 20);
+	int i = 0;
+	while(i < max)
+	{
+		int max = max_of_type(gate, sigs[i], subs[i]);
+		int m = 0;
+		while(m<max)
+		{
+			void* in = get_wire(gate, sigs[i], subs[i],  m);
+			if(NULL != in)
+			{
+				//printf("unwiring: gate: %p, signal: %s, subtype: %d, index: %d\n", gate, sigs[i]->name, subs[i], m);
+				unwire(sigs[i], subs[i], NULL, gate,  m);
+			}
+			++m;
+		}
+		++i;
 	}
 }
 
+static int release_all_port(Gate gate)
+{
+	release_port_generic
+	(
+		gate,
+		gate->behavior->get_input_types,
+		gate->behavior->get_input_max_index,
+		(void* (*)(Gate, Signal, int, uint)) gate->behavior->get_input_wire,
+		lxc_wire_gate_input
+	);
+
+
+
+	release_port_generic
+	(
+		gate,
+		gate->behavior->get_output_types,
+		gate->behavior->get_output_max_index,
+		(void* (*)(Gate, Signal, int, uint)) gate->behavior->get_output_wire,
+		lxc_wire_gate_output
+	);
+
+	return 0;
+}
+
+static int destroy_gate(Gate g)
+{
+	free(g->ref_des);
+	g->behavior->destroy(g);
+	return 0;
+}
+
+void lxc_circuit_destroy(IOCircuit circ)
+{
+	//minimal naive implementation
+
+	//release gates
+	hashmap_iterate(circ->gates, release_all_port, NULL);
+
+	hashmap_iterate(circ->gates, destroy_gate, NULL);
+
+	hashmap_iterate(circ->wires, lxc_wire_destroy, NULL);
+
+	hashmap_free(circ->wires);
+	hashmap_free(circ->gates);
+	free(circ->name);
+	free(circ);
+}
+
+IOCircuit lxc_create_iocircuit()
+{
+	IOCircuit ret = malloc(sizeof(struct circuit));
+	memset(ret, 0, sizeof(struct circuit));
+	ret->wires = hashmap_new();
+	if(NULL == ret->wires)
+	{
+		lxc_dbg_on_oom();
+	}
+
+	ret->gates = hashmap_new();
+	if(NULL == ret->gates)
+	{
+		lxc_dbg_on_oom();
+	}
+
+	return ret;
+}
 

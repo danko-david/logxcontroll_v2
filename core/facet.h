@@ -27,8 +27,6 @@ int lxc_unreference_value(LxcValue value);
 
 int lxc_refdiff_value(LxcValue value, int count);
 
-
-//TODO LxcValue lxc_get_wire_value(Wire);
 LxcValue lxc_get_token_value(Tokenport);
 
 void lxc_absorb_token(Tokenport);
@@ -61,6 +59,8 @@ int lxc_wire_set_refdes(Wire, const char*);
 
 Wire lxc_wire_create(Signal type);
 
+int lxc_wire_set_refdes(Wire, const char*);
+
 /*********************** Gate ASSOCIATED FACET FUNCTION ***********************/
 
 Gate lxc_new_instance_by_behavior(const struct lxc_gate_behavior*);
@@ -76,7 +76,6 @@ void lxc_gate_set_enabled(Gate, bool);
 int lxc_gate_get_input_types(Gate, Signal*, int*, int max_length);
 
 int lxc_gate_get_output_types(Gate, Signal*, int*, int max_length);
-
 
 int lxc_gate_get_input_max_index(Gate, Signal, int);
 
@@ -107,7 +106,16 @@ int lxc_gate_set_property_value(Gate, const char*, const char*, char*, uint);
 
 int lxc_gate_set_refdes(Gate, const char*);
 
+void lxc_gate_enumerate_input_labels_into(const char*** dst, Gate g);
+void lxc_gate_enumerate_output_labels_into(const char*** dst, Gate g);
+
 /************************* Circuit ASSOCIATED FACET FUNCTION ******************/
+
+IOCircuit lxc_circuit_create();
+
+int lxc_circuit_add_gate_to(IOCircuit, Gate);
+
+void lxc_circuit_destroy(IOCircuit);
 
 int lxc_circuit_set_name(IOCircuit, const char*);
 
@@ -118,8 +126,6 @@ bool lxc_circuit_add_wire(IOCircuit, Wire);
 Gate lxc_circuit_get_gate_by_refdes(IOCircuit, const char*);
 
 Wire lxc_circuit_get_wire_by_refdes(IOCircuit, const char*);
-
-int lxc_wire_set_refdes(Wire, const char*);
 
 void lxc_circuit_set_all_gate_enable(IOCircuit, bool);
 

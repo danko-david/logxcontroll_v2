@@ -36,20 +36,18 @@ struct obj_str_arr_pnt
 	char** array;
 };
 
+static int wire_iterator_add_ref_des(Wire w, void*** arr)
+{
+	array_pnt_append_element(arr, w->ref_des);
+}
+
 struct obj_str_arr_pnt*  lxc_circuit_get_all_wire_refdes(IOCircuit circ)
 {
 	struct obj_str_arr_pnt* ret = malloc_zero(sizeof(struct obj_str_arr_pnt));
 	ret->refcount = 1;
 	array_pnt_init((void***) &ret->array);
 
-	{
-		int i = 0;
-		while(NULL != circ->wires[i])
-		{
-			array_pnt_append_element((void***)&ret->array, circ->wires[i]->ref_des);
-			++i;
-		}
-	}
+	hashmap_iterate(circ->wires, wire_iterator_add_ref_des, &ret->array);
 
 	return ret;
 }
@@ -171,7 +169,7 @@ void wiring_output(Wire w, Gate gate, int index)
 
 static IOCircuit create_basic_network_driver_sniffer_network()
 {
-	IOCircuit ret = lxc_create_circuit();
+	IOCircuit ret = lxc_create_iocircuit();
 
 	struct puppet_gate_instance* driver = create_puppet_gate();
 
@@ -284,7 +282,7 @@ static IOCircuit generic_test_bool_unit_assemble_circuit(const char* name, bool 
 {
 	NP_ASSERT_EQUAL(true, lxc_check_gate_exists(name));
 
-	IOCircuit sub = lxc_create_circuit();
+	IOCircuit sub = lxc_create_iocircuit();
 	lxc_circuit_set_name(sub, "single gate testbench");
 
 	Wire I1 = add_new_primitive_wire_to_circuit(sub, &lxc_signal_bool, "I1");
@@ -417,7 +415,7 @@ static void generic_validate_truth_table(const char* name, bool use_secound_inpu
 		++i;
 	}
 
-	lxc_destroy_circuit(circ);
+	lxc_circuit_destroy(circ);
 }
 
 static void test_gate_not(void)
@@ -555,7 +553,7 @@ static void test_scenario_bool_gate_circuit__with_hazard(void)
 		assert_prelling_then_release_array(result_array);
 	}
 
-	lxc_destroy_circuit(circ);
+	lxc_circuit_destroy(circ);
 
 	logxcontroll_destroy_environment();
 }
@@ -679,7 +677,7 @@ static void test_scenario_bool_gate_circuit__without_hazard(void)
 		assert_not_prelling_then_release_array(result_array);
 	}
 
-	lxc_destroy_circuit(circ);
+	lxc_circuit_destroy(circ);
 
 	logxcontroll_destroy_environment();
 
@@ -787,7 +785,7 @@ static void test_scenario_bool_gate_oscillator_1_async(void)
 
 	lxc_test_destroy_worker_pool(&worker_pool);
 
-	lxc_destroy_circuit(circ);
+	lxc_circuit_destroy(circ);
 	logxcontroll_destroy_environment();
 }
 
@@ -813,7 +811,7 @@ static void test_scenario_bool_gate_oscillator_3_async(void)
 
 	lxc_test_destroy_worker_pool(&worker_pool);
 
-	lxc_destroy_circuit(circ);
+	lxc_circuit_destroy(circ);
 	logxcontroll_destroy_environment();
 }
 
@@ -907,7 +905,7 @@ static void test_scenario_bool_gate_oscillator_1_loopbreaker(void)
 
 	lxc_test_destroy_worker_pool(&worker_pool);
 
-	lxc_destroy_circuit(circ);
+	lxc_circuit_destroy(circ);
 	logxcontroll_destroy_environment();
 }
 
@@ -930,6 +928,6 @@ static void test_scenario_bool_gate_oscillator_3_loopbreaker(void)
 
 	lxc_test_destroy_worker_pool(&worker_pool);
 
-	lxc_destroy_circuit(circ);
+	lxc_circuit_destroy(circ);
 	logxcontroll_destroy_environment();
 }
