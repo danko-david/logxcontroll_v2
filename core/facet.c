@@ -781,7 +781,7 @@ bool lxc_gate_is_enabled(Gate gate)
 	return gate->enabled;
 }
 
-void lxc_gate_set_enabled(Gate gate,bool enabled)
+void lxc_gate_set_enabled(Gate gate, bool enabled)
 {
 	if(NULL == gate)
 	{
@@ -790,7 +790,7 @@ void lxc_gate_set_enabled(Gate gate,bool enabled)
 
 	gate->enabled = enabled;
 
-	void (*ivc)(Gate instance, Signal type, int subtype, LxcValue value, uint index) =
+	/*void (*ivc)(Gate instance, Signal type, int subtype, LxcValue value, uint index) =
 		gate->execution_behavior;
 
 	if(NULL == ivc)
@@ -824,7 +824,7 @@ void lxc_gate_set_enabled(Gate gate,bool enabled)
 
 	lxc_reference_value(notify);
 	ivc(gate, notify->type, 0, notify, 0);
-	lxc_unreference_value(notify);
+	lxc_unreference_value(notify);*/
 }
 
 int lxc_gate_get_input_types(Gate gate, Signal* sig, int* sub, int max_length)
@@ -1336,7 +1336,7 @@ static void enumerate_io_names
 {
 	Signal sig[20];
 	int sub[20];
-	array_pnt_init((void***) &dst);
+	array_pnt_init((void***) dst);
 	int size = enumerate_types(g, sig, sub, 20);
 	int i=-1;
 	while(++i < size)
@@ -1347,7 +1347,7 @@ static void enumerate_io_names
 		{
 			array_pnt_append_element
 			(
-				(void***) &dst,
+				(void***) dst,
 				(void*) label(g, sig[i], sub[i], t)
 			);
 		}

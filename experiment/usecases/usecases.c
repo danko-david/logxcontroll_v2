@@ -817,7 +817,7 @@ int main__(int argc, char **argv)
 		printf("\n");
 	}
 }
-
+/*
 int main(int argc, char **argv)
 {
 	//register_option("", );
@@ -851,5 +851,5 @@ int main(int argc, char **argv)
 		}
 	}
 	return 0;
-}
+}*/
 

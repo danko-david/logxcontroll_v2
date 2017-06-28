@@ -138,7 +138,6 @@ typedef struct lxc_tokenport* Tokenport;
 typedef struct circuit* IOCircuit;
 typedef struct circuit* Circuit;
 
-
 /******************************************************************************
  ************************* LXC type related structure *************************
  ******************************************************************************/

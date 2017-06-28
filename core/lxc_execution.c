@@ -37,7 +37,7 @@ void lxc_do_execute(Gate g, LxcValue value, uint index)
 		(
 			g,
 			NULL == value? NULL : value->type,
-			value->subtype_info,
+			NULL == value? 0: value->subtype_info,
 			value,
 			index
 		);

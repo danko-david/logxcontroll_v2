@@ -313,6 +313,7 @@ static int print_dot_gate(Gate g)
 void lxc_dbg_print_dot_graph(IOCircuit circ)
 {
 	printf("digraph structs {\n");
+	printf("	rankdir=LR\n");
 	printf("	node [shape=record];\n");
 
 	hashmap_iterate(circ->gates, print_dot_gate, NULL);

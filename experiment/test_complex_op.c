@@ -766,6 +766,10 @@ static IOCircuit create_bool_oscillator(void)
 	return circ;
 }
 
+static void notify_gate_test(Gate g)
+{
+	g->execution_behavior(g, NULL, 0, NULL, 0);
+}
 
 static void test_scenario_bool_gate_oscillator_1_async(void)
 {
@@ -777,6 +781,7 @@ static void test_scenario_bool_gate_oscillator_1_async(void)
 	lxc_circuit_get_gate_by_refdes(circ, "A")->execution_behavior = async_execution;
 
 	lxc_circuit_set_all_gate_enable(circ, true);
+	notify_gate_test(lxc_circuit_get_gate_by_refdes(circ, "A"));
 	sleep(3);
 	lxc_circuit_set_all_gate_enable(circ, false);
 
@@ -802,6 +807,7 @@ static void test_scenario_bool_gate_oscillator_3_async(void)
 	lxc_circuit_get_gate_by_refdes(circ, "C")->execution_behavior = async_execution;
 
 	lxc_circuit_set_all_gate_enable(circ, true);
+	notify_gate_test(lxc_circuit_get_gate_by_refdes(circ, "A"));
 	sleep(3);
 	lxc_circuit_set_all_gate_enable(circ, false);
 
@@ -900,6 +906,8 @@ static void test_scenario_bool_gate_oscillator_1_loopbreaker(void)
 	wp_submit_task(&worker_pool, task_disable_circuit_after_3_sec, circ);
 	lxc_circuit_set_all_gate_enable(circ, true);
 
+	notify_gate_test(lxc_circuit_get_gate_by_refdes(circ, "A"));
+
 	printf("ring oscillator (3 loopbreaker) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
 	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
 
@@ -922,6 +930,8 @@ static void test_scenario_bool_gate_oscillator_3_loopbreaker(void)
 
 	wp_submit_task(&worker_pool, task_disable_circuit_after_3_sec, circ);
 	lxc_circuit_set_all_gate_enable(circ, true);
+
+	notify_gate_test(lxc_circuit_get_gate_by_refdes(circ, "A"));
 
 	printf("ring oscillator (3 loopbreaker) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
 	NP_ASSERT_TRUE(RISING_EDGE_COUNT > 100);
