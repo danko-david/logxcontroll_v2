@@ -104,6 +104,61 @@
  *
  * */
 
+
+/******************** Behavior ASSOCIATED FACET FUNCTIONS *********************/
+struct lxc_generic_portb_behavior* lxc_behavior_create_portb
+(
+	char* gate_name,
+	int size,
+	void (*execute)(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+)
+{
+	struct lxc_generic_portb_behavior* ret = malloc_zero(sizeof(struct lxc_generic_portb_behavior));
+	lxc_init_from_prototype
+	(
+		ret,
+		sizeof(struct lxc_generic_portb_behavior),
+
+		(void*)&lxc_generic_portb_prototype,
+		sizeof(lxc_generic_portb_prototype)
+	);
+
+	char** name = (char**) &ret->base.gate_name;
+	*name = gate_name;
+
+	ret->instance_memory_size = size;
+	ret->base.execute = execute;
+
+	return ret;
+}
+
+struct lxc_generic_porti_behavior* behavior_create_porti
+(
+	char* gate_name,
+	int size,
+	void (*execute)(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+)
+{
+	struct lxc_generic_porti_behavior* ret = malloc_zero(sizeof(struct lxc_generic_porti_behavior));
+	lxc_init_from_prototype
+	(
+		ret,
+		sizeof(struct lxc_generic_porti_behavior),
+
+		(void*)&lxc_generic_porti_prototype,
+		sizeof(lxc_generic_porti_prototype)
+	);
+
+	char** name = (char**) &ret->base.gate_name;
+	*name = gate_name;
+
+	ret->instance_memory_size = size;
+	ret->base.execute = execute;
+
+	return ret;
+}
+
+
 void raise_wire_hook_calls
 (
 	enum lxc_wire_operation_phase phase,
@@ -1582,7 +1637,32 @@ void lxc_circuit_destroy(IOCircuit circ)
 	free(circ);
 }
 
-IOCircuit lxc_create_iocircuit()
+Wire lxc_circuit_get_or_create_wire
+(
+	IOCircuit circ,
+	const char* name,
+	Signal sig
+)
+{
+	Wire in = lxc_circuit_get_wire_by_refdes(circ, name);
+	if(NULL == in)
+	{
+		in = lxc_wire_create(sig);
+		lxc_wire_set_refdes(in, name);
+		lxc_circuit_add_wire(circ, in);
+	}
+	else
+	{
+		if(sig != in->type)
+		{
+			return NULL;
+		}
+	}
+
+	return in;
+}
+
+IOCircuit lxc_circuit_create()
 {
 	IOCircuit ret = malloc(sizeof(struct circuit));
 	memset(ret, 0, sizeof(struct circuit));

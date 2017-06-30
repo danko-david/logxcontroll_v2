@@ -47,7 +47,7 @@ struct obj_str_arr_pnt*  lxc_circuit_get_all_wire_refdes(IOCircuit circ)
 	ret->refcount = 1;
 	array_pnt_init((void***) &ret->array);
 
-	hashmap_iterate(circ->wires, wire_iterator_add_ref_des, &ret->array);
+	hashmap_iterate(circ->wires, (PFany) wire_iterator_add_ref_des, &ret->array);
 
 	return ret;
 }
@@ -169,7 +169,7 @@ void wiring_output(Wire w, Gate gate, int index)
 
 static IOCircuit create_basic_network_driver_sniffer_network()
 {
-	IOCircuit ret = lxc_create_iocircuit();
+	IOCircuit ret = lxc_circuit_create();
 
 	struct puppet_gate_instance* driver = create_puppet_gate();
 
@@ -282,7 +282,7 @@ static IOCircuit generic_test_bool_unit_assemble_circuit(const char* name, bool 
 {
 	NP_ASSERT_EQUAL(true, lxc_check_gate_exists(name));
 
-	IOCircuit sub = lxc_create_iocircuit();
+	IOCircuit sub = lxc_circuit_create();
 	lxc_circuit_set_name(sub, "single gate testbench");
 
 	Wire I1 = add_new_primitive_wire_to_circuit(sub, &lxc_signal_bool, "I1");

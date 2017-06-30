@@ -14,6 +14,21 @@
 #ifndef FACET_H_
 #define FACET_H_
 
+/******************** Behavior ASSOCIATED FACET FUNCTIONS *********************/
+struct lxc_generic_portb_behavior* lxc_behavior_create_portb
+(
+	char* gate_name,
+	int size,
+	void (*execute)(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+);
+
+struct lxc_generic_porti_behavior* behavior_create_porti
+(
+	char* gate_name,
+	int size,
+	void (*execute)(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+);
+
 
 /*********************** Value ASSOCIATED FACET FUNCTIONS *********************/
 
@@ -128,6 +143,8 @@ Gate lxc_circuit_get_gate_by_refdes(IOCircuit, const char*);
 Wire lxc_circuit_get_wire_by_refdes(IOCircuit, const char*);
 
 void lxc_circuit_set_all_gate_enable(IOCircuit, bool);
+
+Wire lxc_circuit_get_or_create_wire(IOCircuit, const char*, Signal);
 
 /*********************** .......... ASSOCIATED FACET FUNCTION *****************/
 
