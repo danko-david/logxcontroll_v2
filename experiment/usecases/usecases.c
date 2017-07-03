@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 {
 	//register_option("", );
 	register_option("computerphile_sort", computerphile_sort);
-
+	register_option("type_sizes", type_sizes);
 
 	char* ref = NULL;
 	if(argc > 1)

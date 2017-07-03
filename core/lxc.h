@@ -130,6 +130,7 @@ struct lxc_port;
 
 typedef unsigned int uint;
 
+typedef struct lxc_gate_behavior* Behavior;
 typedef struct lxc_instance* Gate;
 typedef const struct lxc_signal_type* Signal;
 typedef struct lxc_wire* Wire;

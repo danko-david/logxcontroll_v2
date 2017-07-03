@@ -419,7 +419,7 @@ static Gate spec_comparator_create()
 /******************************************************************************/
 
 /**
- * https://www.youtube.com/watch?v=pcJHkWwjNl4
+ * https://www.youtube.com/watch?v=pcJHkWwjNl4&t=02m00s
  *
  * 	  0 1 2 3
  * 0: 0

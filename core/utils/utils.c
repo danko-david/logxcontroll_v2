@@ -46,9 +46,7 @@ void* string_to_pointer(char* ptr)
 
 char* copy_string(const char* str)
 {
-	char* ret = malloc(strlen(str)+1);
-	strcpy(ret, str);
-	return ret;
+	return strdup(str);
 }
 
 void* offset_bytes(void* addr, int bytes)
@@ -58,11 +56,7 @@ void* offset_bytes(void* addr, int bytes)
 
 void* malloc_zero(size_t size)
 {
-	void* ret = malloc(size);
-	if(NULL != ret)
-		memset(ret, 0, size);
-
-	return ret;
+	return calloc(size, 1);
 }
 
 void* realloc_zero(void* addr, size_t old_len, size_t new_length)

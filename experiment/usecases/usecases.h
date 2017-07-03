@@ -5,5 +5,6 @@
 #include "core/logxcontroll.h"
 
 void computerphile_sort(int argc, char **argv, int start_from);
+void type_sizes(int argc, char **argv, int start_from);
 
 #endif /*USECASES_H_*/
