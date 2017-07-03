@@ -19,7 +19,7 @@ enum worker_pool_status
 
 struct worker_pool
 {
-	long_lock_t pool_lock;
+	long_lock pool_lock;
 	enum worker_pool_status status;
 
 	struct queue_element* free_head;

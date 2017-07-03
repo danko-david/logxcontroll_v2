@@ -107,7 +107,7 @@ static void generic_test_lock
 
 static void test_short_lock(void)
 {
-	short_lock_t lock;
+	short_lock lock;
 	generic_test_lock
 	(
 		(void*) &lock,
@@ -122,7 +122,7 @@ static void test_short_lock(void)
 
 static void test_long_lock(void)
 {
-	long_lock_t lock;
+	long_lock lock;
 	generic_test_lock
 	(
 		(void*) &lock,

@@ -117,8 +117,8 @@ Available embeddable modules macro:
     #endif
 #elif __linux__
 
-	#define short_lock_t pthread_spinlock_t
-	#define long_lock_t pthread_mutex_t
+	#define short_lock pthread_spinlock_t
+	#define long_lock pthread_mutex_t
 
 	struct condition_wait_t
 	{
@@ -140,7 +140,7 @@ Available embeddable modules macro:
 
 /************************* Common build specific types ************************/
 
-int short_lock_init(short_lock_t*);
+int short_lock_init(short_lock*);
 
 /**
  * returns:
@@ -148,7 +148,7 @@ int short_lock_init(short_lock_t*);
  *	EBUSY: if a thread already holds the lock
  *	other: use lxc_fetch_error
  * */
-int short_lock_lock(short_lock_t*);
+int short_lock_lock(short_lock*);
 
 /**
  * returns:
@@ -156,14 +156,14 @@ int short_lock_lock(short_lock_t*);
  *	EBUSY: if a thread already holds the lock
  *	other: use lxc_fetch_error
  * */
-int short_lock_trylock(short_lock_t*);
-int short_lock_unlock(short_lock_t*);
-int short_lock_destroy(short_lock_t*);
+int short_lock_trylock(short_lock*);
+int short_lock_unlock(short_lock*);
+int short_lock_destroy(short_lock*);
 
 
 
-int long_lock_init(long_lock_t*);
-int long_lock_lock(long_lock_t*);
+int long_lock_init(long_lock*);
+int long_lock_lock(long_lock*);
 
 /**
  * returns:
@@ -171,8 +171,8 @@ int long_lock_lock(long_lock_t*);
  *	EBUSY: if a thread already holds the lock
  *	other: use lxc_fetch_error
  * */
-int long_lock_trylock(long_lock_t*);
-int long_lock_unlock(long_lock_t*);
-int long_lock_destroy(long_lock_t*);
+int long_lock_trylock(long_lock*);
+int long_lock_unlock(long_lock*);
+int long_lock_destroy(long_lock*);
 
 #endif /* BUILD_H_ */

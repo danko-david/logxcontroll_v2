@@ -7,22 +7,22 @@
 
 #include "core/logxcontroll.h"
 
-static inline void short_lock(struct rerunnable_thread* rrt)
+static inline void rt_short_lock(struct rerunnable_thread* rrt)
 {
-	pthread_spin_lock(&(rrt->short_lock));
+	short_lock_lock(&(rrt->rt_lock));
 }
 
-static inline void short_unlock(struct rerunnable_thread* rrt)
+static inline void rt_short_unlock(struct rerunnable_thread* rrt)
 {
-	pthread_spin_unlock(&(rrt->short_lock));
+	short_lock_unlock(&(rrt->rt_lock));
 }
 
 static inline int atomic_get_state(struct rerunnable_thread* rrt)
 {
 	enum rerunnable_thread_state state = 0;
-	short_lock(rrt);
+	rt_short_lock(rrt);
 	state = rrt->status;
-	short_unlock(rrt);
+	rt_short_unlock(rrt);
 	return state;
 }
 
@@ -32,9 +32,9 @@ static inline void atomic_update_state
 	enum rerunnable_thread_state stat
 )
 {
-	short_lock(rrt);
+	rt_short_lock(rrt);
 	rrt->status = stat;
-	short_unlock(rrt);
+	rt_short_unlock(rrt);
 }
 
 static void notify_job(struct rerunnable_thread* rrt)
@@ -62,7 +62,7 @@ bool rrt_try_rerun_if_free
 )
 {
 	bool ret = false;
-	short_lock(rrt);
+	rt_short_lock(rrt);
 	if(rrt_idle == rrt->status)
 	{
 		ret = true;
@@ -73,14 +73,14 @@ bool rrt_try_rerun_if_free
 		rrt->parameter = param;
 
 		//we preserved the thread, so we can unlock
-		short_unlock(rrt);
+		rt_short_unlock(rrt);
 
 		//then notify the thread, it can work now
 		notify_job(rrt);
 	}
 	else
 	{
-		short_unlock(rrt);
+		rt_short_unlock(rrt);
 	}
 	return ret;
 }
@@ -125,7 +125,7 @@ static void executor_function(struct rerunnable_thread* rrt)
 		 * we are notified.
 		 */
 
-		short_lock(rrt);
+		rt_short_lock(rrt);
 
 		void (*funct)(void*) = rrt->run;
 		void* param = rrt->parameter;
@@ -138,12 +138,12 @@ static void executor_function(struct rerunnable_thread* rrt)
 		)
 		{
 			//we get notified because of shutdown.
-			short_unlock(rrt);
+			rt_short_unlock(rrt);
 			break;
 		}
 
 
-		short_unlock(rrt);
+		rt_short_unlock(rrt);
 		funct(param);
 
 		try_invoke_callback
@@ -157,16 +157,16 @@ static void executor_function(struct rerunnable_thread* rrt)
 		rrt->run = NULL;
 		rrt->parameter = NULL;
 
-		short_lock(rrt);
+		rt_short_lock(rrt);
 		//after task done, if shutdown requested, we perform it.
 		if(rrt_shutdown_requested == rrt->status)
 		{
-			short_unlock(rrt);
+			rt_short_unlock(rrt);
 			break;
 		}
 
 		rrt->status = rrt_idle;
-		short_unlock(rrt);
+		rt_short_unlock(rrt);
 
 		try_invoke_callback
 		(
@@ -186,7 +186,7 @@ void rrt_init(struct rerunnable_thread* rrt)
 {
 	memset(rrt, 0, sizeof(struct rerunnable_thread));
 	pthread_mutex_init(&(rrt->mutex), NULL);
-	pthread_spin_init(&(rrt->short_lock), 0);
+	short_lock_init(&rrt->rt_lock);
 	pthread_cond_init(&(rrt->has_job_condition), NULL);
 
 	rrt->status = rrt_initalized;
@@ -195,7 +195,7 @@ void rrt_init(struct rerunnable_thread* rrt)
 int rrt_start(struct rerunnable_thread* rrt)
 {
 	int ret = -1;
-	short_lock(rrt);
+	rt_short_lock(rrt);
 	if(rrt_initalized == rrt->status)
 	{
 		//there is a short duration where the started thread doesn't set the
@@ -210,7 +210,7 @@ int rrt_start(struct rerunnable_thread* rrt)
 					(void*) rrt
 				);
 	}
-	short_unlock(rrt);
+	rt_short_unlock(rrt);
 	return ret;
 }
 
@@ -218,9 +218,9 @@ int rrt_start(struct rerunnable_thread* rrt)
 bool rrt_is_free(struct rerunnable_thread* rrt)
 {
 	enum rerunnable_thread_state state = 0;
-	short_lock(rrt);
+	rt_short_lock(rrt);
 	state = rrt->status;
-	short_unlock(rrt);
+	rt_short_unlock(rrt);
 	return state == rrt_idle;
 }
 
@@ -230,10 +230,10 @@ enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread* rrt)
 	int i = 0;
 	while(++i < 150)
 	{
-		short_lock(rrt);
+		rt_short_lock(rrt);
 		if(!long_lock_trylock(&rrt->mutex))
 		{
-			short_unlock(rrt);
+			rt_short_unlock(rrt);
 			continue;
 		}
 
@@ -243,7 +243,7 @@ enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread* rrt)
 			rrt->status = rrt_shutdown_requested;
 			rrt->run = pointer_on_shutdown_request;
 			long_lock_unlock(&rrt->mutex);
-			short_unlock(rrt);
+			rt_short_unlock(rrt);
 			notify_job(rrt);
 			return SUCCESS;
 		}
@@ -251,13 +251,13 @@ enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread* rrt)
 		{
 			rrt->status = rrt_shutdown_requested;
 			long_lock_unlock(&rrt->mutex);
-			short_unlock(rrt);
+			rt_short_unlock(rrt);
 			return SUCCESS;
 		}
 		else
 		{
 			long_lock_unlock(&rrt->mutex);
-			short_unlock(rrt);
+			rt_short_unlock(rrt);
 		}
 
 		//if(rrt_initalized == state || rrt_exited == state) //in any other case
@@ -314,7 +314,7 @@ int rrt_destroy_thread(struct rerunnable_thread* rrt)
 	}
 
 	pthread_mutex_destroy(&(rrt->mutex));
-	pthread_spin_destroy(&(rrt->short_lock));
+	pthread_spin_destroy(&(rrt->rt_lock));
 	pthread_cond_destroy(&(rrt->has_job_condition));
 
 	return 0;

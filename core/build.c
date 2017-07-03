@@ -54,54 +54,54 @@ void lxc_load_embedded_modules
     #endif
 #elif __linux__
 
-int short_lock_init(short_lock_t* spin)
+int short_lock_init(short_lock* spin)
 {
 	return pthread_spin_init(spin, 0);
 }
 
-int short_lock_lock(short_lock_t* spin)
+int short_lock_lock(short_lock* spin)
 {
 	return pthread_spin_lock(spin);
 }
 
-int short_lock_trylock(short_lock_t* spin)
+int short_lock_trylock(short_lock* spin)
 {
 	return pthread_spin_trylock(spin);
 }
 
-int short_lock_unlock(short_lock_t* spin)
+int short_lock_unlock(short_lock* spin)
 {
 	return pthread_spin_unlock(spin);
 }
 
-int short_lock_destroy(short_lock_t* spin)
+int short_lock_destroy(short_lock* spin)
 {
 	return pthread_spin_destroy(spin);
 }
 
 
 
-int long_lock_init(long_lock_t* mutex)
+int long_lock_init(long_lock* mutex)
 {
 	return pthread_mutex_init(mutex, NULL);
 }
 
-int long_lock_lock(long_lock_t* mutex)
+int long_lock_lock(long_lock* mutex)
 {
 	return pthread_mutex_lock(mutex);
 }
 
-int long_lock_trylock(long_lock_t* mutex)
+int long_lock_trylock(long_lock* mutex)
 {
 	return pthread_mutex_trylock(mutex);
 }
 
-int long_lock_unlock(long_lock_t* mutex)
+int long_lock_unlock(long_lock* mutex)
 {
 	return pthread_mutex_unlock(mutex);
 }
 
-int long_lock_destroy(long_lock_t* mutex)
+int long_lock_destroy(long_lock* mutex)
 {
 	return pthread_mutex_destroy(mutex);
 }

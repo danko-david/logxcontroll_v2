@@ -33,7 +33,7 @@ struct rerunnable_thread
 {
 	pthread_t thread;
 
-	pthread_spinlock_t short_lock;
+	short_lock rt_lock;
 
 	//TODO struct condition_wait_t notify_new_job;
 	pthread_mutex_t mutex;
