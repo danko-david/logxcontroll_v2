@@ -7,6 +7,8 @@
  * Some test to describe functionality.
  */
 
+#ifdef INCLUDE_NOVAPROVA
+
 #include "test-core/test_core.h"
 
 /************************ PREVIOUS implentetion area **************************/
@@ -14,17 +16,6 @@
 Wire lxc_create_primitive_wire(Signal signal)
 {
 	return lxc_wire_create(signal);
-}
-
-Gate lxc_create_gate_by_name(const char* name)
-{
-	struct lxc_gate_behavior* b = get_gate_entry_by_name(name);
-	if(NULL == b)
-	{
-		return NULL;
-	}
-
-	return lxc_new_instance_by_behavior(b);
 }
 
 typedef int refcount_t;
@@ -117,7 +108,7 @@ struct puppet_gate_instance* create_puppet_gate()
 
 	}
 
-	struct puppet_gate_instance* ret = (struct puppet_gate_instance*) lxc_new_instance_by_behavior(&PUPPET_GATE.base);
+	struct puppet_gate_instance* ret = (struct puppet_gate_instance*) lxc_gate_create_by_behavior(&PUPPET_GATE.base);
 	return ret;
 }
 
@@ -143,7 +134,7 @@ Gate add_new_gate_to_circuit
 	const char* reference_designator
 )
 {
-	Gate gate = lxc_create_gate_by_name(gate_name);
+	Gate gate = lxc_gate_create_by_name(gate_name);
 	NP_ASSERT_NOT_NULL(gate);
 	NP_ASSERT_EQUAL(0, lxc_gate_set_refdes(gate, reference_designator));
 	NP_ASSERT_EQUAL(0, lxc_circuit_add_gate(circuit, gate));
@@ -941,3 +932,6 @@ static void test_scenario_bool_gate_oscillator_3_loopbreaker(void)
 	lxc_circuit_destroy(circ);
 	logxcontroll_destroy_environment();
 }
+
+
+#endif

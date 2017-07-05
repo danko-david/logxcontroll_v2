@@ -78,9 +78,9 @@ int lxc_wire_set_refdes(Wire, const char*);
 
 /*********************** Gate ASSOCIATED FACET FUNCTION ***********************/
 
-Gate lxc_new_instance_by_behavior(const struct lxc_gate_behavior*);
+Gate lxc_gate_create_by_behavior(const struct lxc_gate_behavior*);
 
-Gate lxc_new_instance_by_name(const char* name);
+Gate lxc_gate_create_by_name(const char* name);
 
 const char* lxc_gate_get_name(Gate);
 

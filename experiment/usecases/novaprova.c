@@ -8,6 +8,8 @@
  * source: novaprova/main.c
  */
 
+#ifdef INCLUDE_NOVAPROVA
+
 #include "core/logxcontroll.h"
 
 void novaprova(int argc, char **argv, int start_from)
@@ -37,3 +39,5 @@ void novaprova(int argc, char **argv, int start_from)
 
     exit(ec);
 }
+
+#endif

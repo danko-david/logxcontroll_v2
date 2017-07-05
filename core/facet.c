@@ -1275,7 +1275,7 @@ int lxc_gate_get_property_value(Gate gate, const char* prop, char* ret, int max)
 	return pv(gate, prop, ret, max);
 }
 
-Gate lxc_new_instance_by_behavior(const struct lxc_gate_behavior* b)
+Gate lxc_gate_create_by_behavior(const struct lxc_gate_behavior* b)
 {
 	if(NULL == b)
 	{
@@ -1285,7 +1285,7 @@ Gate lxc_new_instance_by_behavior(const struct lxc_gate_behavior* b)
 	return b->create(b);
 }
 
-Gate lxc_new_instance_by_name(const char* name)
+Gate lxc_gate_create_by_name(const char* name)
 {
 	const struct lxc_gate_behavior* behavior = get_gate_entry_by_name(name);
 	if(NULL == behavior)

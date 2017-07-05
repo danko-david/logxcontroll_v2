@@ -61,7 +61,7 @@ static void test_functional_wrap()
 	Wire sum = lxc_circuit_get_or_create_wire(circ, "sum", s_int);
 
 	{
-		Gate add = lxc_create_gate_by_name("add");
+		Gate add = lxc_gate_create_by_name("add");
 		lxc_gate_set_refdes(add, "add");
 		lxc_circuit_add_gate(circ, add);
 
@@ -72,7 +72,7 @@ static void test_functional_wrap()
 	}
 
 	{
-		Gate print = lxc_create_gate_by_name("print_num");
+		Gate print = lxc_gate_create_by_name("print_num");
 		lxc_gate_set_refdes(print, "print");
 		lxc_circuit_add_gate(circ, print);
 
