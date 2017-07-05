@@ -67,7 +67,7 @@ void test_regex_find_float_price()
 				}
 			#endif
 
-			//every acquired group should be released (in the background)
+			//every acquired group should be released
 			regex_free_group(str);
 		}
 	}
@@ -153,9 +153,89 @@ void test_regex_find_float_price_named()
 	regex_destroy(&regex);
 }
 
+void test_regex_overgroup_slice_pass()
+{
+	struct compiled_regex regex;
+	const char* err;
+	int ret = regex_compile(&regex, "(\\d)+", 0, &err);
+	if(0 != ret)
+	{
+		printf("regex compile error: %s\n", err);
+		exit(1);
+	}
+
+	struct regex_matcher matcher;
+
+
+	char* subject = NULL;
+
+	{
+		int size = sizeof(char) * 2 * REGEX_GROUP_MAX_LENGTH;
+		subject = malloc(size+1);
+		subject[size] = 0;
+		int i = -1;
+		while(++i != size)
+		{
+			subject[i] = '0' + (i % 10);
+		}
+	}
+
+	ret = regex_match(&matcher, &regex, subject);
+
+	if(0 != ret)
+	{
+		#ifdef NP_ASSERT
+			NP_ASSERT(0 != ret);
+		#endif
+		printf("Pattern not found\n");
+		exit(2);
+	}
+
+	const char* str;
+	ret = regex_get_group(&matcher, 0, &str);
+	if(0 != ret)
+	{
+		#ifdef NP_ASSERT
+			NP_ASSERT(0 != ret);
+		#endif
+		printf("Failed to get full group\n");
+		exit(3);
+	}
+
+	printf("Full group: %s\n", str);
+
+	regex_free_group(str);
+
+	#ifdef NP_ASSERT
+		NP_ASSERT_EQUAL(2, matcher.group_count);
+	#endif
+
+	{
+		int i = 0;
+		while(++i < matcher.group_count)
+		{
+			ret = regex_get_group(&matcher, i, &str);
+			if(0 != ret)
+			{
+				printf("Failed to get %d. group\n", i);
+				exit(4);
+			}
+			printf("group %d: %s\n", i, str);
+
+			//every acquired group should be released
+			//(in the background it's an allocated block)
+			regex_free_group(str);
+		}
+	}
+
+	free(subject);
+	regex_destroy(&regex);
+}
+
 
 void fw_regex(int argc, char **argv, int start_from)
 {
-	test_regex_find_float_price();
-	test_regex_find_float_price_named();
+	//test_regex_find_float_price();
+	//test_regex_find_float_price_named();
+	test_regex_overgroup_slice_pass();
 }
