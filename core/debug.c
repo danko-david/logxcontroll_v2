@@ -307,6 +307,7 @@ static int print_dot_gate(Gate g)
 	free(i_names);
 	free(o_names);
 
+	return 0;
 }
 
 
@@ -335,7 +336,7 @@ void linux_print_heap_size()
 
 	read(fd, data, sizeof(data));
 
-	data[sizeof(data)-1] = '0';
+	data[sizeof(data)-1] = '\0';
 
 	close(fd);
 

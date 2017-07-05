@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdbool.h>
-//#include <stdarg.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
@@ -35,6 +35,10 @@
 
 #include <dlfcn.h>//TODO POSIX supports dlopen, windows has LoadLibrary function for this job
 
+//if novaprova included
+#ifdef INCLUDE_NOVAPROVA
+	#include <np.h>
+#endif
 
 #define STATIC_ASSERT(COND,MSG) typedef char static_assertion_##MSG[(!!(COND))*2-1]
 
@@ -89,6 +93,11 @@ Available embeddable modules macro:
 
 #ifdef LXC_EMBED_MODULE_POSIX
 	#include "posix/liblxc_posix.h"
+#endif
+
+
+#ifdef LXC_EMBED_MODULE_EXPERIMENT
+	#include "experiment/experiment.h"
 #endif
 
 

@@ -627,7 +627,7 @@ Heap size: 13 Mb, 13824 Kb, 14155776 bytes
 */
 void computerphile_sort(int argc, char **argv, int start_from)
 {
-	int len = 1000;
+	int len = 50;
 
 	IOCircuit circ = create_computerphile_sort_network
 	(
@@ -700,5 +700,7 @@ void computerphile_sort(int argc, char **argv, int start_from)
 	}
 	*/
 
-	//lxc_destroy_circuit(circ);
+	lxc_circuit_set_all_gate_enable(circ, false);
+
+	lxc_circuit_destroy(circ);
 }

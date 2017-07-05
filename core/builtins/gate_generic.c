@@ -603,6 +603,7 @@ static void lxc_generic_portb_gate_destroy(Gate instance)
 
 	free(ins->inputs);
 	free(ins->outputs);
+	free(ins);
 }
 
 static int lxc_generic_portb_get_input_types(Gate instance, Signal* arr, int* subtypes, uint max_length)

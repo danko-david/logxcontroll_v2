@@ -65,8 +65,9 @@ function(include_novaprova)
 		pkg_check_modules(NOVAPROVA "novaprova")
 		if (NOVAPROVA_FOUND)
 			set(LIBRARIES ${LIBRARIES} ${NOVAPROVA_LIBRARIES} PARENT_SCOPE)
-			add_definitions(${NOVAPROVA_CFLAGS} ${NOVAPROVA_CFLAGS_OTHER})
-			add_definitions(-gdwarf)
+			add_definitions(${NOVAPROVA_CFLAGS} ${NOVAPROVA_CFLAGS_OTHER} -gdwarf -DINCLUDE_NOVAPROVA)
+			SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DINCLUDE_NOVAPROVA")
+			SET(CXXFLAGS "${CXXFLAGS} -DINCLUDE_NOVAPROVA")
 		endif()
 	endif()
 endfunction(include_novaprova)
@@ -113,8 +114,9 @@ output_executable()
 #		http://stackoverflow.com/questions/33678965/need-to-link-cmake-project-to-dl-library		
 #
 find_package (Threads REQUIRED)
+find_package (PCRE REQUIRED)
 
-list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
+list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${PCRE_LIBRARIES})
 
 set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 

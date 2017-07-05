@@ -19,12 +19,16 @@
 #include "core/accounting.h"
 #include "core/builtins/gate_generic.h"
 #include "core/builtins/builtin.h"
+#include "core/builtins/functional_wrapper.h"
 
 #include "core/utils/lxc_utils.h"
 #include "core/utils/utils.h"
 #include "core/utils/rerunnable_thread.h"
 #include "core/utils/worker_pool.h"
+#include "core/utils/pcre_util.h"
+
 #include "core/debug.h"
+
 
 #include "external/github/petewarden/c_hashmap/hashmap.h"
 

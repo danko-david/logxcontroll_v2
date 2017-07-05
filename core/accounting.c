@@ -305,7 +305,7 @@ void dbg_recursive_print_library_tree(struct library_tree_node** node, int lvl, 
 	}
 }
 
-void dbg_print_library_tree(bool leafs)
+void lxc_dbg_print_library_tree(bool leafs)
 {
 	if(NULL == ROOT_NODES)
 	{

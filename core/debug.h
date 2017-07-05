@@ -36,4 +36,6 @@ void dbg_print_messages(char** msgs);
 
 void dbg_crash();
 
+void lxc_dbg_print_library_tree(bool leafs);
+
 #endif /* DEBUG_H_ */

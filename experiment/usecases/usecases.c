@@ -1,34 +1,39 @@
 
 #include "experiment/usecases/usecases.h"
 
-
 /****************************** usecase register ******************************/
 
-struct case_option
-{
-	const char* name;
-	void (*funct)();
-};
-
-static struct case_option** OPTS = NULL;
-
-void register_option(const char* name, void (*funct))
+void register_option
+(
+	struct case_option*** opts,
+	const char* name,
+	void (*funct)
+)
 {
 	struct case_option* add = malloc(sizeof(struct case_option));
 	add->name = name;
 	add->funct = funct;
 	array_pnt_append_element
 	(
-		(void***) &OPTS,
-		(void*)add
+		(void***) opts,
+		(void*) add
 	);
 }
 
 int main(int argc, char **argv)
 {
-	//register_option("", );
-	register_option("computerphile_sort", computerphile_sort);
-	register_option("type_sizes", type_sizes);
+	struct case_option** OPTS = NULL;
+
+	register_option(&OPTS, "computerphile_sort", computerphile_sort);
+	register_option(&OPTS, "type_sizes", type_sizes);
+	register_option(&OPTS, "functional_wrap", functional_wrap);
+
+	register_option(&OPTS, "print_entities", print_entities);
+
+
+	register_option(&OPTS, "fw_regex", fw_regex);
+
+	//register_option("builds_custom_experiment", builds_custom_experiment);
 
 	char* ref = NULL;
 	if(argc > 1)
