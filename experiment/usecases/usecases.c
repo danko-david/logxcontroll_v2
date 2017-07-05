@@ -24,6 +24,10 @@ int main(int argc, char **argv)
 {
 	struct case_option** OPTS = NULL;
 
+	#ifdef INCLUDE_NOVAPROVA
+		register_option(&OPTS, "novaprova", novaprova);
+	#endif
+
 	register_option(&OPTS, "computerphile_sort", computerphile_sort);
 	register_option(&OPTS, "type_sizes", type_sizes);
 	register_option(&OPTS, "functional_wrap", functional_wrap);

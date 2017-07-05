@@ -17,6 +17,11 @@ void register_option
 	void (*funct)
 );
 
+
+#ifdef INCLUDE_NOVAPROVA
+	void novaprova(int argc, char **argv, int start_from);
+#endif
+
 void computerphile_sort(int argc, char **argv, int start_from);
 void type_sizes(int argc, char **argv, int start_from);
 void functional_wrap(int argc, char **argv, int start_from);
