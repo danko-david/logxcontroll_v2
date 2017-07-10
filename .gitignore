@@ -2,6 +2,7 @@ hideout
 .project
 .cproject
 .settings
+build
 Debug
 **.d
 **.o
