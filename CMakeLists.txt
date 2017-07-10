@@ -8,6 +8,27 @@ cmake_minimum_required(VERSION 2.6)
 
 include_directories(${CMAKE_SOURCE_DIR})
 
+#
+## Extra build option
+#
+#add_definitions(-DVERBOSE)
+
+
+#
+## LLVM area
+#
+
+SET (CMAKE_AR      "/usr/bin/llvm-ar")
+SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
+SET (CMAKE_NM      "/usr/bin/llvm-nm")
+SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
+SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
+set(CMAKE_C_COMPILER "/usr/bin/clang")
+set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+#add_definitions(-emit-llvm)
+#SET (CMAKE_LINKER  "/usr/bin/llvm-link")
+
+
 # sources and doc used to create functions:
 #	function: https://cmake.org/cmake/help/v3.0/command/function.html
 #	set(SOURCES ... PARENT_SCOPE): http://stackoverflow.com/questions/10031953/how-to-set-the-global-variable-in-a-function-for-cmake
@@ -131,4 +152,5 @@ set_property(TARGET logxcontroll-core PROPERTY C_STANDARD 99)
 message(STATUS "target_link_libraries: " "${LIBRARIES}")
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
 message(STATUS "Incluide dirs: " "${dirs}")
+message(STATUS "Sources: " "${SOURCES}")
 #message(STATUS ":" "${}")

@@ -32,11 +32,12 @@ void lxc_load_embedded_modules
 
 }
 
-#if __STDC_VERSION__ >= 201101L
-
-
-
-#elif _WIN32
+//#if __STDC_VERSION__ >= 201101L
+//
+//
+//
+//#el
+#if _WIN32
    //define something for Windows (32-bit and 64-bit, this part is common)
    #ifdef _WIN64
       //define something for Windows (64-bit only)

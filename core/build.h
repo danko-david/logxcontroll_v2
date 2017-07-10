@@ -11,6 +11,7 @@
 #define BUILD_H_
 
 //http://stackoverflow.com/questions/5919996/how-to-detect-reliably-mac-os-x-ios-linux-windows-in-c-preprocessor
+//https://stackoverflow.com/questions/3826832/is-there-a-portable-way-to-print-a-message-from-the-c-preprocessor
 
 /**
  * Required supports:
@@ -103,28 +104,48 @@ Available embeddable modules macro:
 
 /********************** Support specific build entities ***********************/
 
-
-#if __STDC_VERSION__ >= 201101L
-
-
-
-#elif _WIN32
+//#if __STDC_VERSION__ >= 201101L
+//
+//#ifdef VERBOSE
+//	#pragma message "build target: C11"
+//#endif
+//
+//#el
+#if _WIN32
    //define something for Windows (32-bit and 64-bit, this part is common)
+	#ifdef VERBOSE
+		#pragma message "build target: Windows 32"
+	#endif
    #ifdef _WIN64
+		#ifdef VERBOSE
+			#pragma message "build target: Windows 64"
+		#endif
       //define something for Windows (64-bit only)
    #endif
 #elif __APPLE__
     #include "TargetConditionals.h"
     #if TARGET_IPHONE_SIMULATOR
+		#ifdef VERBOSE
+			#pragma message "build target: IOS simulator"
+		#endif
          // iOS Simulator
     #elif TARGET_OS_IPHONE
+		#ifdef VERBOSE
+			#pragma message "build target: Iphone"
+		#endif
         // iOS device
     #elif TARGET_OS_MAC
         // Other kinds of Mac OS
+		#ifdef VERBOSE
+			#pragma message "build target: Mac OS"
+		#endif
     #else
     #   error "Unknown Apple platform"
     #endif
 #elif __linux__
+	#ifdef VERBOSE
+		#pragma message "build target: linux"
+	#endif
 
 	#define short_lock pthread_spinlock_t
 	#define long_lock pthread_mutex_t
@@ -137,8 +158,14 @@ Available embeddable modules macro:
 
 
 #elif __unix__ // all unices not caught above
+	#ifdef VERBOSE
+		#pragma message "build target: Unix like system"
+	#endif
     // Unix
 #elif defined(_POSIX_VERSION)
+	#ifdef VERBOSE
+		#pragma message "build target: POSIX compatible"
+	#endif
     // POSIX
 #else
 #   error "Unknown compiler"
