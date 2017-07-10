@@ -1,0 +1,15 @@
+###############################################################################
+Single C file creation:
+
+If your can already compile the project with CMake, and wanted to try compile
+with another compiler, but dont want to invest too much to fit the project to
+the new build infrastructure, you can dump some handy suff from CMake and
+Make.
+
+The idea is to concaterate all the used C files into one huge file, then
+compile only this one, therefore the simplest method can be used to compile
+the whole (one file) project.
+
+This workaround is used to compile the project with emscripten.
+
+Utility location: tools/cmake/code_all_in_one.sh

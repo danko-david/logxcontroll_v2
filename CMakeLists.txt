@@ -25,6 +25,7 @@ SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
 SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
 set(CMAKE_C_COMPILER "/usr/bin/clang")
 set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+#add_definitions(-O0)
 #add_definitions(-emit-llvm)
 #SET (CMAKE_LINKER  "/usr/bin/llvm-link")
 
@@ -135,9 +136,11 @@ output_executable()
 #		http://stackoverflow.com/questions/33678965/need-to-link-cmake-project-to-dl-library		
 #
 find_package (Threads REQUIRED)
-find_package (PCRE REQUIRED)
+list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
-list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${PCRE_LIBRARIES})
+find_package (PCRE REQUIRED)
+list(APPEND LIBRARIES ${PCRE_LIBRARIES})
+
 
 set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 
@@ -151,6 +154,10 @@ set_property(TARGET logxcontroll-core PROPERTY C_STANDARD 99)
 
 message(STATUS "target_link_libraries: " "${LIBRARIES}")
 get_property(dirs DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY INCLUDE_DIRECTORIES)
-message(STATUS "Incluide dirs: " "${dirs}")
-message(STATUS "Sources: " "${SOURCES}")
+message(STATUS "Included dirs: " "${dirs}")
+message(STATUS "Link_Options: " "${LIBRARIES}")
+message(STATUS "Source_Files: " "${SOURCES}")
+#https://stackoverflow.com/questions/5403705/cmake-add-definitions-and-compile-definitions-how-to-see-them
+get_directory_property(DirDefs DIRECTORY ${CMAKE_SOURCE_DIR} COMPILE_DEFINITIONS)
+message(STATUS "Compile_Definitions: " "${DirDefs}")
 #message(STATUS ":" "${}")

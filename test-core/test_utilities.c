@@ -98,7 +98,7 @@ static void test_array_pnt_first_element_added(void)
 	free(array);
 }
 
-void test_array_fix(void)
+static void test_array_fix(void)
 {
 	void** array = NULL;
 	uint len = 0;

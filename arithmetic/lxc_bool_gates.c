@@ -5,7 +5,7 @@
  *      Author: szupervigyor
  */
 
-#include "lxc_bool_gates.h"
+#include "arithmetic/lxc_bool_gates.h"
 #include <stdlib.h>
 #include <string.h>
 

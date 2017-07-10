@@ -244,9 +244,9 @@ int wp_init(struct worker_pool* pool)
 
 //TODO shutdown
 
+/*
 void lxc_wait_thread_pool_shutdown()
 {
-/*
 	TODO later we drain all free thread and shutdown...
 
 	TODO use a global bool logxcontroll_under_shudown
@@ -266,5 +266,6 @@ void lxc_wait_thread_pool_shutdown()
 	pthread_spin_lock(&queue_busy_spin);
 	//queue_add_element(&busy_head, use, &busy_tail);
 	pthread_spin_unlock(&queue_busy_spin);
-*/
+
 }
+*/

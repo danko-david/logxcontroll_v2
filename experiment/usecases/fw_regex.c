@@ -235,7 +235,7 @@ void test_regex_overgroup_slice_pass()
 
 void fw_regex(int argc, char **argv, int start_from)
 {
-	//test_regex_find_float_price();
-	//test_regex_find_float_price_named();
+	test_regex_find_float_price();
+	test_regex_find_float_price_named();
 	test_regex_overgroup_slice_pass();
 }

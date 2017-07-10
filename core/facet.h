@@ -46,6 +46,8 @@ LxcValue lxc_get_token_value(Tokenport);
 
 void lxc_absorb_token(Tokenport);
 
+void lxc_wire_release_token(Tokenport tp);
+
 void* lxc_get_value(LxcValue);
 
 LxcValue lxc_get_constant_by_name(const char* name);
@@ -75,6 +77,8 @@ int lxc_wire_set_refdes(Wire, const char*);
 Wire lxc_wire_create(Signal type);
 
 int lxc_wire_set_refdes(Wire, const char*);
+
+bool lxc_wire_token_available(Tokenport tp);
 
 /*********************** Gate ASSOCIATED FACET FUNCTION ***********************/
 

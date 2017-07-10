@@ -48,6 +48,10 @@ struct pool_thread
 
 int wp_init(struct worker_pool* pool);
 
+int wp_submit_task(struct worker_pool* wp, void (*func)(void*), void* param);
+
+enum worker_pool_status wp_get_status(struct worker_pool* wp);
+
 int wp_shutdown(struct worker_pool* pool);
 
 int wp_wait_exit(struct worker_pool* pool);

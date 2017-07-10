@@ -27,5 +27,10 @@ typedef struct regex_matcher* RegexMatcher;
 int regex_destroy(Regex regex);
 int regex_compile(Regex regex, const char* expr, int options, const char** error);
 
+int regex_match(RegexMatcher dst, Regex regex, const char* input);
+
 int regex_get_group(RegexMatcher match, int grp, const char** dst);
+
+int regex_get_named_group(RegexMatcher match, const char* group_name, const char** dst);
+
 void regex_free_group(const char* dst);

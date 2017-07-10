@@ -5,7 +5,7 @@
  *      Author: szupervigyor
  */
 
-#include "logxcontroll.h"
+#include "core/logxcontroll.h"
 
 Task lxc_create_task(Gate instance, LxcValue value, int index)
 {

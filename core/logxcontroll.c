@@ -65,5 +65,5 @@ void logxcontroll_main()
 	//TODO construct bootstrapping workspace
 
 	//returns if last thread is shutted down
-	lxc_wait_thread_pool_shutdown();
+	//lxc_wait_thread_pool_shutdown();
 }
