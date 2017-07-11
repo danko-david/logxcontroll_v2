@@ -92,13 +92,6 @@ void async_execution(Gate instance, Signal type, int subtype, LxcValue value, ui
 	TEST_ASSERT_EQUAL(0, wp_submit_task(&worker_pool, lxc_execute_then_release, t));
 }
 
-static void test_scenario_bool_gate_oscillator_1_async(void)
-{
-	logxcontroll_init_environment();
-	bool_gate_oscillator_1_async();
-	logxcontroll_destroy_environment();
-}
-
 void bool_gate_oscillator_1_async(void)
 {
 	logxcontroll_init_environment();
@@ -122,12 +115,13 @@ void bool_gate_oscillator_1_async(void)
 	logxcontroll_destroy_environment();
 }
 
-static void test_scenario_bool_gate_oscillator_3_async(void)
+static void test_scenario_bool_gate_oscillator_1_async(void)
 {
 	logxcontroll_init_environment();
-	bool_gate_oscillator_3_async();
+	bool_gate_oscillator_1_async();
 	logxcontroll_destroy_environment();
 }
+
 
 void bool_gate_oscillator_3_async(void)
 {
@@ -152,18 +146,20 @@ void bool_gate_oscillator_3_async(void)
 	lxc_circuit_destroy(circ);
 }
 
+static void test_scenario_bool_gate_oscillator_3_async(void)
+{
+	logxcontroll_init_environment();
+	bool_gate_oscillator_3_async();
+	logxcontroll_destroy_environment();
+}
+
+
 static void task_disable_circuit_after_3_sec(IOCircuit circ)
 {
 	sleep(3);
 	lxc_circuit_set_all_gate_enable(circ, false);
 }
 
-static void test_scenario_bool_gate_oscillator_1_loopbreaker(void)
-{
-	logxcontroll_init_environment();
-	bool_gate_oscillator_1_loopbreaker();
-	logxcontroll_destroy_environment();
-}
 
 void bool_gate_oscillator_1_loopbreaker(void)
 {
@@ -185,12 +181,13 @@ void bool_gate_oscillator_1_loopbreaker(void)
 	lxc_circuit_destroy(circ);
 }
 
-static void test_scenario_bool_gate_oscillator_3_loopbreaker(void)
+static void test_scenario_bool_gate_oscillator_1_loopbreaker(void)
 {
 	logxcontroll_init_environment();
-	bool_gate_oscillator_3_loopbreaker();
+	bool_gate_oscillator_1_loopbreaker();
 	logxcontroll_destroy_environment();
 }
+
 
 void bool_gate_oscillator_3_loopbreaker(void)
 {
@@ -212,6 +209,13 @@ void bool_gate_oscillator_3_loopbreaker(void)
 	lxc_test_destroy_worker_pool(&worker_pool);
 
 	lxc_circuit_destroy(circ);
+	logxcontroll_destroy_environment();
+}
+
+static void test_scenario_bool_gate_oscillator_3_loopbreaker(void)
+{
+	logxcontroll_init_environment();
+	bool_gate_oscillator_3_loopbreaker();
 	logxcontroll_destroy_environment();
 }
 
