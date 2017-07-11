@@ -11,7 +11,7 @@ void print_entities(int argc, char **argv, int start_from)
 {
 	struct case_option** OPTS = NULL;
 
-	register_option(&OPTS, "libtree", libtree);
+	options_register(&OPTS, "libtree", libtree);
 
 	char* ref = NULL;
 	if(argc > 2)

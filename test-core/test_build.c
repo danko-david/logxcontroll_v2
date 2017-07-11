@@ -14,12 +14,12 @@ struct lock_test_helper
 
 static void thread_lock_then_set_true(struct lock_test_helper* help)
 {
-	NP_ASSERT_EQUAL(false, help->signal_to_thread.value);
+	TEST_ASSERT_EQUAL(false, help->signal_to_thread.value);
 	help->signal_to_thread.value = true;
 
 	help->lock(help->LOCK);
 
-	NP_ASSERT_EQUAL(false, help->feedback_from_thread.value);
+	TEST_ASSERT_EQUAL(false, help->feedback_from_thread.value);
 	help->feedback_from_thread.value = true;
 
 	help->unlock(help->LOCK);
@@ -27,8 +27,8 @@ static void thread_lock_then_set_true(struct lock_test_helper* help)
 
 void assert_not_locked(void* LOCK, int (*trylock)(void*), int (*unlock)(void*))
 {
-	NP_ASSERT_EQUAL(0, trylock(LOCK));
-	NP_ASSERT_EQUAL(0, unlock(LOCK));
+	TEST_ASSERT_EQUAL(0, trylock(LOCK));
+	TEST_ASSERT_EQUAL(0, unlock(LOCK));
 }
 
 static void generic_test_lock
@@ -41,23 +41,23 @@ static void generic_test_lock
 	int (*destroy)(void*)
 )
 {
-	NP_ASSERT_EQUAL(0, init(LOCK));
+	TEST_ASSERT_EQUAL(0, init(LOCK));
 
 	//newly created locks bust be unlocked by default
 	//if lock locked by default , this call fails faster
 	//because simple "lock()" blocks the execution, so in that case the
 	//test case will be failed because of timeout.
-	NP_ASSERT_EQUAL(0, trylock(LOCK));
+	TEST_ASSERT_EQUAL(0, trylock(LOCK));
 
 	//previous call locked, now release.
-	NP_ASSERT_EQUAL(0, unlock(LOCK));
+	TEST_ASSERT_EQUAL(0, unlock(LOCK));
 
-	NP_ASSERT_EQUAL(0, lock(LOCK));
+	TEST_ASSERT_EQUAL(0, lock(LOCK));
 
 	//must "fail" with EBUSY
-	NP_ASSERT_EQUAL(EBUSY, trylock(LOCK));
+	TEST_ASSERT_EQUAL(EBUSY, trylock(LOCK));
 
-	NP_ASSERT_EQUAL(0, unlock(LOCK));
+	TEST_ASSERT_EQUAL(0, unlock(LOCK));
 
 	//involving threads, testing real concurrency locking
 	{
@@ -93,13 +93,13 @@ static void generic_test_lock
 		thread_wait_until_true(&help.signal_to_thread);
 
 		//test for not falling through the locked code part
-		NP_ASSERT_EQUAL(false, help.feedback_from_thread.value);
+		TEST_ASSERT_EQUAL(false, help.feedback_from_thread.value);
 		unlock(LOCK);
 
 		//it can take "a while"
 		thread_wait_until_true(&help.feedback_from_thread);
 
-		NP_ASSERT_EQUAL(true, help.feedback_from_thread.value);
+		TEST_ASSERT_EQUAL(true, help.feedback_from_thread.value);
 
 		lxc_test_destroy_thread(thread);
 	}

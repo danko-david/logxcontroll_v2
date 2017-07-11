@@ -10,10 +10,10 @@ void lxc_init_instance(Gate instance, const struct lxc_gate_behavior* behavior)
 {
 	instance->behavior = behavior;
 	instance->enabled = 0;
-	instance->execution_behavior = default_execution_behavior;
+	instance->execution_behavior = lxc_execution_default_behavior;
 }
 
-void default_execution_behavior(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+void lxc_execution_default_behavior(Gate instance, Signal type, int subtype, LxcValue value, uint index)
 {
 	instance->behavior->execute(instance, type, subtype, value, index);
 }

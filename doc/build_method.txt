@@ -13,3 +13,8 @@ the whole (one file) project.
 This workaround is used to compile the project with emscripten.
 
 Utility location: tools/cmake/code_all_in_one.sh
+
+
+================
+Useful commands:
+make |& less

@@ -12,6 +12,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 ## Extra build option
 #
 #add_definitions(-DVERBOSE)
+#add_definitions(-DWITHOUT_PCRE)
 
 
 #
@@ -23,8 +24,10 @@ SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
 SET (CMAKE_NM      "/usr/bin/llvm-nm")
 SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
 SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
-set(CMAKE_C_COMPILER "/usr/bin/clang")
-set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+
+#set(CMAKE_C_COMPILER "/usr/bin/clang")
+#set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
+
 #add_definitions(-O0)
 #add_definitions(-emit-llvm)
 #SET (CMAKE_LINKER  "/usr/bin/llvm-link")
@@ -104,7 +107,7 @@ lxc_build_add_embedded_library(arithmetic)
 #tests
 lxc_build_add_embedded_test(test-core)
 lxc_build_add_embedded_library(experiment)
-include_novaprova()
+#include_novaprova()
 
 
 ###### core library ######

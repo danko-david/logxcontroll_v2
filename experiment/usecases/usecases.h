@@ -10,12 +10,14 @@ struct case_option
 	void (*funct)();
 };
 
-void register_option
+void options_register
 (
 	struct case_option*** opts,
 	const char* name,
 	void (*funct)
 );
+
+void options_release(struct case_option** opts);
 
 
 #ifdef INCLUDE_NOVAPROVA

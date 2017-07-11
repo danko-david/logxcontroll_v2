@@ -50,3 +50,68 @@ void lxc_execute_then_release(Task t)
 	lxc_unreference_value(t->value);
 	free(t);
 }
+
+struct queue
+{
+	struct queue_element* head;
+	struct queue_element* tail;
+};
+
+struct qe_task
+{
+	struct queue_element qe;
+	Gate instance;
+	LxcValue value;
+	uint index;
+};
+
+static struct queue* LOOP_BREAKER = NULL;
+
+static struct qe_task* create_qe_task(Gate instance, LxcValue val, uint index)
+{
+	struct qe_task* ret = malloc_zero(sizeof(struct qe_task));
+	ret->instance = instance;
+	lxc_reference_value(val);
+	ret->value = val;
+	ret->index = index;
+	return ret;
+}
+
+static void qe_task_execute_then_destroy(struct qe_task* e)
+{
+	lxc_do_execute(e->instance, e->value, e->index);
+	lxc_unreference_value(e->value);
+	free(e);
+}
+
+void lxc_execution_loopbreaker(Gate instance, Signal type, int subtype, LxcValue value, uint index)
+{
+	struct qe_task* task = create_qe_task(instance, value, index);
+	if(NULL == LOOP_BREAKER)
+	{
+		LOOP_BREAKER = malloc_zero(sizeof(struct queue));
+
+		struct qe_task* crnt = task;
+
+		while(NULL != crnt)
+		{
+			qe_task_execute_then_destroy(crnt);
+			crnt = (struct qe_task*) queue_pop_head_element(&LOOP_BREAKER->head, &LOOP_BREAKER->tail);
+		}
+
+		//done, wipe
+		free(LOOP_BREAKER);
+		LOOP_BREAKER = NULL;
+	}
+	else
+	{
+		queue_add_element
+		(
+			&LOOP_BREAKER->head,
+			&task->qe,
+			&LOOP_BREAKER->tail
+		);
+		return;
+	}
+}
+

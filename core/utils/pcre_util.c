@@ -8,6 +8,8 @@
 
 #include "core/logxcontroll.h"
 
+#ifndef WITHOUT_PCRE
+
 int regex_destroy(Regex regex)
 {
 	if(NULL == regex)
@@ -150,3 +152,5 @@ void regex_free_group(const char* dst)
 {
 	pcre_free_substring(dst);
 }
+
+#endif

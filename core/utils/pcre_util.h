@@ -3,6 +3,8 @@
 
 #include <pcre.h>
 
+#ifndef WITHOUT_PCRE
+
 #define REGEX_GROUP_MAX_LENGTH 20
 
 struct compiled_regex
@@ -34,3 +36,5 @@ int regex_get_group(RegexMatcher match, int grp, const char** dst);
 int regex_get_named_group(RegexMatcher match, const char* group_name, const char** dst);
 
 void regex_free_group(const char* dst);
+
+#endif

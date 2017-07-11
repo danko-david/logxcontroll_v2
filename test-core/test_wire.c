@@ -5,7 +5,7 @@
 Wire lxc_test_create_wire(Signal sig)
 {
 	Wire w = lxc_wire_create(sig);
-	NP_ASSERT_NOT_NULL(w);
+	TEST_ASSERT_NOT_NULL(w);
 	return w;
 }
 

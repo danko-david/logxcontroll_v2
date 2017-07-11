@@ -123,7 +123,7 @@ void assert_thread_reach_state
 	{
 		print_usual_wait(info, reach);
 	}
-	NP_ASSERT_NOT_EQUAL(-1, reach);
+	TEST_ASSERT_NOT_EQUAL(-1, reach);
 }
 
 void assert_switch_reach_state
@@ -149,7 +149,7 @@ void assert_switch_reach_state
 	{
 		print_usual_switch_wait(info, reach);
 	}
-	NP_ASSERT_NOT_EQUAL(-1, reach);
+	TEST_ASSERT_NOT_EQUAL(-1, reach);
 }
 
 struct rerunnable_thread* lxc_test_create_idle_thread()
@@ -160,10 +160,10 @@ struct rerunnable_thread* lxc_test_create_idle_thread()
 	thread->on_release_callback = print_thread_state;
 
 	//must be in initalized state.
-	NP_ASSERT_EQUAL(rrt_initalized, rrt_get_state(thread));
+	TEST_ASSERT_EQUAL(rrt_initalized, rrt_get_state(thread));
 
 	//and may not accept task yet.
-	NP_ASSERT_EQUAL
+	TEST_ASSERT_EQUAL
 	(
 		false,
 		rrt_try_rerun_if_free
@@ -175,11 +175,11 @@ struct rerunnable_thread* lxc_test_create_idle_thread()
 	);
 
 
-	NP_ASSERT_EQUAL(0, rrt_start(thread));
+	TEST_ASSERT_EQUAL(0, rrt_start(thread));
 
 
 	//can't start again (after start)
-	NP_ASSERT_NOT_EQUAL(0, rrt_start(thread));
+	TEST_ASSERT_NOT_EQUAL(0, rrt_start(thread));
 
 	assert_thread_reach_state("started and go idle", thread, rrt_idle);
 	return thread;
@@ -193,8 +193,8 @@ void lxc_test_thread_execute_with_ensure
 )
 {
 	//the thread must be idle (pre check... not really necessary)
-	NP_ASSERT_EQUAL(rrt_idle, rrt_get_state(thread));
-	NP_ASSERT_EQUAL(true, rrt_try_rerun_if_free(thread, func, param));
+	TEST_ASSERT_EQUAL(rrt_idle, rrt_get_state(thread));
+	TEST_ASSERT_EQUAL(true, rrt_try_rerun_if_free(thread, func, param));
 }
 
 void lxc_test_destroy_thread(struct rerunnable_thread* thread)
@@ -210,10 +210,10 @@ void lxc_test_destroy_thread(struct rerunnable_thread* thread)
 	}
 
 	//can't start again (after destroyed)
-	NP_ASSERT_NOT_EQUAL(0, rrt_start(thread));
+	TEST_ASSERT_NOT_EQUAL(0, rrt_start(thread));
 
 	//then able to destroy
-	NP_ASSERT_EQUAL(0, rrt_destroy_thread(thread));
+	TEST_ASSERT_EQUAL(0, rrt_destroy_thread(thread));
 
 	free(thread);
 }
@@ -222,13 +222,13 @@ static void test_rerunnable_thread_full_functionality(void)
 {
 	struct rerunnable_thread* thread = lxc_test_create_idle_thread();
 	//can't start again (after started)
-	NP_ASSERT_NOT_EQUAL(0, rrt_start(thread));
+	TEST_ASSERT_NOT_EQUAL(0, rrt_start(thread));
 
 	//at this point it should be free.
-	NP_ASSERT_TRUE(rrt_is_free(thread));
+	TEST_ASSERT_TRUE(rrt_is_free(thread));
 
 	//with another "words"
-	NP_ASSERT_EQUAL(rrt_idle, rrt_get_state(thread));
+	TEST_ASSERT_EQUAL(rrt_idle, rrt_get_state(thread));
 
 	{
 		//testing for job execution, it will be really done?
@@ -236,7 +236,7 @@ static void test_rerunnable_thread_full_functionality(void)
 		sw.value = false;
 
 		//thread must be in idle state, so it's should accept the task.
-		NP_ASSERT_EQUAL
+		TEST_ASSERT_EQUAL
 		(
 			true,
 			rrt_try_rerun_if_free
@@ -255,7 +255,7 @@ static void test_rerunnable_thread_full_functionality(void)
 		);
 
 		//the other thread set this value true.
-		NP_ASSERT_EQUAL(true, sw.value);
+		TEST_ASSERT_EQUAL(true, sw.value);
 	}
 
 	{
@@ -265,7 +265,7 @@ static void test_rerunnable_thread_full_functionality(void)
 
 		//thread is idle again, is should accept a job again, but now,
 		//the thread should wait until we set the condition to true.
-		NP_ASSERT_EQUAL
+		TEST_ASSERT_EQUAL
 		(
 			true,
 			rrt_try_rerun_if_free
@@ -284,7 +284,7 @@ static void test_rerunnable_thread_full_functionality(void)
 		);
 
 		//may not accept another task.
-		NP_ASSERT_EQUAL
+		TEST_ASSERT_EQUAL
 		(
 			false,
 			rrt_try_rerun_if_free
@@ -296,7 +296,7 @@ static void test_rerunnable_thread_full_functionality(void)
 		);
 
 		//still must be busy (without waiting to be busy)
-		NP_ASSERT_EQUAL(rrt_busy, rrt_get_state(thread));
+		TEST_ASSERT_EQUAL(rrt_busy, rrt_get_state(thread));
 
 		//no we set the switch true, so the thread "done" the task.
 		sw.value = true;
@@ -311,7 +311,7 @@ static void test_rerunnable_thread_full_functionality(void)
 
 	{
 		//can't destroy until shutdown
-		NP_ASSERT_NOT_EQUAL(0, rrt_destroy_thread(thread));
+		TEST_ASSERT_NOT_EQUAL(0, rrt_destroy_thread(thread));
 	}
 
 	lxc_test_destroy_thread(thread);
@@ -324,7 +324,7 @@ static void test_shutdown_request_beneath_running_task(void)
 	struct switch_holder sw;
 	sw.value = false;
 
-	NP_ASSERT_EQUAL
+	TEST_ASSERT_EQUAL
 	(
 		true,
 		rrt_try_rerun_if_free
@@ -342,7 +342,7 @@ static void test_shutdown_request_beneath_running_task(void)
 		rrt_busy
 	);
 
-	NP_ASSERT_EQUAL(0, rrt_graceful_shutdown(thread));
+	TEST_ASSERT_EQUAL(0, rrt_graceful_shutdown(thread));
 
 	assert_thread_reach_state
 	(

@@ -28,8 +28,9 @@ void lxc_do_execute(Gate g, LxcValue value, uint index);
 
 void lxc_execute_then_release(Task t);
 
-void default_execution_behavior(Gate instance, Signal type, int subtype, LxcValue value, uint index);
+void lxc_execution_default_behavior(Gate instance, Signal type, int subtype, LxcValue value, uint index);
 
+void lxc_execution_loopbreaker(Gate instance, Signal type, int subtype, LxcValue value, uint index);
 
 
 #endif /* LXC_EXECUTION_H_ */
