@@ -172,10 +172,6 @@ void queue_pop_intermediate_element
 	struct queue_element** tail
 );
 
-//TODO add map element
-//TODO remove map element
-//TODO map key_val by key
-
 void print_checkpoint(char* str);
 
 

@@ -18,8 +18,8 @@ int logxcontroll_init_environment()
 	}
 
 	//print stack trace on memory violation and other abort cases
-	signal(SIGSEGV, gnu_libc_print_stack_trace_then_terminalte);
-	signal(SIGABRT, gnu_libc_print_stack_trace_then_terminalte);
+//	signal(SIGSEGV, gnu_libc_print_stack_trace_then_terminalte);
+//	signal(SIGABRT, gnu_libc_print_stack_trace_then_terminalte);
 
 
 	/*** initialize generic library ***/

@@ -111,8 +111,9 @@ static void try_invoke_callback
 	}
 }
 
-static void executor_function(struct rerunnable_thread* rrt)
+static void* executor_function(void* param)
 {
+	struct rerunnable_thread* rrt = (struct rerunnable_thread* ) param;
 	pthread_detach(pthread_self());
 	while(true)
 	{
@@ -179,7 +180,7 @@ static void executor_function(struct rerunnable_thread* rrt)
 
 	atomic_update_state(rrt, rrt_exited);
 	pthread_exit(NULL);
-	return;
+	return NULL;
 }
 
 void rrt_init(struct rerunnable_thread* rrt)
@@ -206,7 +207,7 @@ int rrt_start(struct rerunnable_thread* rrt)
 				(
 					&(rrt->thread),
 					NULL,
-					(void *(*) (void *)) executor_function,
+					executor_function,
 					(void*) rrt
 				);
 	}

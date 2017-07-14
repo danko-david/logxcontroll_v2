@@ -48,8 +48,9 @@ int main(int argc, char **argv)
 	options_register(&OPTS, "computerphile_sort", computerphile_sort);
 	options_register(&OPTS, "type_sizes", type_sizes);
 	options_register(&OPTS, "functional_wrap", functional_wrap);
-
 	options_register(&OPTS, "print_entities", print_entities);
+
+	options_register(&OPTS, "oscillator", oscillator);
 
 	#ifndef WITHOUT_PCRE
 		options_register(&OPTS, "fw_regex", fw_regex);

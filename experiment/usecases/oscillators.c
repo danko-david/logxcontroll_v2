@@ -89,7 +89,13 @@ static void notify_gate_test(Gate g)
 void async_execution(Gate instance, Signal type, int subtype, LxcValue value, uint index)
 {
 	Task t = lxc_create_task(instance, value, index);
-	TEST_ASSERT_EQUAL(0, wp_submit_task(&worker_pool, lxc_execute_then_release, t));
+	int ret;
+	TEST_ASSERT_EQUAL(0, ret = wp_submit_task(&worker_pool, lxc_execute_then_release, t));
+	if(0 != ret)
+	{
+		printf("Can't submint task: %d \n", ret);
+		abort();
+	}
 }
 
 void bool_gate_oscillator_1_async(void)
@@ -113,6 +119,11 @@ void bool_gate_oscillator_1_async(void)
 
 	lxc_circuit_destroy(circ);
 	logxcontroll_destroy_environment();
+}
+
+void oscillator_1_async(int argc, char **argv, int start_from)
+{
+	bool_gate_oscillator_1_async();
 }
 
 static void test_scenario_bool_gate_oscillator_1_async(void)
@@ -145,6 +156,12 @@ void bool_gate_oscillator_3_async(void)
 
 	lxc_circuit_destroy(circ);
 }
+
+void oscillator_3_async(int argc, char **argv, int start_from)
+{
+	 bool_gate_oscillator_3_async();
+}
+
 
 static void test_scenario_bool_gate_oscillator_3_async(void)
 {
@@ -181,6 +198,11 @@ void bool_gate_oscillator_1_loopbreaker(void)
 	lxc_circuit_destroy(circ);
 }
 
+void oscillator_1_loopbreaker(int argc, char **argv, int start_from)
+{
+	bool_gate_oscillator_1_loopbreaker();
+}
+
 static void test_scenario_bool_gate_oscillator_1_loopbreaker(void)
 {
 	logxcontroll_init_environment();
@@ -212,6 +234,11 @@ void bool_gate_oscillator_3_loopbreaker(void)
 	logxcontroll_destroy_environment();
 }
 
+void oscillator_3_loopbreaker(int argc, char **argv, int start_from)
+{
+	bool_gate_oscillator_3_loopbreaker();
+}
+
 static void test_scenario_bool_gate_oscillator_3_loopbreaker(void)
 {
 	logxcontroll_init_environment();
@@ -219,3 +246,41 @@ static void test_scenario_bool_gate_oscillator_3_loopbreaker(void)
 	logxcontroll_destroy_environment();
 }
 
+void oscillator(int argc, char **argv, int start_from)
+{
+	struct case_option** OPTS = NULL;
+	options_register(&OPTS, "1_async", oscillator_1_async);
+	options_register(&OPTS, "3_async", oscillator_3_async);
+
+	options_register(&OPTS, "1_loopbreaker", oscillator_1_loopbreaker);
+	options_register(&OPTS, "3_loopbreaker", oscillator_3_loopbreaker);
+
+	char* ref = NULL;
+	if(argc > 2)
+	{
+		ref = argv[2];
+		int i=-1;
+		while(NULL != OPTS[++i])
+		{
+			if(0 == strcmp(ref, OPTS[i]->name))
+			{
+				logxcontroll_init_environment();
+				OPTS[i]->funct(argc, argv, 2);
+				logxcontroll_destroy_environment();
+				options_release(OPTS);
+				return;
+			}
+		}
+	}
+
+	printf("Given oscillator: \"%s\" not found.\n", ref);
+	printf("Available oscillators:\n");
+	{
+		int i = -1;
+		while(NULL != OPTS[++i])
+		{
+			printf("==> \"%s\"\n", OPTS[i]->name);
+		}
+	}
+	options_release(OPTS);
+}

@@ -199,8 +199,10 @@ static void print_wired_ref(Tokenport tp, bool direction, char* def)
 	);
 }
 
-static int print_dot_wire(Wire w)
+static int print_dot_wire(any_t wire, any_t _)
 {
+	Wire w = (Wire) wire;
+
 	Tokenport driver = NULL;
 
 	if(NULL != w->drivers)
@@ -233,8 +235,9 @@ static int print_dot_wire(Wire w)
 	return 0;
 }
 
-static int print_dot_gate(Gate g)
+static int print_dot_gate(any_t gate, any_t _)
 {
+	Gate g = (Gate) gate;
 	printf
 	(
 		"\t\"%s\" [shape=record,label=\"",

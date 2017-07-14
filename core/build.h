@@ -226,4 +226,7 @@ int long_lock_trylock(long_lock*);
 int long_lock_unlock(long_lock*);
 int long_lock_destroy(long_lock*);
 
+
+#define MAX_CONCURRENCY_RETRY 300
+
 #endif /* BUILD_H_ */

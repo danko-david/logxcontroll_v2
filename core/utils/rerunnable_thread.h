@@ -21,8 +21,6 @@ enum rerunnable_thread_state
 	rrt_exited
 };
 
-typedef volatile int pthread_spinlock_t;
-
 enum rrt_callback_point
 {
 	rrt_right_after_executed,

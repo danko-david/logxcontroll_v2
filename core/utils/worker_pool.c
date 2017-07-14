@@ -52,8 +52,11 @@ static struct pool_thread* new_pool_thread(struct worker_pool* pool)
 	ret->thread.on_release_callback = on_release;
 	//TODO this may leak if thread can not be started, create a teastcase for
 	//this, novaprova can "replace" rrt_ start with mocking
-	if(0 != rrt_start(&(ret->thread)))
+	int status = rrt_start(&(ret->thread));
+	if(0 != status)
 	{
+		rrt_destroy_thread(&ret->thread);
+		TEST_ASSERT_EQUAL(0, status);//will fail and show the status
 		return NULL;
 	}
 
