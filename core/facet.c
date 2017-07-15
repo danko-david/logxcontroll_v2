@@ -815,6 +815,11 @@ void* lxc_get_value(LxcValue v)
 	return v->operations->data_address(v);
 }
 
+bool lxc_gate_exists(const char* name)
+{
+	return NULL != get_gate_entry_by_name(name);
+}
+
 
 const char* lxc_gate_get_name(Gate gate)
 {

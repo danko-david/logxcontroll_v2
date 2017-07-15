@@ -34,6 +34,7 @@ void fw_regex(int argc, char **argv, int start_from);
 
 void oscillator(int argc, char **argv, int start_from);
 
+void prell(int argc, char **argv, int start_from);
 
 void builds_custom_experiment(int argc, char **argv, int start_from);
 

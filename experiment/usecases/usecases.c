@@ -51,6 +51,7 @@ int main(int argc, char **argv)
 	options_register(&OPTS, "print_entities", print_entities);
 
 	options_register(&OPTS, "oscillator", oscillator);
+	options_register(&OPTS, "prell", prell);
 
 	#ifndef WITHOUT_PCRE
 		options_register(&OPTS, "fw_regex", fw_regex);
