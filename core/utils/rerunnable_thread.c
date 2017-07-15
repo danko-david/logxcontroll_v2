@@ -39,19 +39,24 @@ static inline void atomic_update_state
 
 static void notify_job(struct rerunnable_thread* rrt)
 {
-	pthread_mutex_lock(&(rrt->mutex));
-	pthread_cond_broadcast(&(rrt->has_job_condition));
-	pthread_mutex_unlock(&(rrt->mutex));
+	lxc_thread_cond_wait_notify(&rrt->has_job_cw);
 }
 
 static void wait_for_job(struct rerunnable_thread* rrt)
 {
-	pthread_mutex_lock(&(rrt->mutex));
+	lxc_thread_cond_wait_lock(&rrt->has_job_cw);
 	if(rrt_idle == atomic_get_state(rrt))
 	{
-		pthread_cond_wait(&(rrt->has_job_condition), &(rrt->mutex));
+		lxc_thread_cond_wait_wait(&rrt->has_job_cw);
 	}
-	pthread_mutex_unlock(&(rrt->mutex));
+	lxc_thread_cond_wait_unlock(&rrt->has_job_cw);
+
+	/*pthread_mutex_lock(&rrt->has_job_cw.mutex);
+	if(rrt_idle == atomic_get_state(rrt))
+	{
+		pthread_cond_wait(&rrt->has_job_cw.condition, &rrt->has_job_cw.mutex);
+	}
+	pthread_mutex_unlock(&rrt->has_job_cw.mutex);*/
 }
 
 bool rrt_try_rerun_if_free
@@ -111,10 +116,10 @@ static void try_invoke_callback
 	}
 }
 
-static void* executor_function(void* param)
+static void executor_function(void* param)
 {
 	struct rerunnable_thread* rrt = (struct rerunnable_thread* ) param;
-	pthread_detach(pthread_self());
+	lxc_thread_setup_after_start();
 	while(true)
 	{
 		wait_for_job(rrt);
@@ -179,17 +184,13 @@ static void* executor_function(void* param)
 	}
 
 	atomic_update_state(rrt, rrt_exited);
-	pthread_exit(NULL);
-	return NULL;
 }
 
 void rrt_init(struct rerunnable_thread* rrt)
 {
 	memset(rrt, 0, sizeof(struct rerunnable_thread));
-	pthread_mutex_init(&(rrt->mutex), NULL);
 	short_lock_init(&rrt->rt_lock);
-	pthread_cond_init(&(rrt->has_job_condition), NULL);
-
+	lxc_thread_cond_wait_init(&rrt->has_job_cw);
 	rrt->status = rrt_initalized;
 }
 
@@ -203,10 +204,9 @@ int rrt_start(struct rerunnable_thread* rrt)
 		//status to rrt_idle yet, under this time we fail to submit a task
 		//for this newly created thread, so i set this before thread start
 		rrt->status = rrt_idle;
-		ret =	pthread_create
+		ret =	lxc_start_new_thread
 				(
 					&(rrt->thread),
-					NULL,
 					executor_function,
 					(void*) rrt
 				);
@@ -232,7 +232,7 @@ enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread* rrt)
 	while(++i < 150)
 	{
 		rt_short_lock(rrt);
-		if(!long_lock_trylock(&rrt->mutex))
+		if(0 != lxc_thread_cond_wait_trylock(&rrt->has_job_cw))
 		{
 			rt_short_unlock(rrt);
 			continue;
@@ -243,7 +243,7 @@ enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread* rrt)
 		{
 			rrt->status = rrt_shutdown_requested;
 			rrt->run = pointer_on_shutdown_request;
-			long_lock_unlock(&rrt->mutex);
+			lxc_thread_cond_wait_unlock(&rrt->has_job_cw);
 			rt_short_unlock(rrt);
 			notify_job(rrt);
 			return SUCCESS;
@@ -251,13 +251,13 @@ enum lxc_errno rrt_graceful_shutdown(struct rerunnable_thread* rrt)
 		else if(rrt_busy == state)
 		{
 			rrt->status = rrt_shutdown_requested;
-			long_lock_unlock(&rrt->mutex);
+			lxc_thread_cond_wait_unlock(&rrt->has_job_cw);
 			rt_short_unlock(rrt);
 			return SUCCESS;
 		}
 		else
 		{
-			long_lock_unlock(&rrt->mutex);
+			lxc_thread_cond_wait_unlock(&rrt->has_job_cw);
 			rt_short_unlock(rrt);
 		}
 
@@ -294,7 +294,7 @@ int rrt_poll_wait_exit(struct rerunnable_thread* rrt)
 		{
 			return 0;
 		}
-		usleep(100000); //100 ms
+		c_usleep(100000); //100 ms
 	}
 	while(1);
 
@@ -314,9 +314,9 @@ int rrt_destroy_thread(struct rerunnable_thread* rrt)
 		//pthread_detach(rrt->thread);
 	}
 
-	pthread_mutex_destroy(&(rrt->mutex));
-	pthread_spin_destroy(&(rrt->rt_lock));
-	pthread_cond_destroy(&(rrt->has_job_condition));
+	short_lock_destroy(&rrt->rt_lock);
+
+	lxc_thread_cond_wait_destroy(&rrt->has_job_cw);
 
 	return 0;
 }

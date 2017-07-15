@@ -55,7 +55,8 @@ int main(int argc, char **argv)
 	#ifndef WITHOUT_PCRE
 		options_register(&OPTS, "fw_regex", fw_regex);
 	#endif
-	//register_option("builds_custom_experiment", builds_custom_experiment);
+
+	//options_register(&OPTS, "builds_custom_experiment", builds_custom_experiment);
 
 	char* ref = NULL;
 	if(argc > 1)
@@ -66,6 +67,14 @@ int main(int argc, char **argv)
 		{
 			if(0 == strcmp(ref, OPTS[i]->name))
 			{
+				if(0 != strcmp("novaprova", ref))
+				{
+					setenv("NOVAPROVA_VALGRIND", "no", 0);
+					#ifdef INCLUDE_NOVAPROVA
+						np_init();
+					#endif
+				}
+
 				logxcontroll_init_environment();
 				OPTS[i]->funct(argc, argv, 2);
 				logxcontroll_destroy_environment();

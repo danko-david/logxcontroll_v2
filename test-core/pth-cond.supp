@@ -1,0 +1,10 @@
+{
+   <pth_sch_safejump>
+   Memcheck:Cond
+   fun:__pth_sched_eventmanager
+   fun:__pth_scheduler
+   fun:*
+#   obj:/usr/*lib*/libpth.so.20.0.27
+#   obj:/lib/libc-2.19.so
+}
+

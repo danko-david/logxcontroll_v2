@@ -420,3 +420,10 @@ void lxc_dbg_on_oom()
 	printf("Out of memory ocurred.");
 	gnu_libc_print_stack_trace_then_terminalte();
 }
+
+//for green thread tests
+void dbg_busy_wait_sec(int sec)
+{
+	clock_t t0 = clock();
+	while(t0 + CLOCKS_PER_SEC*sec < clock());
+}

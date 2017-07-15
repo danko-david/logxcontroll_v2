@@ -134,7 +134,7 @@ static void shutdown_all(struct pool_thread* el)
 {
 	while(NULL != el)
 	{
-		rrt_graceful_shutdown(&el->thread);
+		TEST_ASSERT_EQUAL(0, rrt_graceful_shutdown(&el->thread));
 		el = (struct pool_thread*) el->elem.next;
 	}
 }
@@ -197,7 +197,7 @@ int wp_wait_exit(struct worker_pool* pool)
 
 		if(!exited)
 		{
-			usleep(100000);
+			c_usleep(100000);
 			long_lock_lock(&pool->pool_lock);
 		}
 		else

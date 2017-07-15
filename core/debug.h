@@ -38,4 +38,6 @@ void dbg_crash();
 
 void lxc_dbg_print_library_tree(bool leafs);
 
+void dbg_busy_wait_sec(int sec);
+
 #endif /* DEBUG_H_ */

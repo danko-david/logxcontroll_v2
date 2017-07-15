@@ -16,7 +16,7 @@ void thread_wait_until_true(struct switch_holder* sw)
 	while(!sw->value)
 	{
 		printf("waiting for condition become true\n");
-		usleep(100000);
+		c_usleep(100000);
 	}
 }
 
@@ -45,7 +45,7 @@ int wait_thread_for_state
 			return times;
 		}
 		printf("waiting for state\n");
-		usleep(wait_unit_time_us);
+		c_usleep(wait_unit_time_us);
 	}
 	while(++times < try_max_count);
 
@@ -68,7 +68,7 @@ int wait_switch_for_state
 			return times;
 		}
 		printf("waiting for switch state\n");
-		usleep(wait_unit_time_us);
+		c_usleep(wait_unit_time_us);
 	}
 	while(++times < try_max_count);
 
@@ -351,7 +351,7 @@ static void test_shutdown_request_beneath_running_task(void)
 		rrt_shutdown_requested
 	);
 
-	sleep(1);
+	c_sleep(1);
 
 	//should stay in shutdown_requested state
 	assert_thread_reach_state

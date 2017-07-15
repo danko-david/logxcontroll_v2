@@ -96,12 +96,11 @@ void async_execution(Gate instance, Signal type, int subtype, LxcValue value, ui
 		printf("Can't submint task: %d \n", ret);
 		abort();
 	}
+	//pth_yield(pth_self());
 }
 
 void bool_gate_oscillator_1_async(void)
 {
-	logxcontroll_init_environment();
-
 	wp_init(&worker_pool);
 
 	IOCircuit circ = create_bool_oscillator();
@@ -109,7 +108,7 @@ void bool_gate_oscillator_1_async(void)
 
 	lxc_circuit_set_all_gate_enable(circ, true);
 	notify_gate_test(lxc_circuit_get_gate_by_refdes(circ, "A"));
-	sleep(3);
+	c_sleep(3);
 	lxc_circuit_set_all_gate_enable(circ, false);
 
 	printf("ring oscillator (1 async) produced %d rising edges under 3 sec\n", RISING_EDGE_COUNT);
@@ -118,7 +117,6 @@ void bool_gate_oscillator_1_async(void)
 	lxc_test_destroy_worker_pool(&worker_pool);
 
 	lxc_circuit_destroy(circ);
-	logxcontroll_destroy_environment();
 }
 
 void oscillator_1_async(int argc, char **argv, int start_from)
@@ -145,7 +143,7 @@ void bool_gate_oscillator_3_async(void)
 
 	lxc_circuit_set_all_gate_enable(circ, true);
 	notify_gate_test(lxc_circuit_get_gate_by_refdes(circ, "A"));
-	sleep(3);
+	c_sleep(3);
 	lxc_circuit_set_all_gate_enable(circ, false);
 
 
@@ -171,16 +169,16 @@ static void test_scenario_bool_gate_oscillator_3_async(void)
 }
 
 
-static void task_disable_circuit_after_3_sec(IOCircuit circ)
+static void task_disable_circuit_after_3_sec(void* param)
 {
-	sleep(3);
-	lxc_circuit_set_all_gate_enable(circ, false);
+	c_sleep(3);
+	lxc_circuit_set_all_gate_enable((IOCircuit) param, false);
 }
 
 
 void bool_gate_oscillator_1_loopbreaker(void)
 {
-	wp_init(&worker_pool);
+	TEST_ASSERT_EQUAL(0, wp_init(&worker_pool));
 
 	IOCircuit circ = create_bool_oscillator();
 	lxc_circuit_get_gate_by_refdes(circ, "A")->execution_behavior = lxc_execution_loopbreaker;

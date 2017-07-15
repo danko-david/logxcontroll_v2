@@ -11,6 +11,7 @@
 LxcValue lxc_create_primitive_value(Signal type)
 {
 	struct lxc_primitive_value* ret = malloc(sizeof(struct lxc_primitive_value));
+//	cdll_init(&ret->base.heap_link);
 	ret->base.type = type;
 	ret->refcount = 1;
 	ret->base.subtype_info = 0;

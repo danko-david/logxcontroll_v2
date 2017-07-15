@@ -29,13 +29,11 @@ enum rrt_callback_point
 
 struct rerunnable_thread
 {
-	pthread_t thread;
+	thread_handle thread;
 
 	short_lock rt_lock;
 
-	//TODO struct condition_wait_t notify_new_job;
-	pthread_mutex_t mutex;
-	pthread_cond_t has_job_condition;
+	struct conditional_wait has_job_cw;
 
 	void (*volatile run)(void*);
 	void* parameter;

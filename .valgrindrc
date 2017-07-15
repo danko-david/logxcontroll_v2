@@ -1,1 +1,2 @@
 --suppressions=./test-core/pthread-leakage.supp
+--suppressions=./test-core/pth-cond.supp
