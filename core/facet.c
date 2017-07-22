@@ -1400,7 +1400,7 @@ static void enumerate_io_names
 	int i=-1;
 	while(++i < size)
 	{
-		int tmax = max(g, max(sig[i], sub[i]));
+		int tmax = max(g, sig[i], sub[i]);
 		int t = -1;
 		while(++t < tmax)
 		{
