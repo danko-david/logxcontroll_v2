@@ -172,7 +172,4 @@ void queue_pop_intermediate_element
 	struct queue_element** tail
 );
 
-void print_checkpoint(char* str);
-
-
 #endif /* UTILS_H_ */

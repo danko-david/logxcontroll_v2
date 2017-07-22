@@ -180,6 +180,16 @@ Available embeddable modules macro:
 
 /************************* Common build specific types ************************/
 
+/**
+ * to fully utilize this function use -rdynamic linking option
+ * */
+void print_stack_trace();
+
+void print_stack_trace_then_terminalte();
+
+
+
+#include "pthread.h"
 #define short_lock pthread_spinlock_t
 #define long_lock pthread_mutex_t
 
@@ -280,8 +290,12 @@ int long_lock_unlock(long_lock*);
 int long_lock_destroy(long_lock*);
 
 
+
+
 int c_sleep(int);
 
-int c_usleep(__useconds_t);
+int c_usleep(useconds_t);
+
+
 
 #endif /* BUILD_H_ */

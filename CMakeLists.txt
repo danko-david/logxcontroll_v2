@@ -112,8 +112,8 @@ lxc_build_add_embedded_library(arithmetic)
 #tests
 lxc_build_add_embedded_test(test-core)
 lxc_build_add_embedded_library(experiment)
-#lxc_build_add_embedded_library(hideout)#
-include_novaprova()
+#lxc_build_add_embedded_library(hideout)
+#include_novaprova()
 
 
 ###### core library ######

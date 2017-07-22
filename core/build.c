@@ -11,7 +11,7 @@
 void lxc_on_bug_found(void)
 {
 	printf("A runtime bug found! stack trace:");
-	gnu_libc_print_stack_trace();
+	print_stack_trace();
 }
 
 void lxc_load_embedded_modules
@@ -31,6 +31,46 @@ void lxc_load_embedded_modules
 #endif
 
 }
+
+
+#ifdef __GLIBC__
+	#include <execinfo.h>
+#endif
+
+/**
+ *
+ * https://www.gnu.org/software/libc/manual/html_node/Backtraces.html
+ * */
+void print_stack_trace()
+{
+#ifdef __GLIBC__
+	void *array[10];
+	size_t size;
+	char **strings;
+	size_t i;
+
+	size = backtrace(array, 10);
+	strings = backtrace_symbols(array, size);
+
+	printf ("Obtained %zd stack frames.\n", size);
+
+	for (i = 0; i < size; i++)
+	{
+		printf ("%s\n", strings[i]);
+	}
+
+	free (strings);
+#else
+	printf("//TODO implement `print_stack_trace` on this platform!\n");
+#endif
+}
+
+void print_stack_trace_then_terminalte()
+{
+	print_stack_trace();
+	exit(11);
+}
+
 
 #if __STDC_VERSION__ >= 201101L
 #pragma message "build target: C11"
@@ -426,7 +466,7 @@ int c_sleep(int sec)
 	return sleep(sec);
 }
 
-int c_usleep(__useconds_t us)
+int c_usleep(useconds_t us)
 {
 	return usleep(us);
 }

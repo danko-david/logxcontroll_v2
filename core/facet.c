@@ -737,9 +737,8 @@ int lxc_refdiff_value(LxcValue value, int count)
 		if(ret < 0)
 		{
 			char str[200];
-			gnu_libc_backtrace_symbol(value, str, sizeof(str));
-
 			printf("WARNING: negative reference count for type: \"%s\", value: %s", value->type->name, str);
+			lxc_on_bug_found();
 		}
 #endif
 
@@ -1401,7 +1400,7 @@ static void enumerate_io_names
 	int i=-1;
 	while(++i < size)
 	{
-		int tmax = max(g, sig[i], sub[i]);
+		int tmax = max(g, max(sig[i], sub[i]));
 		int t = -1;
 		while(++t < tmax)
 		{

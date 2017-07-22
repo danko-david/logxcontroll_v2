@@ -365,37 +365,7 @@ void linux_print_heap_size()
 	printf("Heap size: %ld Mb, %ld Kb, %ld bytes\n", diff/(1024*1024), diff/1024, diff);
 }
 
-#include <execinfo.h>
-
-/**
- *
- * https://www.gnu.org/software/libc/manual/html_node/Backtraces.html
- * */
-void gnu_libc_print_stack_trace()
-{
-	void *array[10];
-	size_t size;
-	char **strings;
-	size_t i;
-
-	size = backtrace(array, 10);
-	strings = backtrace_symbols(array, size);
-
-	printf ("Obtained %zd stack frames.\n", size);
-
-	for (i = 0; i < size; i++)
-	{
-		printf ("%s\n", strings[i]);
-	}
-
-	free (strings);
-}
-
-void gnu_libc_print_stack_trace_then_terminalte()
-{
-	gnu_libc_print_stack_trace();
-	exit(11);
-}
+//#include <execinfo.h>
 
 void dbg_print_messages(char** msgs)
 {
@@ -418,7 +388,7 @@ void dbg_crash()
 void lxc_dbg_on_oom()
 {
 	printf("Out of memory ocurred.");
-	gnu_libc_print_stack_trace_then_terminalte();
+	print_stack_trace_then_terminalte();
 }
 
 //for green thread tests
@@ -427,3 +397,37 @@ void dbg_busy_wait_sec(int sec)
 	clock_t t0 = clock();
 	while(t0 + CLOCKS_PER_SEC*sec < clock());
 }
+
+/*
+int gnu_libc_backtrace_symbol(void* addr, char* ret_str, size_t max_length)
+{
+	void *arr[1];
+	arr[0] = addr;
+	char** ob = backtrace_symbols(arr, 1);
+	if(NULL == ob)
+	{
+		return safe_strcpy(ret_str,max_length, "");
+	}
+
+	char* ret = ob[0];
+
+	if(NULL != ret)
+	{
+		int retval = safe_strcpy(ret_str,max_length, ret);
+		free(ob);
+		return retval;
+	}
+	else
+	{
+		return safe_strcpy(ret_str,max_length, "");
+	}
+
+	/*struct Dl_info info;
+	if(0 == dladdr(addr, &info))
+	{
+		return safe_strcpy(ret_str, max_length, "");
+	}
+
+	return safe_strcpy(ret_str, max_length, info.dli_sname);
+	*/
+//}

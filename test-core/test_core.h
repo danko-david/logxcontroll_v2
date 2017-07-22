@@ -10,7 +10,10 @@
 #define TEST_CORE_H_
 
 #include "core/logxcontroll.h"
-#include "np.h"
+
+#ifdef INCLUDE_NOVAPROVA
+	#include "np.h"
+#endif
 
 struct switch_holder
 {

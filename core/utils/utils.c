@@ -7,6 +7,7 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dlfcn.h>
 #include "string.h"
 
 #include "core/logxcontroll.h"
@@ -502,50 +503,6 @@ int safe_strcpy(char* dst, int max_length, const char* src)
 	return len;
 }
 
-#include <dlfcn.h>
-
-void gnu_libc_print_backtraced_symbol(void* addr)
-{
-	char sym[200];
-	sym[0] = 0;
-	gnu_libc_backtrace_symbol(addr, sym, sizeof(sym));
-	printf("%s\n",sym);
-}
-
-#include <execinfo.h>
-
-int gnu_libc_backtrace_symbol(void* addr, char* ret_str, size_t max_length)
-{
-	void *arr[1];
-	arr[0] = addr;
-	char** ob = backtrace_symbols(arr, 1);
-	if(NULL == ob)
-	{
-		return safe_strcpy(ret_str,max_length, "");
-	}
-
-	char* ret = ob[0];
-
-	if(NULL != ret)
-	{
-		int retval = safe_strcpy(ret_str,max_length, ret);
-		free(ob);
-		return retval;
-	}
-	else
-	{
-		return safe_strcpy(ret_str,max_length, "");
-	}
-
-	/*struct Dl_info info;
-	if(0 == dladdr(addr, &info))
-	{
-		return safe_strcpy(ret_str, max_length, "");
-	}
-
-	return safe_strcpy(ret_str, max_length, info.dli_sname);
-	*/
-}
 
 void queue_add_element
 (
@@ -658,10 +615,4 @@ void queue_pop_intermediate_element
 		}
 		*tail = intermediate->prev;
 	}
-}
-
-void print_checkpoint(char* str)
-{
-	printf("%s\r\n", str);
-	fsync(1);
 }

@@ -25,13 +25,6 @@ void lxc_dbg_on_oom();
 
 void linux_print_heap_size();
 
-/**
- * to fully utilize this function use -rdynamic linking option
- * */
-void gnu_libc_print_stack_trace();
-
-void gnu_libc_print_stack_trace_then_terminalte();
-
 void dbg_print_messages(char** msgs);
 
 void dbg_crash();
