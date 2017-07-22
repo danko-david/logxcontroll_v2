@@ -1,58 +1,11 @@
 /*
- * test_complex_op.c
+ * prell.c
  *
- *  Created on: 2017.05.18.
+ *  Created on: 2017. 07. 15.
  *      Author: szupervigyor
- *
- * Some test to describe functionality.
  */
-#ifdef ITS_ALWAYS_FALSE
-//#ifdef INCLUDE_NOVAPROVA
-
-#include "test-core/test_core.h"
-
-/************************ PREVIOUS implentetion area **************************/
-
-Wire lxc_create_primitive_wire(Signal signal)
-{
-	return lxc_wire_create(signal);
-}
-
-typedef int refcount_t;
-
-struct obj_str_arr_pnt
-{
-	void* rtt_type;
-	refcount_t refcount;
-	char** array;
-};
-
-static int wire_iterator_add_ref_des(Wire w, void*** arr)
-{
-	array_pnt_append_element(arr, w->ref_des);
-}
-
-struct obj_str_arr_pnt*  lxc_circuit_get_all_wire_refdes(IOCircuit circ)
-{
-	struct obj_str_arr_pnt* ret = malloc_zero(sizeof(struct obj_str_arr_pnt));
-	ret->refcount = 1;
-	array_pnt_init((void***) &ret->array);
-
-	hashmap_iterate(circ->wires, (PFany) wire_iterator_add_ref_des, &ret->array);
-
-	return ret;
-}
-
-bool lxc_check_gate_exists(const char* name)
-{
-	return NULL != get_gate_entry_by_name(name);
-}
-
-
-
-
-
-
+#include "core/logxcontroll.h"
+#include "experiment/usecases/circuit_test_utils.h"
 
 /**
  *
@@ -67,8 +20,8 @@ bool lxc_check_gate_exists(const char* name)
  * */
 static IOCircuit create_multistage_bool_network()
 {
-	TEST_ASSERT_EQUAL(true, lxc_check_gate_exists("bool not"));
-	TEST_ASSERT_EQUAL(true, lxc_check_gate_exists("bool xor"));
+	TEST_ASSERT_EQUAL(true, lxc_gate_exists("bool not"));
+	TEST_ASSERT_EQUAL(true, lxc_gate_exists("bool xor"));
 
 	IOCircuit sub = create_basic_network_driver_sniffer_network();
 	lxc_circuit_set_name(sub, "multistage_bool_network");
@@ -126,7 +79,7 @@ static void print_bool_value(Gate instance, Signal type, int subtype, LxcValue v
 
 static IOCircuit generic_test_bool_unit_assemble_circuit(const char* name, bool use_secound_input)
 {
-	TEST_ASSERT_EQUAL(true, lxc_check_gate_exists(name));
+	TEST_ASSERT_EQUAL(true, lxc_gate_exists(name));
 
 	IOCircuit sub = lxc_circuit_create();
 	lxc_circuit_set_name(sub, "single gate testbench");
@@ -350,9 +303,9 @@ static void assert_prelling_then_release_array(void*** array)
  * for the next input, the output will waggle between the true and false but
  * finally reach the true state and the circuit becomes idle.
  */
-static void test_scenario_bool_gate_circuit__with_hazard(void)
+static void bool_gate_circuit__with_prell(void)
 {
-	logxcontroll_init_environment();
+
 	IOCircuit circ = create_multistage_bool_network();
 
 	struct puppet_gate_instance* driver = (struct puppet_gate_instance*)
@@ -400,8 +353,18 @@ static void test_scenario_bool_gate_circuit__with_hazard(void)
 	}
 
 	lxc_circuit_destroy(circ);
+}
 
+void test_scenario_bool_gate_circuit__with_prell(void)
+{
+	logxcontroll_init_environment();
+	bool_gate_circuit__with_prell();
 	logxcontroll_destroy_environment();
+}
+
+void uc_bool_gate_circuit__with_prell(int argc, char **argv, int start_from)
+{
+	bool_gate_circuit__with_prell();
 }
 
 static void assert_not_prelling_then_release_array(void*** array)
@@ -467,9 +430,21 @@ struct wire_handler_logic NONHAZARD_PROPAGATE_VALUE =
 	.release_token = wire_nonhazard_propagate_noop,
 };
 
-static void test_scenario_bool_gate_circuit__without_hazard(void)
+void lxc_circuit_do_on_all_wire(IOCircuit circ, PFany funct, any_t param)
 {
-	logxcontroll_init_environment();
+	hashmap_iterate(circ->wires, funct, param);
+}
+
+static int iterate_set_all_wire_handler_logic(any_t p_wire, any_t p_logic)
+{
+	Wire w = (Wire) p_wire;
+	struct wire_handler_logic* logic = (struct wire_handler_logic*) p_logic;
+	w->handler = logic;
+	return 0;
+}
+
+static void bool_gate_circuit__without_prell(void)
+{
 	IOCircuit circ = create_multistage_bool_network();
 
 	struct puppet_gate_instance* driver = (struct puppet_gate_instance*)
@@ -478,26 +453,20 @@ static void test_scenario_bool_gate_circuit__without_hazard(void)
 	struct puppet_gate_instance* receiver = (struct puppet_gate_instance*)
 			lxc_circuit_get_gate_by_refdes(circ, "network sniffer");
 
-	Wire input = lxc_circuit_get_wire_by_refdes(circ, "input");
-
-	{
-		struct obj_str_arr_pnt* a = lxc_circuit_get_all_wire_refdes(circ);
-		int i = -1;
-		while(NULL != a->array[++i])
-		{
-			Wire w = lxc_circuit_get_wire_by_refdes(circ, a->array[i]);
-			TEST_ASSERT_NOT_NULL(w);
-			w->handler  = &NONHAZARD_PROPAGATE_VALUE;
-		}
-		free(a->array);
-		free(a);
-	}
+	lxc_circuit_do_on_all_wire
+	(
+		circ,
+		iterate_set_all_wire_handler_logic,
+		&NONHAZARD_PROPAGATE_VALUE
+	);
 
 	lxc_circuit_set_all_gate_enable(circ, true);
 
 	Gate drv = &driver->base.base;
 
 	void*** result_array = (void***) &receiver->user_data;
+
+	Wire input = lxc_circuit_get_wire_by_refdes(circ, "input");
 
 	{
 		array_pnt_init(result_array);
@@ -525,12 +494,56 @@ static void test_scenario_bool_gate_circuit__without_hazard(void)
 
 	lxc_circuit_destroy(circ);
 
-	logxcontroll_destroy_environment();
-
 	//TODO we must not experience prelling
 	//TODO wait for circuit become idle
 }
 
 
+static void test_scenario_bool_gate_circuit__without_prell(void)
+{
+	logxcontroll_init_environment();
+	test_scenario_bool_gate_circuit__without_prell();
+	logxcontroll_destroy_environment();
+}
 
-#endif
+static void uc_bool_gate_circuit__without_prell(int argc, char **argv, int start_from)
+{
+	bool_gate_circuit__without_prell();
+}
+
+void prell(int argc, char **argv, int start_from)
+{
+	struct case_option** OPTS = NULL;
+
+	options_register(&OPTS, "with_prell", uc_bool_gate_circuit__with_prell);
+	options_register(&OPTS, "without_prell", uc_bool_gate_circuit__without_prell);
+
+	char* ref = NULL;
+	if(argc > 2)
+	{
+		ref = argv[2];
+		int i=-1;
+		while(NULL != OPTS[++i])
+		{
+			if(0 == strcmp(ref, OPTS[i]->name))
+			{
+				logxcontroll_init_environment();
+				OPTS[i]->funct(argc, argv, 2);
+				logxcontroll_destroy_environment();
+				options_release(OPTS);
+				return;
+			}
+		}
+	}
+
+	printf("Given prell circuit: \"%s\" not found.\n", ref);
+	printf("Available prell circuits:\n");
+	{
+		int i = -1;
+		while(NULL != OPTS[++i])
+		{
+			printf("==> \"%s\"\n", OPTS[i]->name);
+		}
+	}
+	options_release(OPTS);
+}

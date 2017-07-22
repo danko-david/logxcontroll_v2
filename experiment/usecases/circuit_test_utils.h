@@ -32,4 +32,13 @@ Gate add_new_gate_to_circuit
 	const char* reference_designator
 );
 
+IOCircuit create_basic_network_driver_sniffer_network();
+
+Wire add_new_primitive_wire_to_circuit
+(
+	IOCircuit circuit,
+	Signal type,
+	const char* reference_designator
+);
+
 #endif /* REPOSITORY_EXPERIMENT_USECASES_CIRCUIT_TEST_UTILS_H_ */

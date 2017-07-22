@@ -102,19 +102,6 @@
  ******************************************************************************/
 
 /****** Primitive types ******/
-//
-// linked list: `reference counted chain link`
-//
-struct chain_link_refc
-{
-	int refcount;
-	struct chain_link_refc* next;
-	void* addr;
-};
-
-
-
-
 
 /*
 			Because of cross referencing inside types to each
@@ -235,8 +222,10 @@ struct lxc_value_operation
 	void* (*data_address)(LxcValue value);
 };
 
+
 struct lxc_value
 {
+	//struct cdll_cl heap_link;
 	Signal type;
 
 	/**

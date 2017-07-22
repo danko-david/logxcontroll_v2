@@ -292,7 +292,7 @@ static bool wire_direct_propagate_availabe(Tokenport p)
 	return NULL != p->owner->current_value;
 }
 
-static void wire_direct_propagate_noop()
+static void wire_direct_propagate_noop_tp(Tokenport _)
 {}
 
 static LxcValue wire_direct_propagate_get_value(Tokenport tp)
@@ -306,8 +306,8 @@ struct wire_handler_logic DIRECT_PROPAGATE_VALUE =
 
 	.is_token_available = wire_direct_propagate_availabe,
 	.token_get_value = wire_direct_propagate_get_value,
-	.absorb_token = wire_direct_propagate_noop,
-	.release_token = wire_direct_propagate_noop,
+	.absorb_token = wire_direct_propagate_noop_tp,
+	.release_token = wire_direct_propagate_noop_tp,
 };
 
 Wire lxc_wire_create(Signal type)
@@ -813,6 +813,11 @@ void* lxc_get_value(LxcValue v)
 		return NULL;
 
 	return v->operations->data_address(v);
+}
+
+bool lxc_gate_exists(const char* name)
+{
+	return NULL != get_gate_entry_by_name(name);
 }
 
 
@@ -1515,9 +1520,9 @@ int lxc_circuit_set_name(IOCircuit circ, const char* name)
 	return 0;
 }
 
-static int iterator_set_gate_enable(Gate g, bool en)
+static int iterator_set_gate_enable(any_t g, any_t en)
 {
-	lxc_gate_set_enabled(g, en);
+	lxc_gate_set_enabled((Gate) g, (bool) en);
 	return 0;
 }
 
@@ -1557,6 +1562,12 @@ int lxc_wire_destroy(Wire w)
 	return 0;
 }
 
+static int iterate_wire_destroy(any_t w, any_t _)
+{
+	lxc_wire_destroy((Wire) w);
+	return 0;
+}
+
 static void release_port_generic
 (
 	Gate gate,
@@ -1588,8 +1599,9 @@ static void release_port_generic
 	}
 }
 
-static int release_all_port(Gate gate)
+static int iterate_release_all_port(any_t g, any_t _)
 {
+	Gate gate  = (Gate)g;
 	release_port_generic
 	(
 		gate,
@@ -1613,10 +1625,11 @@ static int release_all_port(Gate gate)
 	return 0;
 }
 
-static int destroy_gate(Gate g)
+static int iterate_destroy_gate(any_t g, any_t _)
 {
-	free(g->ref_des);
-	g->behavior->destroy(g);
+	Gate gate = (Gate) g;
+	free(gate->ref_des);
+	gate->behavior->destroy(gate);
 	return 0;
 }
 
@@ -1625,11 +1638,11 @@ void lxc_circuit_destroy(IOCircuit circ)
 	//minimal naive implementation
 
 	//release gates
-	hashmap_iterate(circ->gates, release_all_port, NULL);
+	hashmap_iterate(circ->gates, iterate_release_all_port, NULL);
 
-	hashmap_iterate(circ->gates, destroy_gate, NULL);
+	hashmap_iterate(circ->gates, iterate_destroy_gate, NULL);
 
-	hashmap_iterate(circ->wires, lxc_wire_destroy, NULL);
+	hashmap_iterate(circ->wires, iterate_wire_destroy, NULL);
 
 	hashmap_free(circ->wires);
 	hashmap_free(circ->gates);

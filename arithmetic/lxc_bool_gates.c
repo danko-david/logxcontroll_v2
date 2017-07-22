@@ -342,11 +342,11 @@ static bool is_all_input_valid_and_copy(Gate instance, bool values[21], int* ep)
 	return true;
 }
 
-static const bool FALSE = false;
-static const bool TRUE = true;
+static const bool VAL_FALSE = false;
+static const bool VAL_TRUE = true;
 
-static const bool* PTR_FALSE = &FALSE;
-static const bool* PTR_TRUE = &TRUE;
+static const bool* PTR_FALSE = &VAL_FALSE;
+static const bool* PTR_TRUE = &VAL_TRUE;
 
 
 

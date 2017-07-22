@@ -10,17 +10,13 @@ static void func_add_num(int** add2, LxcValue* sum)
 	sum[0] = lxc_create_primitive_value(&lxc_signal_int);
 	int* val = lxc_get_value(sum[0]);
 	*val = *add2[0] + *add2[1];
-	#ifdef NP_ASSERT
-		NP_ASSERT_EQUAL(*val, OPERAND_RESULT);
-	#endif
+	TEST_ASSERT_EQUAL(*val, OPERAND_RESULT);
 }
 
 static void func_print_num(int** num1, LxcValue* _)
 {
 	printf("Gate: print_num: %d\n", *num1[0]);
-	#ifdef NP_ASSERT
-		NP_ASSERT_EQUAL(*num1[0], OPERAND_RESULT);
-	#endif
+	TEST_ASSERT_EQUAL(*num1[0], OPERAND_RESULT);
 }
 
 static void test_functional_wrap()

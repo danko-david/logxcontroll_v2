@@ -6,6 +6,7 @@
 
 void type_sizes(int argc, char **argv, int start_from)
 {
+	PRINT_TYPE_SIZE(void*);
 	PRINT_TYPE_SIZE(struct lxc_gate_behavior);
 	PRINT_TYPE_SIZE(struct lxc_generic_portb_behavior);
 	PRINT_TYPE_SIZE(struct lxc_generic_porti_instance);
@@ -26,8 +27,8 @@ void type_sizes(int argc, char **argv, int start_from)
 	PRINT_TYPE_SIZE(struct queue_element);
 	PRINT_TYPE_SIZE(struct lxc_task);
 
-	PRINT_TYPE_SIZE(short_lock_t);
-	PRINT_TYPE_SIZE(long_lock_t);
+	PRINT_TYPE_SIZE(short_lock);
+	PRINT_TYPE_SIZE(long_lock);
 
 	PRINT_TYPE_SIZE(struct lxc_property_manager);
 

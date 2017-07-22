@@ -14,7 +14,6 @@ include_directories(${CMAKE_SOURCE_DIR})
 #add_definitions(-DVERBOSE)
 add_definitions(-DWITHOUT_PCRE)
 
-
 #
 ## LLVM area
 #
@@ -32,6 +31,11 @@ add_definitions(-DWITHOUT_PCRE)
 #add_definitions(-O0)
 #add_definitions(-emit-llvm)
 #SET (CMAKE_LINKER  "/usr/bin/llvm-link")
+#add_definitions(-lrt)
+
+#list(APPEND LIBRARIES "pth")
+#add_definitions(-DUSE_GREEN_THREAD)
+#add_definitions(-DPTH_DEBUG)
 
 
 # sources and doc used to create functions:
@@ -108,7 +112,8 @@ lxc_build_add_embedded_library(arithmetic)
 #tests
 lxc_build_add_embedded_test(test-core)
 lxc_build_add_embedded_library(experiment)
-#include_novaprova()
+#lxc_build_add_embedded_library(hideout)#
+include_novaprova()
 
 
 ###### core library ######

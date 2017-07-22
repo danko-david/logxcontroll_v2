@@ -52,8 +52,11 @@ static struct pool_thread* new_pool_thread(struct worker_pool* pool)
 	ret->thread.on_release_callback = on_release;
 	//TODO this may leak if thread can not be started, create a teastcase for
 	//this, novaprova can "replace" rrt_ start with mocking
-	if(0 != rrt_start(&(ret->thread)))
+	int status = rrt_start(&(ret->thread));
+	if(0 != status)
 	{
+		rrt_destroy_thread(&ret->thread);
+		TEST_ASSERT_EQUAL(0, status);//will fail and show the status
 		return NULL;
 	}
 
@@ -131,7 +134,7 @@ static void shutdown_all(struct pool_thread* el)
 {
 	while(NULL != el)
 	{
-		rrt_graceful_shutdown(&el->thread);
+		TEST_ASSERT_EQUAL(0, rrt_graceful_shutdown(&el->thread));
 		el = (struct pool_thread*) el->elem.next;
 	}
 }
@@ -194,7 +197,7 @@ int wp_wait_exit(struct worker_pool* pool)
 
 		if(!exited)
 		{
-			usleep(100000);
+			c_usleep(100000);
 			long_lock_lock(&pool->pool_lock);
 		}
 		else

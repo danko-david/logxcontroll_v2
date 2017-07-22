@@ -67,7 +67,7 @@ static void test_worker_pool(void)
 
 static void random_sleepers(void* asd)
 {
-	usleep(1000*(rand()%1000));
+	c_usleep(1000*(rand()%1000));
 }
 
 static void test_worker_pool__high_thread_count(void)
@@ -85,7 +85,7 @@ static void test_worker_pool__high_thread_count(void)
 		}
 
 		//half sec
-		usleep(1000* 500);
+		c_usleep(1000* 500);
 
 		lxc_test_destroy_worker_pool(wp);
 		free(wp);

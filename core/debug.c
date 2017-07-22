@@ -199,8 +199,10 @@ static void print_wired_ref(Tokenport tp, bool direction, char* def)
 	);
 }
 
-static int print_dot_wire(Wire w)
+static int print_dot_wire(any_t wire, any_t _)
 {
+	Wire w = (Wire) wire;
+
 	Tokenport driver = NULL;
 
 	if(NULL != w->drivers)
@@ -233,8 +235,9 @@ static int print_dot_wire(Wire w)
 	return 0;
 }
 
-static int print_dot_gate(Gate g)
+static int print_dot_gate(any_t gate, any_t _)
 {
+	Gate g = (Gate) gate;
 	printf
 	(
 		"\t\"%s\" [shape=record,label=\"",
@@ -416,4 +419,11 @@ void lxc_dbg_on_oom()
 {
 	printf("Out of memory ocurred.");
 	gnu_libc_print_stack_trace_then_terminalte();
+}
+
+//for green thread tests
+void dbg_busy_wait_sec(int sec)
+{
+	clock_t t0 = clock();
+	while(t0 + CLOCKS_PER_SEC*sec < clock());
 }

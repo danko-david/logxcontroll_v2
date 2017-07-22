@@ -18,8 +18,8 @@ int logxcontroll_init_environment()
 	}
 
 	//print stack trace on memory violation and other abort cases
-	signal(SIGSEGV, gnu_libc_print_stack_trace_then_terminalte);
-	signal(SIGABRT, gnu_libc_print_stack_trace_then_terminalte);
+//	signal(SIGSEGV, gnu_libc_print_stack_trace_then_terminalte);
+//	signal(SIGABRT, gnu_libc_print_stack_trace_then_terminalte);
 
 
 	/*** initialize generic library ***/
@@ -39,6 +39,7 @@ int logxcontroll_init_environment()
 
 	//lxc_load_shared_library("/home/szupervigyor/projektek/LogxKontroll/WS/Liblxc_ieee1003/Default/libLiblxc_ieee1003", errors, 200);
 
+	lxc_thread_init_env();
 
 	logxcontroll_intialized = true;
 
@@ -47,6 +48,7 @@ int logxcontroll_init_environment()
 
 int logxcontroll_destroy_environment()
 {
+	lxc_thread_destroy_env();
 	return 0;
 }
 

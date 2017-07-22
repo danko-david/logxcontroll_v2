@@ -48,13 +48,16 @@ int main(int argc, char **argv)
 	options_register(&OPTS, "computerphile_sort", computerphile_sort);
 	options_register(&OPTS, "type_sizes", type_sizes);
 	options_register(&OPTS, "functional_wrap", functional_wrap);
-
 	options_register(&OPTS, "print_entities", print_entities);
+
+	options_register(&OPTS, "oscillator", oscillator);
+	options_register(&OPTS, "prell", prell);
 
 	#ifndef WITHOUT_PCRE
 		options_register(&OPTS, "fw_regex", fw_regex);
 	#endif
-	//register_option("builds_custom_experiment", builds_custom_experiment);
+
+	//options_register(&OPTS, "builds_custom_experiment", builds_custom_experiment);
 
 	char* ref = NULL;
 	if(argc > 1)
@@ -65,6 +68,14 @@ int main(int argc, char **argv)
 		{
 			if(0 == strcmp(ref, OPTS[i]->name))
 			{
+				if(0 != strcmp("novaprova", ref))
+				{
+					setenv("NOVAPROVA_VALGRIND", "no", 0);
+					#ifdef INCLUDE_NOVAPROVA
+						np_init();
+					#endif
+				}
+
 				logxcontroll_init_environment();
 				OPTS[i]->funct(argc, argv, 2);
 				logxcontroll_destroy_environment();

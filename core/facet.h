@@ -86,6 +86,8 @@ Gate lxc_gate_create_by_behavior(const struct lxc_gate_behavior*);
 
 Gate lxc_gate_create_by_name(const char* name);
 
+bool lxc_gate_exists(const char* name);
+
 const char* lxc_gate_get_name(Gate);
 
 bool lxc_gate_is_enabled(Gate);
