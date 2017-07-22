@@ -9,6 +9,7 @@ Debug
 **.so
 **.dll
 **.asm
+**.exe
 Shared
 ext_sources
 
