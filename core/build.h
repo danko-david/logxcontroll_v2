@@ -104,13 +104,14 @@ Available embeddable modules macro:
 
 /********************** Support specific build entities ***********************/
 
-//#if __STDC_VERSION__ >= 201101L
-//
-//#ifdef VERBOSE
-//	#pragma message "build target: C11"
-//#endif
-//
-//#el
+#if __STDC_VERSION__ >= 201101L
+
+	//#ifdef VERBOSE
+		#pragma message "build target: C11"
+	//#endif
+
+#endif
+
 #if _WIN32
    //define something for Windows (32-bit and 64-bit, this part is common)
 	#ifdef VERBOSE
@@ -190,6 +191,16 @@ Available embeddable modules macro:
 #endif
 
 /************************* Common build specific types ************************/
+
+#define short_lock pthread_spinlock_t
+#define long_lock pthread_mutex_t
+
+struct condition_wait_t
+{
+	pthread_mutex_t mutex;
+	pthread_cond_t condition;
+};
+
 
 int short_lock_init(short_lock*);
 

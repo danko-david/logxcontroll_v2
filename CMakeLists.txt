@@ -12,18 +12,19 @@ include_directories(${CMAKE_SOURCE_DIR})
 ## Extra build option
 #
 #add_definitions(-DVERBOSE)
-#add_definitions(-DWITHOUT_PCRE)
+add_definitions(-DWITHOUT_PCRE)
 
 
 #
 ## LLVM area
 #
 
-SET (CMAKE_AR      "/usr/bin/llvm-ar")
-SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
-SET (CMAKE_NM      "/usr/bin/llvm-nm")
-SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
-SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
+#SET (CMAKE_AR      "/usr/bin/llvm-ar")
+#SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
+#SET (CMAKE_LINKER  "/usr/bin/llvm-ld")
+#SET (CMAKE_NM      "/usr/bin/llvm-nm")
+#SET (CMAKE_OBJDUMP "/usr/bin/llvm-objdump")
+#SET (CMAKE_RANLIB  "/usr/bin/llvm-ranlib")
 
 #set(CMAKE_C_COMPILER "/usr/bin/clang")
 #set(CMAKE_CXX_COMPILER "/usr/bin/clang++")
@@ -141,8 +142,8 @@ output_executable()
 find_package (Threads REQUIRED)
 list(APPEND LIBRARIES ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS})
 
-find_package (PCRE REQUIRED)
-list(APPEND LIBRARIES ${PCRE_LIBRARIES})
+#find_package (PCRE REQUIRED)
+#list(APPEND LIBRARIES ${PCRE_LIBRARIES})
 
 
 set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")

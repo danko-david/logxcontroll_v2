@@ -32,12 +32,16 @@ void lxc_load_embedded_modules
 
 }
 
-//#if __STDC_VERSION__ >= 201101L
-//
-//
-//
-//#el
+#if __STDC_VERSION__ >= 201101L
+#pragma message "build target: C11"
+//TODO http://en.cppreference.com/w/c/thread
+//TODO
+
+#endif
+
+
 #if _WIN32
+#pragma message "build target: Win32"
    //define something for Windows (32-bit and 64-bit, this part is common)
    #ifdef _WIN64
       //define something for Windows (64-bit only)
