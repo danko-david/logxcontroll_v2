@@ -1,9 +1,9 @@
 
 #include "core/logxcontroll.h"
 
-#include <pcre.h>
-
 #ifndef WITHOUT_PCRE
+
+#include <pcre.h>
 
 #define REGEX_GROUP_MAX_LENGTH 20
 

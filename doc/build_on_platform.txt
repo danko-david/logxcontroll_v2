@@ -1,11 +1,22 @@
-Identify (on most Unix) system's exact version: `cat /etc/issue`
+# Handy stuffs to discover your environment:
+
+# Check gcc default macros:
+# https://stackoverflow.com/questions/2224334/gcc-dump-preprocessor-defines
+# gcc -dM -E - < /dev/null
+
+#Identify (on most Unix) system's distribution exact version: `cat /etc/issue`
+
+## MAINTAINER-TODO: uname
+
+
 #
 ## MAINTAINER-TODO:
-#	- Verify build environment requirements with scratch system install.
+#	- Verify build environment requirements on scratch system install.
 #	- Specify absolut minimal build software versions.
 #	- create different build target (cmake)
 #
 
+###############################################################################
 
 
 ###############################################################################
@@ -42,3 +53,6 @@ sudo make install
 sudo cp np.h /usr/include/
 #
 
+###############################################################################
+#TODO Windows
+cmake -G "MinGW Makefiles" -DCMAKE_C_COMPILER=/c/MinGW/bin/gcc.exe -DCMAKE_CXX_COMPILER=/c/MinGW/bin/g++.exe
