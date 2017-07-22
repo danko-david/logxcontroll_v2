@@ -1388,7 +1388,7 @@ static void enumerate_io_names
 (
 	void*** dst,
 	int (*enumerate_types)(Gate gate, Signal* sig, int* sub, uint max_length),
-	int (*max)(Gate gate, Signal s, int subtype),
+	int (*max_labels)(Gate gate, Signal s, int subtype),
 	const char* (*label)(Gate gate, Signal type, int subtype, uint index),
 	Gate g
 )
@@ -1400,7 +1400,7 @@ static void enumerate_io_names
 	int i=-1;
 	while(++i < size)
 	{
-		int tmax = max(g, sig[i], sub[i]);
+		int tmax = max_labels(g, sig[i], sub[i]);
 		int t = -1;
 		while(++t < tmax)
 		{
