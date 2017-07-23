@@ -41,7 +41,7 @@ size_t lxc_size_primitive_value(/*LxcValue value*/)
 	return sizeof(double);
 }
 
-static int lxc_ref_diff_primitive_value(LxcValue asdf, int n)
+int lxc_ref_diff_primitive_value(LxcValue asdf, int n)
 {
 	struct lxc_primitive_value* val = (struct lxc_primitive_value*) asdf;
 	return __sync_fetch_and_add(&(val->refcount), n)+n;

@@ -101,6 +101,7 @@ struct lxc_primitive_value
 
 		long	long_value;
 		double	double_value;
+		void*	addr;
 	};
 };
 

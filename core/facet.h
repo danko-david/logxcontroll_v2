@@ -50,7 +50,7 @@ void lxc_wire_release_token(Tokenport tp);
 
 void* lxc_get_value(LxcValue);
 
-LxcValue lxc_get_constant_by_name(const char* name);
+struct lxc_constant_value* lxc_get_constant_by_name(const char* name);
 
 /******************** Signal ASSOCIATED FACET FUNCTION ************************/
 

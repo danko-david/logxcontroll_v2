@@ -1301,7 +1301,7 @@ Gate lxc_gate_create_by_name(const char* name)
 }
 
 
-LxcValue lxc_get_constant_by_name(const char* name)
+struct lxc_constant_value* lxc_get_constant_by_name(const char* name)
 {
 	if(NULL == REGISTERED_CONSTANT_VALUES)
 		return NULL;
@@ -1310,7 +1310,7 @@ LxcValue lxc_get_constant_by_name(const char* name)
 	for(i=0;NULL != REGISTERED_CONSTANT_VALUES[i];++i)
 	{
 		if(0 == strcmp(name,REGISTERED_CONSTANT_VALUES[i]->name))
-			return REGISTERED_CONSTANT_VALUES[i]->value;
+			return REGISTERED_CONSTANT_VALUES[i];
 	}
 
 	return NULL;
