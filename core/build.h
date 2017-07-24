@@ -103,7 +103,7 @@ Available embeddable modules macro:
 
 #if __STDC_VERSION__ >= 201101L
 
-	//#ifdef VERBOSE
+	//#ifdef VERBOSE_BUILD
 		#pragma message "build target: C11"
 	//#endif
 
@@ -111,11 +111,11 @@ Available embeddable modules macro:
 
 #if _WIN32
    //define something for Windows (32-bit and 64-bit, this part is common)
-	#ifdef VERBOSE
+	#ifdef VERBOSE_BUILD
 		#pragma message "build target: Windows 32"
 	#endif
    #ifdef _WIN64
-		#ifdef VERBOSE
+		#ifdef VERBOSE_BUILD
 			#pragma message "build target: Windows 64"
 		#endif
       //define something for Windows (64-bit only)
@@ -123,35 +123,35 @@ Available embeddable modules macro:
 #elif __APPLE__
     #include "TargetConditionals.h"
     #if TARGET_IPHONE_SIMULATOR
-		#ifdef VERBOSE
+		#ifdef VERBOSE_BUILD
 			#pragma message "build target: IOS simulator"
 		#endif
          // iOS Simulator
     #elif TARGET_OS_IPHONE
-		#ifdef VERBOSE
+		#ifdef VERBOSE_BUILD
 			#pragma message "build target: Iphone"
 		#endif
         // iOS device
     #elif TARGET_OS_MAC
         // Other kinds of Mac OS
-		#ifdef VERBOSE
+		#ifdef VERBOSE_BUILD
 			#pragma message "build target: Mac OS"
 		#endif
     #else
     #   error "Unknown Apple platform"
     #endif
 #elif __linux__
-	#ifdef VERBOSE
+	#ifdef VERBOSE_BUILD
 		#pragma message "build target: linux"
 	#endif
 
 #elif __unix__ // all unices not caught above
-	#ifdef VERBOSE
+	#ifdef VERBOSE_BUILD
 		#pragma message "build target: Unix like system"
 	#endif
     // Unix
 #elif defined(_POSIX_VERSION)
-	#ifdef VERBOSE
+	#ifdef VERBOSE_BUILD
 		#pragma message "build target: POSIX compatible"
 	#endif
     // POSIX
