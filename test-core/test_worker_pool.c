@@ -70,6 +70,8 @@ static void random_sleepers(void* asd)
 	c_usleep(1000*(rand()%1000));
 }
 
+#ifdef LXC_INCLUDE_STRESS_TESTS
+
 static void test_worker_pool__high_thread_count(void)
 {
 	int i=-1;
@@ -91,7 +93,7 @@ static void test_worker_pool__high_thread_count(void)
 		free(wp);
 	}
 }
-
+#endif
 
 //TODO shrink/spawn
 

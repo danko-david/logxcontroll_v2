@@ -502,7 +502,7 @@ static void bool_gate_circuit__without_prell(void)
 static void test_scenario_bool_gate_circuit__without_prell(void)
 {
 	logxcontroll_init_environment();
-	test_scenario_bool_gate_circuit__without_prell();
+	bool_gate_circuit__without_prell();
 	logxcontroll_destroy_environment();
 }
 
