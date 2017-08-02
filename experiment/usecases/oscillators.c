@@ -229,7 +229,6 @@ void bool_gate_oscillator_3_loopbreaker(void)
 	lxc_test_destroy_worker_pool(&worker_pool);
 
 	lxc_circuit_destroy(circ);
-	logxcontroll_destroy_environment();
 }
 
 void oscillator_3_loopbreaker(int argc, char **argv, int start_from)

@@ -21,7 +21,6 @@ int logxcontroll_init_environment()
 //	signal(SIGSEGV, gnu_libc_print_stack_trace_then_terminalte);
 //	signal(SIGABRT, gnu_libc_print_stack_trace_then_terminalte);
 
-
 	/*** initialize generic library ***/
 	lxc_init_generic_library();
 
@@ -40,6 +39,7 @@ int logxcontroll_init_environment()
 	//lxc_load_shared_library("/home/szupervigyor/projektek/LogxKontroll/WS/Liblxc_ieee1003/Default/libLiblxc_ieee1003", errors, 200);
 
 	lxc_thread_init_env();
+	TEST_ASSERT_EQUAL(0, wp_init(&LXC_SYS_DEFAULT_WORKER_POOL));
 
 	logxcontroll_intialized = true;
 
@@ -48,7 +48,17 @@ int logxcontroll_init_environment()
 
 int logxcontroll_destroy_environment()
 {
+	if(!logxcontroll_intialized)
+	{
+		return LXC_ERROR_ILLEGAL_REQUEST;
+	}
+
+	TEST_ASSERT_EQUAL(0, wp_shutdown(&LXC_SYS_DEFAULT_WORKER_POOL));
+	TEST_ASSERT_EQUAL(0, wp_wait_exit(&LXC_SYS_DEFAULT_WORKER_POOL));
+	TEST_ASSERT_EQUAL(0, wp_destroy(&LXC_SYS_DEFAULT_WORKER_POOL));
 	lxc_thread_destroy_env();
+
+	logxcontroll_intialized = false;
 	return 0;
 }
 
