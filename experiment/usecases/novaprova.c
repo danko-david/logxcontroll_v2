@@ -23,6 +23,12 @@ void novaprova(int argc, char **argv, int start_from)
 	np_plan_t *plan = NULL;
 	if(argc > start_from)
 	{
+		if(0 == strcmp(argv[start_from], "--list"))
+		{
+			np_list_tests(runner, plan);
+			exit(0);
+		}
+
 		plan = np_plan_new();
 		np_plan_add_specs(plan, argc-start_from, (const char **)argv+start_from);
 	}

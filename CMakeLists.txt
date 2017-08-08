@@ -272,6 +272,7 @@ if(C_OPT)
 	set(CMAKE_XCODE_ATTRIBUTE_DEBUG_INFORMATION_FORMAT "dwarf-with-dsym")
 else()
 	set(CMAKE_BUILD_TYPE Release)
+	#TODO add_definitions(-flto)#-x lto
 endif()
 
 
@@ -319,6 +320,8 @@ foreach(opt ${BUILD_CONFIG_CONTENT})
 		 message(FATAL_ERROR "Unrecognised build option: ${opt}")
 	endif()
 endforeach()
+
+#enable_testing()
 
 #
 # DEBUG info (Don't remove/comment out, tools/cmake/code_all_in_one.sh utility uses this output)
