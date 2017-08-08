@@ -1397,6 +1397,7 @@ LxcValue lxc_create_generic_value(Signal type, size_t size)
 {
 	struct lxc_generic_value* ret =
 		(struct lxc_generic_value*) malloc_zero(sizeof(struct lxc_generic_value)+size);
+	ret->refcount = 1;
 	ret->base.type = type;
 	ret->base.operations = &lxc_generic_value_operations;
 	ret->size = size;

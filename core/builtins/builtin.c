@@ -49,7 +49,7 @@ int lxc_ref_diff_primitive_value(LxcValue asdf, int n)
 
 void* lxc_data_address_primitive_value(LxcValue val)
 {
-	return &(((struct lxc_primitive_value*) val)->char_value);
+	return &(((struct lxc_primitive_value*) val)->addr);
 }
 
 const struct lxc_value_operation primitive_variable_value_operations =

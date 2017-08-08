@@ -106,6 +106,15 @@ const char* lxc_gate_get_input_label(Gate gate, Signal type, int, uint index);
 
 const char* lxc_gate_get_output_label(Gate gate, Signal type, int, uint index);
 
+int lxc_gate_get_portinfo_by_name
+(
+	Gate gate,
+	bool direction,
+	const char* port_name,
+	Signal* ret_sig,
+	int* ret_sub,
+	uint* ret_index
+);
 
 Tokenport lxc_gate_get_input_port(Gate, Signal, int, uint);
 
@@ -151,6 +160,17 @@ Wire lxc_circuit_get_wire_by_refdes(IOCircuit, const char*);
 void lxc_circuit_set_all_gate_enable(IOCircuit, bool);
 
 Wire lxc_circuit_get_or_create_wire(IOCircuit, const char*, Signal);
+
+int lxc_circuit_wire_ports_together
+(
+	IOCircuit circ,
+	const char* out_gate,
+	const char* out_port,
+	const char* wire_name,
+	const char* in_gate,
+	const char* in_port,
+	bool create_wire_if_nonex
+);
 
 /*********************** .......... ASSOCIATED FACET FUNCTION *****************/
 

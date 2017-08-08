@@ -17,6 +17,11 @@ struct lxc_constant_value** REGISTERED_CONSTANT_VALUES;
 
 int lxc_register_gate(const struct lxc_gate_behavior* entry)
 {
+	if(NULL == entry->gate_name)
+	{
+		return LXC_ERROR_BAD_CALL;
+	}
+
 	struct lxc_gate_behavior* in = get_gate_entry_by_name(entry->gate_name);
 	if(NULL != in)
 		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;

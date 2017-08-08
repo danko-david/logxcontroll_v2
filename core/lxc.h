@@ -384,6 +384,8 @@ enum lxc_errno
 	LXC_ERROR_RESOURCE_UNDER_SHUTDOWN = -1028,
 	LXC_ERROR_TOO_HIGH_CONCURRENCY = -1029,
 
+	LXC_ERROR_TYPE_MISMATCH = -1030,
+
 
 
 
@@ -571,6 +573,16 @@ struct lxc_gate_behavior
 
 };
 
+enum lxc_gate_state
+{
+	gs_disabled,
+	gs_idle,
+	gs_waiting,
+	gs_busy,
+	gs_soft_blocked,
+	gs_hard_blocked,
+};
+
 struct lxc_instance
 {
 	const struct lxc_gate_behavior* behavior;
@@ -590,7 +602,7 @@ struct lxc_instance
 	//other way than with the current control flow or thread.
 	void (*execution_behavior)(Gate instance, Signal type, int subtype, LxcValue value, uint index);
 
-
+	enum lxc_gate_state state;
 
 	//long_lock
 	/*
@@ -641,6 +653,8 @@ enum lxc_system_event_type
 
 
 	system_event_property_modified,
+
+	system_event_wait_state_event,
 };
 
 struct lxc_system_event
@@ -649,7 +663,7 @@ struct lxc_system_event
 	Signal signal;
 	int subtype;
 	int index;
-	const char* name;
+	void* user_data;
 };
 
 

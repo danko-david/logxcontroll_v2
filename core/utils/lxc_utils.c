@@ -65,7 +65,7 @@ LxcValue lxc_create_system_event
 	Signal signal,
 	int subtype,
 	int index,
-	const char* name
+	void* user_data
 )
 {
 	LxcValue ret = lxc_create_generic_value
@@ -81,7 +81,7 @@ LxcValue lxc_create_system_event
 	event->signal = signal;
 	event->subtype = subtype;
 	event->index = index;
-	event->name = name;
+	event->user_data = user_data;
 
 	return ret;
 }

@@ -923,7 +923,7 @@ int lxc_gate_get_output_types(Gate gate, Signal* sig, int* sub, int max_length)
 	}
 }
 
-static int get_io_min_max(bool direction, Gate gate, Signal s, int subtype)
+static int get_io_max(bool direction, Gate gate, Signal s, int subtype)
 {
 	if(NULL == gate || NULL == s)
 	{
@@ -947,12 +947,12 @@ static int get_io_min_max(bool direction, Gate gate, Signal s, int subtype)
 
 int lxc_gate_get_input_max_index(Gate gate, Signal s, int subtype)
 {
-	return get_io_min_max(DIRECTION_IN, gate, s, subtype);
+	return get_io_max(DIRECTION_IN, gate, s, subtype);
 }
 
 int lxc_gate_get_output_max_index(Gate gate, Signal s, int subtype)
 {
-	return get_io_min_max(DIRECTION_OUT, gate, s, subtype);
+	return get_io_max(DIRECTION_OUT, gate, s, subtype);
 }
 
 static int fill_labels
@@ -1152,6 +1152,69 @@ const char* lxc_gate_get_output_label(Gate gate, Signal type, int subtype, uint 
 				index,
 				gate->behavior->get_output_label
 			);
+}
+int lxc_gate_get_portinfo_by_name
+(
+	Gate gate,
+	bool direction,
+	const char* port_name,
+	Signal* ret_sig,
+	int* ret_sub,
+	uint* ret_index
+)
+{
+	int (*types)(Gate, Signal*, int*, int);
+	int (*type_max)(Gate, Signal, int);
+	const char* (*port_label)(Gate, Signal, int, uint);
+
+	if(DIRECTION_IN == direction)
+	{
+		types = lxc_gate_get_input_types;
+		type_max = lxc_gate_get_input_max_index;
+		port_label = lxc_gate_get_input_label;
+	}
+	else
+	{
+		types = lxc_gate_get_output_types;
+		type_max = lxc_gate_get_output_max_index;
+		port_label = lxc_gate_get_output_label;
+	}
+
+
+	Signal sigs[20];
+	int subs[20];
+	int ep = types(gate, sigs, subs, 20);
+
+	if(ep < 1)
+	{
+		return LXC_ERROR_PORT_DOESNOT_EXISTS;
+	}
+
+	int i=0;
+	out:for(;i<ep;++i)
+	{
+		int max = type_max(gate, sigs[i], subs[i]);
+		int t = 0;
+		for(;t<max; ++t)
+		{
+			const char* name = port_label(gate, sigs[i], subs[i], t);
+			if(NULL == name)
+			{
+				continue /*out*/;
+			}
+
+			if(0 == strcmp(port_name, name))
+			{
+				*ret_sig = sigs[i];
+				*ret_sub = subs[i];
+				*ret_index = t;
+				return 0;
+			}
+		}
+	}
+
+	*ret_sig = NULL;
+	return LXC_ERROR_PORT_DOESNOT_EXISTS;
 }
 
 const char* lxc_gate_get_property_description(Gate gate, const char* property)
@@ -1475,7 +1538,7 @@ bool lxc_circuit_add_wire(IOCircuit circ, Wire w)
 		return LXC_ERROR_ENTITY_BY_NAME_ALREADY_REGISTERED;
 	}
 
-	return MAP_OK == hashmap_put(circ->wires, w->ref_des, w);
+	return MAP_OK != hashmap_put(circ->wires, w->ref_des, w);
 /*	return -1 != array_pnt_append_element
 	(
 		(void***) &circ->wires,
@@ -1691,5 +1754,145 @@ IOCircuit lxc_circuit_create()
 	}
 
 	return ret;
+}
+
+//lazy girls/mens leather armchair
+int lxc_circuit_wire_ports_together
+(
+	IOCircuit circ,
+	const char* out_gate,
+	const char* out_port,
+	const char* wire_name,
+	const char* in_gate,
+	const char* in_port,
+	bool create_wire_if_nonex
+)
+{
+	Gate out = lxc_circuit_get_gate_by_refdes(circ, out_gate);
+
+	Signal sig;
+	int sub;
+
+	int out_index;
+
+	//assert that output gate, port exists, discover the port's type
+	//and assert it's still unwired
+	{
+		if(NULL == out)
+		{
+			return LXC_ERROR_ENTITY_NOT_FOUND;
+		}
+
+		int stat = lxc_gate_get_portinfo_by_name
+		(
+			out,
+			DIRECTION_OUT,
+			out_port,
+			&sig,
+			&sub,
+			&out_index
+		);
+
+		if(0 != stat)
+		{
+			return stat;
+		}
+
+		Wire tp = lxc_gate_get_output_wire(out, sig, sub, out_index);
+
+		if(NULL != tp)
+		{
+			return LXC_ERROR_PORT_IS_IN_USE;
+		}
+	}
+
+	Gate in = lxc_circuit_get_gate_by_refdes(circ, in_gate);
+	int in_index;
+
+	//assert that input gate, port exists, has the same type and still unwired
+	{
+		if(NULL == in)
+		{
+			return LXC_ERROR_ENTITY_NOT_FOUND;
+		}
+
+
+		Signal bust_type;
+		int bust_sub;
+		int stat = lxc_gate_get_portinfo_by_name
+		(
+			in,
+			DIRECTION_IN,
+			in_port,
+			&bust_type,
+			&bust_sub,
+			&in_index
+		);
+
+		if(0 != stat)
+		{
+			return stat;
+		}
+
+		if(sig != bust_type || sub != bust_sub)
+		{
+			return LXC_ERROR_TYPE_NOT_SUPPORTED;
+		}
+
+		Tokenport tp = lxc_gate_get_input_port(in, sig, sub, in_index);
+
+		if(NULL != tp)
+		{
+			return LXC_ERROR_PORT_IS_IN_USE;
+		}
+	}
+
+	Wire w = lxc_circuit_get_wire_by_refdes(circ, wire_name);
+	if(NULL == w)
+	{
+		if(!create_wire_if_nonex)
+		{
+			return LXC_ERROR_ENTITY_NOT_FOUND;
+		}
+
+		w = lxc_wire_create(sig);
+		lxc_wire_set_refdes(w, wire_name);
+		int stat = lxc_circuit_add_wire(circ, w);
+		if(0 != stat)
+		{
+			TEST_ASSERT_EQUAL(0, lxc_wire_destroy(w));
+			return stat;
+		}
+	}
+	else
+	{
+		//assert that has the same type and still not driven
+		if(sig != w->type || sub != w->subtype)
+		{
+			return LXC_ERROR_TYPE_MISMATCH;
+		}
+
+		if(0 != w->drivers_length)
+		{
+			return LXC_ERROR_ALREADY_HAS_DRIVER;
+		}
+	}
+
+	//do the work
+	int status = lxc_wire_gate_output(sig, sub, w, out, out_index);
+
+	if(0 != status)
+	{
+		return status;
+	}
+
+	status = lxc_wire_gate_input(sig, sub, w, in, in_index);
+
+	if(0 != status)
+	{
+		return status;
+	}
+
+	return 0;
 }
 

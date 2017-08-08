@@ -53,6 +53,8 @@ int main(int argc, char **argv)
 	options_register(&OPTS, "oscillator", oscillator);
 	options_register(&OPTS, "prell", prell);
 
+	options_register(&OPTS, "line_processor", line_processor);
+
 	#ifndef WITHOUT_PCRE
 		options_register(&OPTS, "fw_regex", fw_regex);
 	#endif

@@ -33,4 +33,9 @@ void lxc_execution_default_behavior(Gate instance, Signal type, int subtype, Lxc
 void lxc_execution_loopbreaker(Gate instance, Signal type, int subtype, LxcValue value, uint index);
 
 
+struct worker_pool LXC_SYS_DEFAULT_WORKER_POOL;
+
+int lxc_crutch_wp_exec(void(*func)(void*), void* param);
+
+
 #endif /* LXC_EXECUTION_H_ */

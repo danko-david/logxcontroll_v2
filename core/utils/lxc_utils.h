@@ -35,7 +35,7 @@ LxcValue lxc_create_system_event
 	Signal signal,
 	int subtype,
 	int index,
-	const char* name
+	void* user_data
 );
 
 void lxc_portb_republish_internal_value

@@ -115,3 +115,13 @@ void lxc_execution_loopbreaker(Gate instance, Signal type, int subtype, LxcValue
 	}
 }
 
+int lxc_crutch_wp_exec(void(*func)(void*), void* param)
+{
+	return wp_submit_task
+	(
+		&LXC_SYS_DEFAULT_WORKER_POOL,
+		func,
+		param
+	);
+}
+
